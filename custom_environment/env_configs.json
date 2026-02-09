@@ -1,0 +1,28 @@
+{
+  "simulation_parameters": {
+    "alpha": 0.4,
+    "lambda": 0.5,
+    "ev_per_capita": 0.022,
+    "evs_parking_area_sqm": 15
+  },
+  "constraints": {
+    "max_chargers_per_station": 300,
+    "radius_max_meters": 1000,
+    "battery_capacity_kwh": 85,
+    "relocation_factor": 0.2,
+    "budget": 900000
+  },
+  "hardware_specs": {
+    "charging_power_kw": [3, 7, 11, 20, 22, 30, 60, 80, 120, 150, 180, 250],
+    "install_fee": [5, 11, 12, 100, 12, 143, 278, 397, 416, 676, 956, 3272]
+  },
+  "physics_and_units": {
+    "time_unit_h": 1,
+    "capacity_unit_kw": 1,
+    "velocity_m_per_h": 23000
+  },
+  "constants": {
+    "inf": 1000000,
+    "distance_inf": 10000000
+  }
+}
