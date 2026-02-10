@@ -38,8 +38,8 @@ DEFAULT_EV_STATION_POWER_MW = 0.35
 # Ngưỡng khoảng cách đến lưới điện (km)
 # Nghiên cứu: Chi phí đấu nối tăng đáng kể khi >1km trong đô thị
 # Penalty bắt đầu từ 1km, tối đa tại 3km
-DISTANCE_THRESHOLD_MIN_KM = 0.4  # Bắt đầu penalty
-DISTANCE_THRESHOLD_MAX_KM = 1.5  # Penalty tối đa
+DISTANCE_THRESHOLD_MIN_KM = 1  # Bắt đầu penalty
+DISTANCE_THRESHOLD_MAX_KM = 3  # Penalty tối đa
 
 # Penalty weights
 PENALTY_DISTANCE_WEIGHT = 0.3  # Weight cho distance penalty
