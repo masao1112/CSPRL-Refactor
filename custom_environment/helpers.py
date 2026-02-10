@@ -1,6 +1,7 @@
 import json
 import osmnx as ox
 import numpy as np
+import networkx as nx
 from math import sin, cos, sqrt, atan2, radians, ceil
 
 """
@@ -26,7 +27,7 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     if s_pos[0] in my_node_dict[my_node[0]]:
         distance = my_node_dict[my_node[0]][s_pos[0]]
     else:
-        distance = haversine(s_pos, my_node)
+        distance = calculate_distance(s_pos, my_node)
         my_node_dict[my_node[0]][s_pos[0]] = distance
     # check if cost has to be calculated
     try:
@@ -37,7 +38,7 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
         cost_node = my_cost_dict[my_node[0]][s_pos[0]]
     else:
         cost_travel = alpha * distance / VELOCITY
-        cost_boring = (1 - alpha) / distance * (s_dict["W_s"] + 1 / (s_dict["service rate"]+1e-6))
+        cost_boring = (1 - alpha) / (distance + eps) * (s_dict["W_s"] + 1 / (s_dict["service rate"] + eps))
         cost_node = weak_demand(my_node) * (cost_travel + cost_boring)
         my_cost_dict[my_node[0]][s_pos[0]] = cost_node
     return cost_node, my_node_dict, my_cost_dict
@@ -55,6 +56,27 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
         the_node[1]["charging station"] = s_pos[0]
         the_node[1]["distance"] = my_node_dict[the_node[0]][s_pos[0]]
     return my_node_list, my_node_dict, my_cost_dict
+
+def calculate_distance(s_pos, my_node):
+    """
+    Calculates distance between two nodes using the precomputed distance matrix.
+    Falls back to haversine if matrix lookup fails.
+    """
+    try:
+        # s_pos[0] and my_node[0] là the OSM node IDs
+        u = s_pos[0]
+        v = my_node[0]
+        distance = nx.shortest_path_length(graph, u, v, weight='length')
+        return distance
+    except (KeyError, IndexError):
+        # Fallback if node not found in matrix
+        # print(f"Matrix lookup failed for {u} -> {v}, falling back to Haversine")
+        pass
+    except Exception as e:
+        # print(f"Distance loader error: {e}")
+        pass
+    # if not available, use haversine instead
+    return haversine(s_pos, my_node)
 
 
 ################################################################################################
@@ -110,16 +132,6 @@ def haversine(s_pos, my_node):
     if distance < 0.1:  # to avoid ZeroDivisionError
         distance = 0.1
     return distance
-
-
-def nodes_covered(my_station, my_node_list):
-    """
-    yields the number of nodes within the influence radius of the station
-    """
-    s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-    radius_s = s_dict["radius"]
-    I_1 = sum([1 if haversine(s_pos, my_node) <= radius_s else 0 for my_node in my_node_list])
-    return I_1
 
 
 def node_coverage(my_plan, my_node):
@@ -440,9 +452,15 @@ def support_stations(my_plan, free_list):
     return chosen_node
 
 
+# Load graph file for travel distance computing
+location = "DongDa"
+graph_file = f"custom_environment/data/Graph/{location}/{location}.graphml"
+graph = nx.read_graphml(graph_file)
+
 # Parameters ########################################################
 alpha = 0.4
 my_lambda = 0.5
+eps = 1e-9
 ev_per_capita = 0.022
 evs_parking_area = 15 # meter square
 
