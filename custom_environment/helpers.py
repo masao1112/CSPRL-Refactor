@@ -57,6 +57,7 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
         the_node[1]["distance"] = my_node_dict[the_node[0]][s_pos[0]]
     return my_node_list, my_node_dict, my_cost_dict
 
+
 def calculate_distance(s_pos, my_node):
     """
     Calculates distance between two nodes using the precomputed distance matrix.
@@ -136,7 +137,7 @@ def haversine(s_pos, my_node):
 
 def node_coverage(my_plan, my_node):
     """
-    yields the number of nodes within the influence radius of the station
+    yields the number of station nodes which cover a given node
     """
     I_1, I_2 = 0, 0
     priv_CS = my_node[1]["private_cs"]
@@ -282,9 +283,9 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     if not my_plan:
         return my_score
     benefit = social_benefit(my_plan, my_node_list) / norm_benefit
-    cost_travel = travel_cost(my_node_list) / norm_travel  # dimensionless
-    charg_time = charging_time(my_plan) / norm_charg  # dimensionless
-    wait_time = waiting_time(my_plan) / norm_wait  # dimensionless
+    cost_travel = travel_cost(my_node_list) / norm_travel # dimensionless
+    charg_time = charging_time(my_plan) / norm_charg # dimensionless
+    wait_time = waiting_time(my_plan) / norm_wait # dimensionless
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
     my_score = my_lambda * benefit - (1 - my_lambda) * cost
     return my_score, benefit, cost, charg_time, wait_time, cost_travel
@@ -399,13 +400,19 @@ def choose_node_new_benefit(free_list):
     return chosen_node
 
 
-def choose_node_bydemand(free_list):
+def choose_node_bydemand(free_list, my_plan=None):
     """
     pick location with highest weakened demand
     """
-    demand_list = [my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"]) for my_node in free_list]
-    chosen_index = demand_list.index(max(demand_list))
-    chosen_node = free_list[chosen_index]
+    if my_plan:
+        # choose the node with the highest waiting time
+        wait_list = [station[2]["D_s"] * station[2]["W_s"] for station in my_plan]
+        chosen_index = wait_list.index(max(wait_list))
+        chosen_node = free_list[chosen_index]
+    else:
+        demand_list = [my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"]) for my_node in free_list]
+        chosen_index = demand_list.index(max(demand_list))
+        chosen_node = free_list[chosen_index]
     return chosen_node
 
 
@@ -425,7 +432,7 @@ def anti_choose_node_bybenefit(my_node_list, my_plan):
     return remove_station
 
 
-def support_stations_hilfe(station):
+def _support_stations(station):
     charg_time = station[2]["D_s"] / (station[2]["service rate"] + 1e-6)
     wait_time = station[2]["D_s"] * station[2]["W_s"]
     neediness = (wait_time + charg_time)
@@ -436,7 +443,7 @@ def support_stations(my_plan, free_list):
     """
     choose a station which needs support due to highest waiting + charging time
     """
-    cost_list = [support_stations_hilfe(station) for station in my_plan]
+    cost_list = [_support_stations(station) for station in my_plan]
     if not cost_list:
         chosen_node = choose_node_bydemand(free_list)
     else:
