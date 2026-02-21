@@ -29,6 +29,7 @@ class FeatureScaler:
         # Estimated realistic ranges (adjust based on your actual dataset!)
         self.lon_min, self.lon_max = 105.7, 106.0      # Hanoi/DongDa approximate
         self.lat_min, self.lat_max = 20.95, 21.05
+        self.pop_min, self.pop_max = 2.646, 468.3
         self.demand_max = 1.0                          # assuming already normalized [0,1]
         self.land_price_max = 214.245                  # triệu VND/m²
         self.private_cs_max = 1.0
@@ -40,6 +41,9 @@ class FeatureScaler:
 
     def scale_lat(self, v):
         return 2 * (np.clip(v, self.lat_min, self.lat_max) - self.lat_min) / (self.lat_max - self.lat_min + 1e-9) - 1
+
+    def scale_pop(self, v):
+        return 2 * (np.clip(v, self.pop_min, self.pop_max) - self.pop_min) / (self.pop_max - self.pop_min + 1e-9) - 1
 
     def scale_demand(self, v):
         return 2 * np.clip(v / (self.demand_max + 1e-9), 0, 1) - 1
@@ -146,21 +150,23 @@ class StationPlacement(gym.Env):
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
-            self.node_list = self.grid_adapter.extend_node_features(self.node_list)
+            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
 
-        self.node_list = [self.init_hilfe(my_node) for my_node in self.node_list]
+        self.node_list = [self._init(my_node) for my_node in self.node_list]
 
         self.plan_file = my_plan_file
         self.game_over = None
         self.budget = None
         self.plan_instance = None
         self.plan_length = None
-        self.row_length = 5
+        self.row_length = 3
         self.best_score = None
         self.best_plan = None
         self.best_node_list = None
         self.schritt = None
         self.config_dict = None
+        # self.previous_score = None
         self.feature_scaler = FeatureScaler()
         # new action space including all charger types
         self.action_space = spaces.Discrete(5)
@@ -183,6 +189,7 @@ class StationPlacement(gym.Env):
                                                        self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                        self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
+        # self.previous_score = self.best_score
         # Add grid penalty to initial best_score to match evaluation logic
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
@@ -203,7 +210,7 @@ class StationPlacement(gym.Env):
         # Return obs AND an empty info dict (Required by new SB3/Gymnasium)
         return obs, {}
 
-    def init_hilfe(self, my_node):
+    def _init(self, my_node):
         StationPlacement.node_dict[my_node[0]] = {}  # prepare node_dict
         StationPlacement.cost_dict[my_node[0]] = {}
         my_node[1]["charging station"] = None
@@ -220,16 +227,16 @@ class StationPlacement(gym.Env):
 
         for j, node in enumerate(self.node_list):
             i = j * row_length
-            obs[i + 0] = self.feature_scaler.scale_lon(node[1]['x'])
-            obs[i + 1] = self.feature_scaler.scale_lat(node[1]['y'])
-            obs[i + 2] = self.feature_scaler.scale_demand(node[1]['demand'])
-            obs[i + 3] = self.feature_scaler.scale_land_price(node[1]['land_price'])
-            obs[i + 4] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])
+            # obs[i + 0] = self.feature_scaler.scale_lon(node[1]['x'])
+            # obs[i + 1] = self.feature_scaler.scale_lat(node[1]['y'])
+            obs[i + 0] = self.feature_scaler.scale_pop(node[1]['pop']) #* H.demand_modified(self.plan_instance.plan, node)
+            obs[i + 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
+            obs[i + 2] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])
 
             for station in self.plan_instance.plan:
                 if station[0][0] == node[0]:
                     for e in range(len(H.CHARGING_POWER)):
-                        obs[i + 5 + e] = self.feature_scaler.scale_charger_count(station[1][e])
+                        obs[i + self.row_length + e] = self.feature_scaler.scale_charger_count(station[1][e])
                     break
 
         obs[-1] = self.feature_scaler.scale_budget(self.budget)
@@ -346,14 +353,14 @@ class StationPlacement(gym.Env):
                 chosen_node = H.choose_node_bydemand(free_list)
         elif 2 <= my_action <= 3:
             # add column to existing station
-            config_index = 1
+            config_index = 3
             if len(occupied_list) == 0:
                 chosen_node = choice(free_list)
             else:
                 if my_action == 2:
                     chosen_node = H.choose_node_new_benefit(occupied_list)
                 else:
-                    chosen_node = H.choose_node_bydemand(occupied_list)
+                    chosen_node = H.choose_node_bydemand(occupied_list, my_plan=self.plan_instance.plan)
         else:
             # move station
             steal_plan = [s for s in self.plan_instance.plan if s[0] not in self.plan_instance.existing_plan]
@@ -383,6 +390,12 @@ class StationPlacement(gym.Env):
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
             grid_penalty = self.grid_adapter.calculate_grid_penalty(station_nodes)
             new_score += grid_penalty
+
+        # Compare against the score from the PREVIOUS step, not the all-time best
+        # step_improvement = new_score - self.previous_score
+        # reward += step_improvement
+        # # Update previous score for the next step
+        # self.previous_score = new_score
 
         new_score = max(new_score, -25)  # if negative score
         if new_score - self.best_score > 0:
