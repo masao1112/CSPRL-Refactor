@@ -26,7 +26,7 @@ Start evaluating
 print("Evaluation for best model")
 env = Monitor(env, log_dir)  # new environment for evaluation
 
-step = 78800
+step = 56800
 model = DQN.load(log_dir + "best_model_" + location + f"_{step}")
 
 obs, _ = env.reset()

@@ -27,7 +27,7 @@ class GridLoader:
         results = loader.run_power_flow()
     """
 
-    def __init__(self, data_folder: str):
+    def __init__(self, data_folder: str, bus_limit: float):
         """
         Khởi tạo loader.
 
@@ -37,6 +37,7 @@ class GridLoader:
         self.data_folder = data_folder
         self.dataframes: Dict[str, pd.DataFrame] = {}
         self.net = None
+        self.bus_limit = bus_limit
         self._load_csv_files()
 
     def _load_csv_files(self) -> None:
@@ -330,7 +331,7 @@ class GridLoader:
         if max_capacity_mva > 9000:
             max_capacity_mva = 10.0  # Default fallback if floating bus
 
-        available_mw = max_capacity_mva * 0.8 - current_load_mw  # 80% loading limit
+        available_mw = max_capacity_mva * self.bus_limit - current_load_mw  # 80% loading limit
 
         return {
             "available_mw": max(0, available_mw),
@@ -433,4 +434,3 @@ class GridLoader:
             "voltage_kv": voltage_kv,
             **capacity_info,
         }
-
