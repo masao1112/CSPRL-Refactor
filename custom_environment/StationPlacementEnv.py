@@ -148,11 +148,6 @@ class StationPlacement(gym.Env):
 
         _graph, self.node_list = H.prepare_graph(my_graph_file, my_node_file)
 
-        # Extend node features with grid data (if available)
-        if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
-            self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
-
         self.node_list = [self._init(my_node) for my_node in self.node_list]
 
         self.plan_file = my_plan_file
@@ -160,7 +155,7 @@ class StationPlacement(gym.Env):
         self.budget = None
         self.plan_instance = None
         self.plan_length = None
-        self.row_length = 3
+        self.row_length = 4
         self.best_score = None
         self.best_plan = None
         self.best_node_list = None
@@ -189,11 +184,17 @@ class StationPlacement(gym.Env):
                                                        self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                        self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
+        # Extend node features with grid data (if available)
+        if self.grid_adapter:
+            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
+
         # self.previous_score = self.best_score
         # Add grid penalty to initial best_score to match evaluation logic
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
-            self.best_score += self.grid_adapter.calculate_grid_penalty(station_nodes)
+            grid_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            self.best_score += grid_penalty
 
         self.best_score = max(self.best_score, -25)
         self.plan_length = len(self.plan_instance.existing_plan)
@@ -231,12 +232,14 @@ class StationPlacement(gym.Env):
             # obs[i + 1] = self.feature_scaler.scale_lat(node[1]['y'])
             obs[i + 0] = self.feature_scaler.scale_pop(node[1]['pop']) #* H.demand_modified(self.plan_instance.plan, node)
             obs[i + 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
-            obs[i + 2] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])
-
+            # obs[i + 2] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])
+            obs[i + 2] = node[1]['grid_distance_km'] / 3.0
+            obs[i + 3] = node[1]['grid_available_mw'] / 10.0
             for station in self.plan_instance.plan:
                 if station[0][0] == node[0]:
                     for e in range(len(H.CHARGING_POWER)):
                         obs[i + self.row_length + e] = self.feature_scaler.scale_charger_count(station[1][e])
+                    # obs[i + self.row_length + 1] = station[2]["capability"] / 1000.0
                     break
 
         obs[-1] = self.feature_scaler.scale_budget(self.budget)
@@ -307,6 +310,12 @@ class StationPlacement(gym.Env):
         # update station capacity
         for station in self.plan_instance.plan:
             H.s_dictionnary(station, self.node_list)
+
+        # Extend node features with grid data (if available)
+        if self.grid_adapter:
+            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
+
         # Step: calculate reward
         reward = self.evaluation()
         H.coverage(self.node_list, self.plan_instance.plan)
@@ -388,9 +397,9 @@ class StationPlacement(gym.Env):
         # Add Grid Penalty (if adapter is active)
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
-            grid_penalty = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            grid_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
             new_score += grid_penalty
-
+        print(grid_utilization, grid_distance)
         # Compare against the score from the PREVIOUS step, not the all-time best
         # step_improvement = new_score - self.previous_score
         # reward += step_improvement

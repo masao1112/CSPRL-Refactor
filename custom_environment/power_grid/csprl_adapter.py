@@ -12,6 +12,7 @@ Usage:
 """
 
 import os
+import numpy as np
 from typing import List, Dict, Tuple, Optional, Any
 from functools import lru_cache
 import math
@@ -83,7 +84,7 @@ class CSPRLGridAdapter:
         self._bus_cache: Dict[Tuple[float, float], Dict] = {}
 
         # Khởi tạo GridLoader
-        self.loader = GridLoader(grid_data_folder)
+        self.loader = GridLoader(grid_data_folder, bus_limit=0.8)
         self.loader.create_network()
 
         if auto_run_power_flow:
@@ -109,7 +110,7 @@ class CSPRLGridAdapter:
 
         return self._bus_cache[cache_key]
 
-    def extend_node_features(self, node_list: List) -> List:
+    def extend_node_features(self, node_list: List, station_nodes: List[Any]) -> List:
         """
         Thêm các thuộc tính lưới điện vào danh sách node CSPRL.
 
@@ -129,9 +130,12 @@ class CSPRLGridAdapter:
             >>> extended = adapter.extend_node_features(nodes)
             >>> print(extended[0][1]['grid_distance_km'])
             0.45
+            :param node_list:
+            :param station_nodes:
         """
         extended_nodes = []
-
+        # get the available_mw dict
+        bus_loads = self.get_accumulate_load(station_nodes)
         for node_id, attrs in node_list:
             # Lấy tọa độ từ node attributes
             lat = attrs.get('y', 0)
@@ -144,12 +148,38 @@ class CSPRLGridAdapter:
             new_attrs = attrs.copy()
             new_attrs['grid_bus_idx'] = bus_info.get('bus_idx', -1)
             new_attrs['grid_distance_km'] = bus_info.get('distance_km', float('inf'))
-            new_attrs['grid_available_mw'] = bus_info.get('available_mw', 0)
+            if new_attrs['grid_bus_idx'] in bus_loads.keys():
+                new_attrs['grid_available_mw'] = bus_loads[new_attrs['grid_bus_idx']]['available'] - bus_loads[new_attrs['grid_bus_idx']]['required']
+            else:
+                new_attrs['grid_available_mw'] = bus_info.get('available_mw', 0)
             # Removed 'grid_feasible' to avoid misleading agents with hardcoded assumptions
 
             extended_nodes.append((node_id, new_attrs))
 
         return extended_nodes
+
+    def get_accumulate_load(self, station_nodes: List[Any]) -> Dict:
+        bus_loads = {}
+        for item in station_nodes:
+            # Check input format
+            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], (int, float)):
+                # Format: (Node, capacity_mw)
+                node, capacity_mw = item
+                result = self.check_feasibility(node, actual_power_mw=capacity_mw)
+            else:
+                # Format: Node only
+                node = item
+                # Fallback to default but warn if possible
+                result = self.check_feasibility(node)
+
+            # 2. Accumulate Load for Bus
+            bus_idx = result.get('bus_idx', -1)
+            if bus_idx != -1:
+                if bus_idx not in bus_loads:
+                    bus_loads[bus_idx] = {'required': 0.0, 'available': result['available_mw']}
+                bus_loads[bus_idx]['required'] += result['required_mw']
+
+        return bus_loads
 
     def check_feasibility(self, node: Tuple, actual_power_mw: float = None) -> Dict:
         """
@@ -219,7 +249,7 @@ class CSPRLGridAdapter:
             'bus_idx': bus_info.get('bus_idx', -1)
         }
 
-    def calculate_grid_penalty(self, station_nodes: List[Any]) -> float:
+    def calculate_grid_penalty(self, station_nodes: List[Any]):
         """
         Tính tổng penalty từ ràng buộc lưới điện cho một charging plan, có tính đến CUMULATIVE LOAD.
 
@@ -234,6 +264,8 @@ class CSPRLGridAdapter:
             - Số âm = Có vi phạm ràng buộc
         """
         total_penalty = 0.0
+        grid_utilization_list = []
+        grid_distance_list = []
         bus_loads = {}  # bus_idx -> {'required': 0.0, 'available': 0.0}
 
         for item in station_nodes:
@@ -256,6 +288,7 @@ class CSPRLGridAdapter:
             # Let's extract distance component manually to be safe
             dist_km = result['distance_km']
             dist_penalty = 0.0
+            grid_distance_list.append(dist_km/DISTANCE_THRESHOLD_MAX_KM)
             if dist_km > DISTANCE_THRESHOLD_MAX_KM:
                 dist_penalty = PENALTY_DISTANCE_WEIGHT * 1.0
             elif dist_km > DISTANCE_THRESHOLD_MIN_KM:
@@ -276,7 +309,7 @@ class CSPRLGridAdapter:
         for bus_idx, data in bus_loads.items():
             required = data['required']
             available = data['available']
-
+            grid_utilization_list.append(required / available)
             if required > available and required > 0:
                 shortage = required - available
                 # Penalty proportional to overload ratio
@@ -284,7 +317,9 @@ class CSPRLGridAdapter:
                 bus_penalty = PENALTY_CAPACITY_WEIGHT * min(1.0, ratio)
                 total_penalty -= bus_penalty
 
-        return total_penalty
+        grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item()
+        grid_distance = np.mean(grid_distance_list, dtype=np.float32).item()
+        return total_penalty, grid_utilization, grid_distance
 
     def get_grid_summary_for_nodes(self, node_list: List) -> Any:
         """
