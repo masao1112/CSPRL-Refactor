@@ -135,21 +135,59 @@ def haversine(s_pos, my_node):
     return distance
 
 
+def station_coverage(my_station, my_node_list):
+    """yields the number of nodes within a station influential radius (raw count - use for other purposes)"""
+    node_counts = 0
+    s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
+    radius_s = s_dict["radius"]
+    for node in my_node_list:
+        distance = haversine(s_pos, node)
+        if distance < radius_s:
+            node_counts += 1
+    return node_counts
+
+
+def station_coverage_diminishing(my_station, my_node_list):
+    """
+    Yields the benefit of nodes within a station's influential radius.
+    More nodes covered = more benefit (no diminishing returns here).
+    This is different from node_coverage which has diminishing returns 
+    due to redundancy (multiple stations covering one node).
+    For fair comparison with node_coverage, we normalize by total possible nodes.
+    """
+    s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
+    radius_s = s_dict["radius"]
+    
+    # Count nodes within radius
+    covered_nodes = 0
+    for node in my_node_list:
+        distance = haversine(s_pos, node)
+        if distance < radius_s:
+            covered_nodes += 1
+    
+    # Normalize to 0-1 range based on total nodes, then scale to be comparable to node_coverage
+    # (which typically ranges from ~1-4 with diminishing returns)
+    normalized_coverage = (covered_nodes / len(my_node_list)) * 10  # scale factor to match node_coverage range
+    
+    return normalized_coverage
+
+
 def node_coverage(my_plan, my_node):
     """
     yields the number of station nodes which cover a given node
     """
-    I_1, I_2 = 0, 0
+    station_counts, diminishing_benefit = 0, 0
     priv_CS = my_node[1]["private_cs"]
     for my_station in my_plan:
         s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
         radius_s = s_dict["radius"]
         distance = haversine(s_pos, my_node)
         if distance <= radius_s:
-            I_1 += 1
-    for ith in range(I_1):
-        I_2 += 1 / (ith + 1) # diminishing return, as more stations cover node v, the higher the benefit
-    single_benefit = I_2 * (1 - 0.1 * priv_CS)
+            station_counts += 1
+
+    for ith in range(station_counts):
+        diminishing_benefit += 1 / (ith + 1) # diminishing return, as more stations cover node v, the higher the benefit
+    single_benefit = diminishing_benefit * (1 - 0.1 * priv_CS)
     return single_benefit
 
 
@@ -215,13 +253,32 @@ def s_dictionnary(my_station, my_node_list):
 # SCORE over the plan #####################################################################
 def social_benefit(my_plan, my_node_list):
     """
-    returns the social benefit of the charging plan (our definition of benefit)
+    Returns the social benefit of the charging plan.
+    Combines two balanced components with fair weighting:
+    1. Node coverage: how many stations cover each node (with diminishing returns)
+    2. Station coverage: how many nodes each station covers (with diminishing returns)
+    Both components use diminishing returns to encourage balanced, distributed placement.
     """
-    my_benefit = 0
+    if not my_plan:
+        return 0
+    
+    # Component 1: Node perspective - how well are nodes covered by stations
+    # (how many charging stations can each node access)
+    node_coverage_total = 0
     for my_node in my_node_list:
-        I3 = node_coverage(my_plan, my_node)
-        my_benefit += I3
-    my_benefit /= len(my_node_list)
+        node_coverage_total += node_coverage(my_plan, my_node)
+    node_coverage_avg = node_coverage_total / len(my_node_list)
+    
+    # Component 2: Station perspective - how efficiently do stations cover nodes
+    # (with diminishing returns to encourage balanced coverage)
+    station_coverage_total = 0
+    for station in my_plan:
+        station_coverage_total += station_coverage_diminishing(station, my_node_list)
+    station_coverage_avg = station_coverage_total / len(my_plan)
+    
+    # Balance both components equally
+    # This ensures neither metric dominates the benefit calculation
+    my_benefit = (node_coverage_avg + station_coverage_avg) / 2
     return my_benefit
 
 
@@ -404,11 +461,17 @@ def choose_node_bydemand(free_list, my_plan=None):
     """
     pick location with highest weakened demand
     """
+    chosen_node = None
     if my_plan:
         # choose the node with the highest waiting time
-        wait_list = [station[2]["D_s"] * station[2]["W_s"] for station in my_plan]
-        chosen_index = wait_list.index(max(wait_list))
-        chosen_node = free_list[chosen_index]
+        priority_list = [station[2]["D_s"] * station[2]["W_s"] + station[2]["D_s"] / (station[2]["service rate"]+eps) for station in my_plan]
+        max_station_index = priority_list.index(max(priority_list))
+        max_station = my_plan[max_station_index]
+        for my_node in free_list:
+            if my_node[0] == max_station[0][0]:  # if the node is the same as the station position, skip it
+                chosen_node = my_node
+                break 
+                
     else:
         demand_list = [my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"]) for my_node in free_list]
         chosen_index = demand_list.index(max(demand_list))
@@ -433,7 +496,7 @@ def anti_choose_node_bybenefit(my_node_list, my_plan):
 
 
 def _support_stations(station):
-    charg_time = station[2]["D_s"] / (station[2]["service rate"] + 1e-6)
+    charg_time = station[2]["D_s"] / (station[2]["service rate"] + 1e-6) # not sure why this need
     wait_time = station[2]["D_s"] * station[2]["W_s"]
     neediness = (wait_time + charg_time)
     return neediness
@@ -471,7 +534,7 @@ eps = 1e-9
 ev_per_capita = 0.022
 evs_parking_area = 15 # meter square
 
-K = 300  # maximal number of chargers at a station
+K = 100  # maximal number of chargers at a station
 RADIUS_MAX = 1000  # [radius_max] = m
 # INSTALL_FEE = np.array([300, 750, 28000])  # fee per installing a charger of type 1, 2 or 3. [fee] = $
 # CHARGING_POWER = np.array([7, 22, 50])  # [power] = kW, rounded
