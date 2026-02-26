@@ -155,17 +155,17 @@ class StationPlacement(gym.Env):
         self.budget = None
         self.plan_instance = None
         self.plan_length = None
-        self.row_length = 4
+        self.row_length = 5
         self.best_score = None
         self.best_plan = None
         self.best_node_list = None
         self.schritt = None
         self.config_dict = None
-        # self.previous_score = None
+        self.previous_score = None
         self.feature_scaler = FeatureScaler()
         # new action space including all charger types
         self.action_space = spaces.Discrete(5)
-        shape = (self.row_length + len(H.CHARGING_POWER)) * len(self.node_list) + 1
+        shape = (self.row_length + 1) * len(self.node_list) + 1
         self.observation_space = spaces.Box(low=-1, high=1, shape=(shape,), dtype=np.float16)
 
     def reset(self, seed=None, options=None):
@@ -189,7 +189,7 @@ class StationPlacement(gym.Env):
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
 
-        # self.previous_score = self.best_score
+        self.previous_score = self.best_score
         # Add grid penalty to initial best_score to match evaluation logic
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
@@ -222,7 +222,7 @@ class StationPlacement(gym.Env):
         """
         Build observation matrix
         """
-        row_length = self.row_length + len(H.CHARGING_POWER)
+        row_length = self.row_length + 1
         width = row_length * len(self.node_list) + 1
         obs = np.zeros(width, dtype=np.float32)
 
@@ -233,13 +233,15 @@ class StationPlacement(gym.Env):
             obs[i + 0] = self.feature_scaler.scale_pop(node[1]['pop']) #* H.demand_modified(self.plan_instance.plan, node)
             obs[i + 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
             # obs[i + 2] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])
-            obs[i + 2] = node[1]['grid_distance_km'] / 3.0
-            obs[i + 3] = node[1]['grid_available_mw'] / 10.0
+            obs[i + 2] = 2 * (np.clip(node[1]['grid_distance_km'], 0, 3.0) / 3.0) - 1
+            obs[i + 3] = 2 * (np.clip(node[1]['grid_available_mw'], 0, 10.0) / 10.0) - 1
+            obs[i + 4] = 2 * (np.clip(node[1]['covered'], 0, 10.0) / 10.0) - 1
+
             for station in self.plan_instance.plan:
                 if station[0][0] == node[0]:
-                    for e in range(len(H.CHARGING_POWER)):
-                        obs[i + self.row_length + e] = self.feature_scaler.scale_charger_count(station[1][e])
-                    # obs[i + self.row_length + 1] = station[2]["capability"] / 1000.0
+                    # for e in range(len(H.CHARGING_POWER)):
+                        # obs[i + self.row_length + e] = self.feature_scaler.scale_charger_count(station[1][e])
+                    obs[i + self.row_length + 1] = station[2]["capability"] / 1000.0
                     break
 
         obs[-1] = self.feature_scaler.scale_budget(self.budget)
@@ -389,7 +391,7 @@ class StationPlacement(gym.Env):
         """
         reward = 0
         self.prepare_score()
-        new_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+        new_score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(self.plan_instance.plan, self.node_list,
                                                  self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                  self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
@@ -399,16 +401,16 @@ class StationPlacement(gym.Env):
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
             grid_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
             new_score += grid_penalty
-        print(grid_utilization, grid_distance)
+
         # Compare against the score from the PREVIOUS step, not the all-time best
-        # step_improvement = new_score - self.previous_score
-        # reward += step_improvement
-        # # Update previous score for the next step
-        # self.previous_score = new_score
+        step_improvement = new_score - self.previous_score
+        reward += step_improvement
+        # Update previous score for the next step
+        self.previous_score = new_score
 
         new_score = max(new_score, -25)  # if negative score
         if new_score - self.best_score > 0:
-            reward += (new_score - self.best_score)
+            # reward += (new_score - self.best_score)
             # avoid jojo learning
             self.best_score = new_score
             self.best_plan = self.plan_instance.plan.copy()
