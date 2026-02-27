@@ -186,13 +186,13 @@ class StationPlacement(gym.Env):
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
 
         self.previous_score = self.best_score
         # Add grid penalty to initial best_score to match evaluation logic
         if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             grid_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
             self.best_score += grid_penalty
 
@@ -230,9 +230,9 @@ class StationPlacement(gym.Env):
             i = j * row_length
             # obs[i + 0] = self.feature_scaler.scale_lon(node[1]['x'])
             # obs[i + 1] = self.feature_scaler.scale_lat(node[1]['y'])
-            obs[i + 0] = self.feature_scaler.scale_pop(node[1]['pop']) #* H.demand_modified(self.plan_instance.plan, node)
+            obs[i + 0] = H.dynamic_demand(node, self.plan_instance.plan)
             obs[i + 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
-            # obs[i + 2] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])
+            # obs[i + 2] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])z
             obs[i + 2] = 2 * (np.clip(node[1]['grid_distance_km'], 0, 3.0) / 3.0) - 1
             obs[i + 3] = 2 * (np.clip(node[1]['grid_available_mw'], 0, 10.0) / 10.0) - 1
             obs[i + 4] = 2 * (np.clip(node[1]['covered'], 0, 10.0) / 10.0) - 1
@@ -241,7 +241,7 @@ class StationPlacement(gym.Env):
                 if station[0][0] == node[0]:
                     # for e in range(len(H.CHARGING_POWER)):
                         # obs[i + self.row_length + e] = self.feature_scaler.scale_charger_count(station[1][e])
-                    obs[i + self.row_length + 1] = station[2]["capability"] / 1000.0
+                    obs[i + self.row_length + 1] = station[2]["capability"]
                     break
 
         obs[-1] = self.feature_scaler.scale_budget(self.budget)
@@ -315,7 +315,7 @@ class StationPlacement(gym.Env):
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
 
         # Step: calculate reward
@@ -361,7 +361,7 @@ class StationPlacement(gym.Env):
             if my_action == 0:
                 chosen_node = H.choose_node_new_benefit(free_list)
             else:
-                chosen_node = H.choose_node_bydemand(free_list)
+                chosen_node = H.choose_node_bydemand(free_list, self.plan_instance.plan)
         elif 2 <= my_action <= 3:
             # add column to existing station
             config_index = 3
@@ -371,7 +371,7 @@ class StationPlacement(gym.Env):
                 if my_action == 2:
                     chosen_node = H.choose_node_new_benefit(occupied_list)
                 else:
-                    chosen_node = H.choose_node_bydemand(occupied_list, my_plan=self.plan_instance.plan)
+                    chosen_node = H.choose_node_bydemand(occupied_list, self.plan_instance.plan, add=True)
         else:
             # move station
             steal_plan = [s for s in self.plan_instance.plan if s[0] not in self.plan_instance.existing_plan]
@@ -398,7 +398,7 @@ class StationPlacement(gym.Env):
 
         # Add Grid Penalty (if adapter is active)
         if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             grid_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
             new_score += grid_penalty
 
