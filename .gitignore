@@ -2,3 +2,26 @@ custom_environment/data
 Results/optimal_plan
 Results/tmp
 Images
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project Results & Data
+Results/*.csv
+Results/*.pkl
+Results/*.png
+.ipynb_checkpoints
+*.log
