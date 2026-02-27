@@ -233,9 +233,9 @@ class StationPlacement(gym.Env):
             obs[i + 0] = H.dynamic_demand(node, self.plan_instance.plan)
             obs[i + 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
             # obs[i + 2] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])z
-            obs[i + 2] = 2 * (np.clip(node[1]['grid_distance_km'], 0, 3.0) / 3.0) - 1
-            obs[i + 3] = 2 * (np.clip(node[1]['grid_available_mw'], 0, 10.0) / 10.0) - 1
-            obs[i + 4] = 2 * (np.clip(node[1]['covered'], 0, 10.0) / 10.0) - 1
+            obs[i + 2] = 2 * (np.clip(node[1].get('grid_distance_km', 3.0), 0, 3.0) / 3.0) - 1
+            obs[i + 3] = 2 * (np.clip(node[1].get('grid_available_mw', 0.0), 0, 10.0) / 10.0) - 1
+            obs[i + 4] = 2 * (np.clip(node[1].get('covered', 0.0), 0, 10.0) / 10.0) - 1
 
             for station in self.plan_instance.plan:
                 if station[0][0] == node[0]:
