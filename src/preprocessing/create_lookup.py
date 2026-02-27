@@ -10,7 +10,7 @@ project_root = os.path.dirname(src_dir) # root
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from src.preprocessing import evaluation_framework as ef
+import custom_environment.helpers as ef
 
 
 def generate_lookup():
