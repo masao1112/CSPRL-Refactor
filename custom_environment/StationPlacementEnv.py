@@ -359,7 +359,7 @@ class StationPlacement(gym.Env):
         if 0 <= my_action <= 1:
             # build
             if my_action == 0:
-                chosen_node = H.choose_node_new_benefit(free_list)
+                chosen_node = H.choose_node_new_benefit(free_list, self.node_list)
             else:
                 chosen_node = H.choose_node_bydemand(free_list, self.plan_instance.plan)
         elif 2 <= my_action <= 3:
@@ -369,7 +369,7 @@ class StationPlacement(gym.Env):
                 chosen_node = choice(free_list)
             else:
                 if my_action == 2:
-                    chosen_node = H.choose_node_new_benefit(occupied_list)
+                    chosen_node = H.choose_node_new_benefit(occupied_list, self.node_list)
                 else:
                     chosen_node = H.choose_node_bydemand(occupied_list, self.plan_instance.plan, add=True)
         else:
