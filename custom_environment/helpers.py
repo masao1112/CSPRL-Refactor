@@ -331,7 +331,7 @@ def existing_score(my_existing_plan, my_node_list):
     wait_time = waiting_time(my_existing_plan)
     cost_boring = charg_time + wait_time  # dimensionless
     my_cost = alpha * travel_time + (1 - alpha) * cost_boring
-    my_fairness = social_fairness(my_existing_plan, my_node_list)
+    my_fairness = social_fairness(my_node_list)
     return my_benefit, my_cost, my_fairness, charg_time, wait_time, travel_time
 
 
@@ -347,7 +347,7 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     charg_time = charging_time(my_plan) / norm_charg # dimensionless
     wait_time = waiting_time(my_plan) / norm_wait # dimensionless
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
-    fairness = social_fairness(my_plan, my_node_list) / norm_fairness
+    fairness = social_fairness(my_node_list) / norm_fairness
     my_score = 1/3 * benefit - 1/3 * cost + 1/3 * fairness
     return my_score, benefit, cost, fairness, charg_time, wait_time, cost_travel
 

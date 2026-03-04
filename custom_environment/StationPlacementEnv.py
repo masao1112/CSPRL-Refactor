@@ -184,10 +184,10 @@ class StationPlacement(gym.Env):
         self.game_over = False
         self.plan_instance = Plan(self.node_list, StationPlacement.node_dict, StationPlacement.cost_dict,
                                   self.plan_file)
-        self.best_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+        self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                        self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                        self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                       self.norm_fairness)
+                                                       self.plan_instance.norm_fairness)
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
@@ -198,7 +198,7 @@ class StationPlacement(gym.Env):
         # Add grid penalty to initial best_score to match evaluation logic
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
-            grid_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            grid_penalty = self.grid_adapter.calculate_grid_penalty(station_nodes)
             self.best_score += grid_penalty
 
         self.best_score = max(self.best_score, -25)
@@ -401,15 +401,16 @@ class StationPlacement(gym.Env):
         """
         reward = 0
         self.prepare_score()
-        new_score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(self.plan_instance.plan, self.node_list,
+        new_score, benefit, cost, fairness, charg_time, wait_time, cost_travel = H.norm_score(self.plan_instance.plan, self.node_list,
                                                  self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                 self.plan_instance.norm_wait, self.plan_instance.norm_travel)
+                                                 self.plan_instance.norm_wait, self.plan_instance.norm_travel,
+                                                    self.plan_instance.norm_fairness)
 
 
         # Add Grid Penalty (if adapter is active)
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
-            grid_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            grid_penalty = self.grid_adapter.calculate_grid_penalty(station_nodes)
             new_score += grid_penalty
 
         # Compare against the score from the PREVIOUS step, not the all-time best

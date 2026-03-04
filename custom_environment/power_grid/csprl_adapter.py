@@ -264,8 +264,8 @@ class CSPRLGridAdapter:
             - Số âm = Có vi phạm ràng buộc
         """
         total_penalty = 0.0
-        grid_utilization_list = []
-        grid_distance_list = []
+        # grid_utilization_list = []
+        # grid_distance_list = []
         bus_loads = {}  # bus_idx -> {'required': 0.0, 'available': 0.0}
 
         for item in station_nodes:
@@ -288,7 +288,7 @@ class CSPRLGridAdapter:
             # Let's extract distance component manually to be safe
             dist_km = result['distance_km']
             dist_penalty = 0.0
-            grid_distance_list.append(dist_km/DISTANCE_THRESHOLD_MAX_KM)
+            # grid_distance_list.append(dist_km/DISTANCE_THRESHOLD_MAX_KM)
             if dist_km > DISTANCE_THRESHOLD_MAX_KM:
                 dist_penalty = PENALTY_DISTANCE_WEIGHT * 1.0
             elif dist_km > DISTANCE_THRESHOLD_MIN_KM:
@@ -309,7 +309,7 @@ class CSPRLGridAdapter:
         for bus_idx, data in bus_loads.items():
             required = data['required']
             available = data['available']
-            grid_utilization_list.append(required / available)
+            # grid_utilization_list.append(required / available)
             if required > available and required > 0:
                 shortage = required - available
                 # Penalty proportional to overload ratio
@@ -317,9 +317,9 @@ class CSPRLGridAdapter:
                 bus_penalty = PENALTY_CAPACITY_WEIGHT * min(1.0, ratio)
                 total_penalty -= bus_penalty
 
-        grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item()
-        grid_distance = np.mean(grid_distance_list, dtype=np.float32).item()
-        return total_penalty, grid_utilization, grid_distance
+        # grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item()
+        # grid_distance = np.mean(grid_distance_list, dtype=np.float32).item()
+        return total_penalty
 
     def get_grid_summary_for_nodes(self, node_list: List) -> Any:
         """
