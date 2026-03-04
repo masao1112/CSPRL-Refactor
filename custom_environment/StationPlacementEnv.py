@@ -69,7 +69,7 @@ class Plan:
         my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict)
         # update the dictionnary
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
-        self.norm_benefit, self.norm_cost, self.norm_charg, self.norm_wait, self.norm_travel = \
+        self.norm_benefit, self.norm_cost, self.norm_fairness, self.norm_charg, self.norm_wait, self.norm_travel = \
             H.existing_score(self.plan, my_node_list)
         self.existing_plan = self.plan.copy()
         self.existing_plan = [s[0] for s in self.existing_plan]
@@ -163,8 +163,12 @@ class StationPlacement(gym.Env):
         self.config_dict = None
         self.previous_score = None
         self.feature_scaler = FeatureScaler()
-        # new action space including all charger types
-        self.action_space = spaces.Discrete(5)
+        # action mapping:
+        # 0: create by benefit, 1: create by demand,
+        # 2: add by benefit, 3: add by demand,
+        # 4: create by fairness, 5: add by fairness,
+        # 6: move (steal) station
+        self.action_space = spaces.Discrete(7)
         shape = (self.row_length + 1) * len(self.node_list) + 1
         self.observation_space = spaces.Box(low=-1, high=1, shape=(shape,), dtype=np.float16)
 
@@ -182,7 +186,8 @@ class StationPlacement(gym.Env):
                                   self.plan_file)
         self.best_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                        self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                       self.plan_instance.norm_wait, self.plan_instance.norm_travel)
+                                                       self.plan_instance.norm_wait, self.plan_instance.norm_travel,
+                                                       self.norm_fairness)
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
@@ -241,7 +246,7 @@ class StationPlacement(gym.Env):
                 if station[0][0] == node[0]:
                     # for e in range(len(H.CHARGING_POWER)):
                         # obs[i + self.row_length + e] = self.feature_scaler.scale_charger_count(station[1][e])
-                    obs[i + self.row_length + 1] = station[2]["capability"] / 1000.0
+                    obs[i + self.row_length] = station[2]["capability"] / 1000.0
                     break
 
         obs[-1] = self.feature_scaler.scale_budget(self.budget)
@@ -356,13 +361,16 @@ class StationPlacement(gym.Env):
         occupied_list = [node for node in self.node_list if node[0] not in full_station_list and node[0] in
                          station_list]  # nodes with non-full stations
         free_list = [node for node in self.node_list if node[0] not in station_list]  # nodes without stations
-        if 0 <= my_action <= 1:
-            # build
+        # Map discrete action to behavior. Actions 0/1/4 => build; 2/3/5 => add column; 6 => move
+        if my_action in (0, 1, 4):
+            # build new station
             if my_action == 0:
                 chosen_node = H.choose_node_new_benefit(free_list)
-            else:
+            elif my_action == 1:
                 chosen_node = H.choose_node_bydemand(free_list)
-        elif 2 <= my_action <= 3:
+            else:  # my_action == 4
+                chosen_node = H.choose_node_by_fairness(free_list)
+        elif my_action in (2, 3, 5):
             # add column to existing station
             config_index = 3
             if len(occupied_list) == 0:
@@ -370,10 +378,12 @@ class StationPlacement(gym.Env):
             else:
                 if my_action == 2:
                     chosen_node = H.choose_node_new_benefit(occupied_list)
-                else:
+                elif my_action == 3:
                     chosen_node = H.choose_node_bydemand(occupied_list, my_plan=self.plan_instance.plan)
+                else:  # my_action == 5
+                    chosen_node = H.choose_node_by_fairness(occupied_list)
         else:
-            # move station
+            # move station (steal from non-existing-plan stations)
             steal_plan = [s for s in self.plan_instance.plan if s[0] not in self.plan_instance.existing_plan]
             # we can not steal from the existing charging plan
             stolen_station = H.anti_choose_node_bybenefit(self.node_list, steal_plan)
