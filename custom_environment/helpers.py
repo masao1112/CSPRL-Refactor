@@ -135,21 +135,60 @@ def haversine(s_pos, my_node):
     return distance
 
 
-def node_coverage(my_plan, my_node):
+def station_coverage(my_station, my_node_list):
+    """yields the number of nodes within a station influential radius (raw count - use for other purposes)"""
+    node_counts = 0
+    s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
+    radius_s = s_dict["radius"]
+    for node in my_node_list:
+        distance = haversine(s_pos, node)
+        if distance < radius_s:
+            node_counts += 1
+    return node_counts
+
+
+def station_benefit(my_station, my_node_list):
+    """
+    Yields the benefit of nodes within a station's influential radius.
+    More nodes covered = more benefit (no diminishing returns here).
+    This is different from node_coverage which has diminishing returns
+    due to redundancy (multiple stations covering one node).
+    For fair comparison with node_coverage, we normalize by total possible nodes.
+    """
+    s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
+    radius_s = s_dict["radius"]
+
+    # Count nodes within radius
+    covered_nodes = 0
+    for node in my_node_list:
+        distance = haversine(s_pos, node)
+        if distance < radius_s:
+            covered_nodes += 1
+
+    # Normalize to 0-1 range based on total nodes, then scale to be comparable to node_coverage
+    # (which typically ranges from ~1-4 with diminishing returns)
+    normalized_coverage = (covered_nodes / len(my_node_list)) * 10  # scale factor to match node_coverage range
+
+    return normalized_coverage
+
+
+def node_benefit(my_plan, my_node):
     """
     yields the number of station nodes which cover a given node
     """
-    I_1, I_2 = 0, 0
+    station_counts, diminishing_benefit = 0, 0
     priv_CS = my_node[1]["private_cs"]
     for my_station in my_plan:
         s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
         radius_s = s_dict["radius"]
         distance = haversine(s_pos, my_node)
         if distance <= radius_s:
-            I_1 += 1
-    for ith in range(I_1):
-        I_2 += 1 / (ith + 1) # diminishing return, as more stations cover node v, the higher the benefit
-    single_benefit = I_2 * (1 - 0.1 * priv_CS)
+            station_counts += 1
+    my_node[1]['n_stations'] = station_counts
+    for ith in range(station_counts):
+        diminishing_benefit += 1 / (
+                    ith + 1)  # diminishing return, as more stations cover node v, the higher the benefit
+    single_benefit = diminishing_benefit * (1 - 0.1 * priv_CS)
     return single_benefit
 
 
@@ -215,15 +254,46 @@ def s_dictionnary(my_station, my_node_list):
 # SCORE over the plan #####################################################################
 def social_benefit(my_plan, my_node_list):
     """
-    returns the social benefit of the charging plan (our definition of benefit)
+    Returns the social benefit of the charging plan.
+    Combines two balanced components with fair weighting:
+    1. Node coverage: how many stations cover each node (with diminishing returns)
+    2. Station coverage: how many nodes each station covers (with diminishing returns)
+    Both components use diminishing returns to encourage balanced, distributed placement.
     """
-    my_benefit = 0
+    if not my_plan:
+        return 0
+
+    # Component 1: Node perspective - how well are nodes covered by stations
+    # (how many charging stations can each node access)
+    node_benefit_total = 0
     for my_node in my_node_list:
-        I3 = node_coverage(my_plan, my_node)
-        my_benefit += I3
-    my_benefit /= len(my_node_list)
+        node_benefit_total += node_benefit(my_plan, my_node)
+    node_benefit_total = node_benefit_total / len(my_node_list)
+
+    # Component 2: Station perspective - how efficiently do stations cover nodes
+    # (with diminishing returns to encourage balanced coverage)
+    station_benefit_total = 0
+    for station in my_plan:
+        station_benefit_total += station_benefit(station, my_node_list)
+    station_benefit_total = station_benefit_total / len(my_plan)
+
+    # Balance both components equally
+    # This ensures neither metric dominates the benefit calculation
+    my_benefit = (node_benefit_total + station_benefit_total) / 2
     return my_benefit
 
+def social_fairness(my_node_list):
+    """
+    Return a scalar fairness score for the node coverage distribution.
+    Higher values indicate more fair (more even) coverage across nodes.
+    We use the inverse of the standard deviation of station counts so that
+    perfectly even coverage -> higher fairness, and skewed coverage -> lower fairness.
+    """
+    counts = np.array([node[1].get('n_stations', 0) for node in my_node_list], dtype=float)
+    if counts.size == 0:
+        return 0.0
+    std = float(np.std(counts))
+    return 1.0 / (1.0 + std)
 
 def travel_cost(my_node_list):
     """ yields the estimated travel time of all vehicles """
@@ -272,10 +342,11 @@ def existing_score(my_existing_plan, my_node_list):
     wait_time = waiting_time(my_existing_plan)
     cost_boring = charg_time + wait_time  # dimensionless
     my_cost = alpha * travel_time + (1 - alpha) * cost_boring
-    return my_benefit, my_cost, charg_time, wait_time, travel_time
+    my_fairness = social_fairness(my_node_list)
+    return my_benefit, my_cost, my_fairness, charg_time, wait_time, travel_time
 
 
-def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_travel):
+def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_travel, norm_fairness):
     """
     same as score, but normalised.
     """
@@ -287,8 +358,9 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     charg_time = charging_time(my_plan) / norm_charg # dimensionless
     wait_time = waiting_time(my_plan) / norm_wait # dimensionless
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
-    my_score = my_lambda * benefit - (1 - my_lambda) * cost
-    return my_score, benefit, cost, charg_time, wait_time, cost_travel
+    fairness = social_fairness(my_node_list) / norm_fairness
+    my_score = 1/3 * benefit - 1/3 * cost + 1/3 * fairness
+    return my_score, benefit, cost, fairness, charg_time, wait_time, cost_travel
 
 
 def score(my_plan, my_node_list):
@@ -386,7 +458,7 @@ def coverage(my_node_list, my_plan):
     see which nodes are covered by the charging plan
     """
     for my_node in my_node_list:
-        cover = node_coverage(my_plan, my_node)
+        cover = node_benefit(my_plan, my_node)
         my_node[1]["covered"] = cover
 
 
@@ -400,15 +472,18 @@ def choose_node_new_benefit(free_list):
     return chosen_node
 
 
-def choose_node_bydemand(free_list, my_plan=None):
+def choose_node_bydemand(free_list, my_plan, add=False):
     """
     pick location with highest weakened demand
     """
-    if my_plan:
+    chosen_node = None
+    if add:
         # choose the node with the highest waiting time
-        wait_list = [station[2]["D_s"] * station[2]["W_s"] for station in my_plan]
-        chosen_index = wait_list.index(max(wait_list))
-        chosen_node = free_list[chosen_index]
+        priority_list = [station[2]["D_s"] * station[2]["W_s"] + station[2]["D_s"] / (station[2]["service rate"] + eps)
+                         for station in my_plan]
+        max_station_index = np.argmax(priority_list)
+        max_station = my_plan[max_station_index]
+        chosen_node = max_station[0]
     else:
         demand_list = [my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"]) for my_node in free_list]
         chosen_index = demand_list.index(max(demand_list))
