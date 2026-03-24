@@ -43,8 +43,8 @@ DISTANCE_THRESHOLD_MIN_KM = 1  # Bắt đầu penalty
 DISTANCE_THRESHOLD_MAX_KM = 3  # Penalty tối đa
 
 # Penalty weights
-PENALTY_DISTANCE_WEIGHT = 0.3  # Weight cho distance penalty
-PENALTY_CAPACITY_WEIGHT = 0.7  # Weight cho capacity penalty
+PENALTY_DISTANCE_WEIGHT = 1.0  # Weight cho distance penalty
+PENALTY_CAPACITY_WEIGHT = 1.0  # Weight cho capacity penalty
 
 # Capacity margin - dự phòng 20% cho growth
 CAPACITY_SAFETY_MARGIN = 0.2
@@ -105,7 +105,7 @@ class CSPRLGridAdapter:
         cache_key = (round(lat, 4), round(lon, 4))
 
         if cache_key not in self._bus_cache:
-            result = self.loader.find_nearest_bus(lat, lon, voltage_kv=22.0)
+            result = self.loader.find_nearest_bus(lat, lon, voltage_kv=22.0, prefer_available=True)
             self._bus_cache[cache_key] = result
 
         return self._bus_cache[cache_key]
@@ -263,9 +263,10 @@ class CSPRLGridAdapter:
             - 0.0 = Tất cả trạm đều khả thi
             - Số âm = Có vi phạm ràng buộc
         """
-        total_penalty = 0.0
-        # grid_utilization_list = []
-        # grid_distance_list = []
+        dist_penalty_total = 0.0
+        cap_penalty_total = 0.0
+        grid_utilization_list = []
+        grid_distance_list = []
         bus_loads = {}  # bus_idx -> {'required': 0.0, 'available': 0.0}
 
         for item in station_nodes:
@@ -288,7 +289,7 @@ class CSPRLGridAdapter:
             # Let's extract distance component manually to be safe
             dist_km = result['distance_km']
             dist_penalty = 0.0
-            # grid_distance_list.append(dist_km/DISTANCE_THRESHOLD_MAX_KM)
+            grid_distance_list.append(dist_km/DISTANCE_THRESHOLD_MAX_KM)
             if dist_km > DISTANCE_THRESHOLD_MAX_KM:
                 dist_penalty = PENALTY_DISTANCE_WEIGHT * 1.0
             elif dist_km > DISTANCE_THRESHOLD_MIN_KM:
@@ -296,7 +297,7 @@ class CSPRLGridAdapter:
                             DISTANCE_THRESHOLD_MAX_KM - DISTANCE_THRESHOLD_MIN_KM)
                 dist_penalty = PENALTY_DISTANCE_WEIGHT * dist_ratio
 
-            total_penalty -= dist_penalty
+            dist_penalty_total -= dist_penalty
 
             # 2. Accumulate Load for Bus
             bus_idx = result.get('bus_idx', -1)
@@ -309,17 +310,18 @@ class CSPRLGridAdapter:
         for bus_idx, data in bus_loads.items():
             required = data['required']
             available = data['available']
-            # grid_utilization_list.append(required / available)
+            grid_utilization_list.append(required / (available + 1e-9))
             if required > available and required > 0:
                 shortage = required - available
-                # Penalty proportional to overload ratio
-                ratio = shortage / required
-                bus_penalty = PENALTY_CAPACITY_WEIGHT * min(1.0, ratio)
-                total_penalty -= bus_penalty
+                # Penalty proportional to overload ratio, but let it grow beyond 1.0
+                # to provide gradient for the RL agent even when highly overloaded.
+                ratio = shortage / available if available > 0 else shortage / self.ev_station_power_mw
+                bus_penalty = PENALTY_CAPACITY_WEIGHT * ratio
+                cap_penalty_total -= bus_penalty
 
-        # grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item()
-        # grid_distance = np.mean(grid_distance_list, dtype=np.float32).item()
-        return total_penalty
+        grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item()
+        grid_distance = np.mean(grid_distance_list, dtype=np.float32).item()
+        return dist_penalty_total, cap_penalty_total, grid_utilization, grid_distance
 
     def get_grid_summary_for_nodes(self, node_list: List) -> Any:
         """

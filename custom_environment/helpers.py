@@ -202,27 +202,19 @@ def service_rate(my_station):
     return my_station
 
 
-def W_s(my_station, max_wait_multiplier=100):
+def W_s(my_station):
     """
-    Returns the expected waiting time, capped to prevent 'infinite' spikes.
+    returns the expected value of waiting time
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-
-    # tau_s is the average service time
-    tau_s = 1 / (s_dict["service rate"] + 1e-6)
-    rho_s = s_dict["D_s"] * tau_s * time_unit
-
-    # CLIP RHO: We cap rho at 0.99 (or similar) so the denominator never hits zero.
-    # This prevents the 'massive' 10**6 jump.
-    rho_s_capped = min(rho_s, 0.999)
-
-    # Calculation (M/M/1 formula)
-    my_W_s = (rho_s_capped * tau_s) / (2 * (1 - rho_s_capped))
-
-    # Optional: Hard cap the final wait time to a multiple of service time
-    # e.g., waiting 100x longer than the service time is effectively 'infinite'
-    max_allowed = tau_s * max_wait_multiplier
-    s_dict["W_s"] = min(my_W_s, max_allowed)
+    tau_s = 1 / s_dict["service rate"]
+    rho_s = s_dict["D_s"] * tau_s * time_unit  # dimensionless (shortened away)
+    if rho_s >= 1:
+        my_W_s = my_inf
+        s_dict["W_s"] = my_W_s
+    else:
+        my_W_s = rho_s * tau_s / (2 * (1 - rho_s))  # W_s = expected waiting time at S, [W_s] = h
+        s_dict["W_s"] = my_W_s
     return my_station
 
 
@@ -335,7 +327,7 @@ def existing_score(my_existing_plan, my_node_list):
     return my_benefit, my_cost, my_fairness, charg_time, wait_time, travel_time
 
 
-def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_travel, norm_fairness):
+def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_travel, norm_fairness, grid_penalty=None):
     """
     same as score, but normalised.
     """
@@ -348,7 +340,14 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     wait_time = waiting_time(my_plan) / norm_wait # dimensionless
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
     fairness = social_fairness(my_node_list) / norm_fairness
-    my_score = 1/3 * benefit - 1/3 * cost + 1/3 * fairness
+    # print(norm_benefit, norm_charg, norm_wait, norm_travel, norm_fairness)
+    # print(social_benefit(my_plan, my_node_list), charging_time(my_plan), waiting_time(my_plan), travel_cost(my_node_list), social_fairness(my_node_list))
+    if grid_penalty is not None:
+        avg_penalty = abs(grid_penalty) / max(1, len(my_plan))
+        grid_score = max(0.0, 1.0 - avg_penalty)
+        my_score = 0.25 * benefit - 0.25 * cost + 0.25 * fairness + 0.25 * grid_score
+    else:
+        my_score = 1/3 * benefit - 1/3 * cost + 1/3 * fairness
     return my_score, benefit, cost, fairness, charg_time, wait_time, cost_travel
 
 

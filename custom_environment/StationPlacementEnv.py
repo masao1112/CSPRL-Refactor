@@ -1,3 +1,5 @@
+import copy
+
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -20,21 +22,28 @@ from custom_environment.power_grid.csprl_adapter import create_adapter_for_locat
 Custom environment
 """
 
+
 class FeatureScaler:
     """
     Scale features separately based on realistic ranges.
     All outputs are in [-1, 1] to match Box observation space.
     """
+
     def __init__(self):
         # Estimated realistic ranges (adjust based on your actual dataset!)
-        self.lon_min, self.lon_max = 105.7, 106.0      # Hanoi/DongDa approximate
+        self.lon_min, self.lon_max = 105.7, 106.0  # Hanoi/DongDa approximate
         self.lat_min, self.lat_max = 20.95, 21.05
         self.pop_min, self.pop_max = 2.646, 468.3
-        self.demand_max = 1.0                          # assuming already normalized [0,1]
-        self.land_price_max = 214.245                  # triệu VND/m²
+        self.demand_max = 1.0  # assuming already normalized [0,1]
+        self.land_price_max = 214.245  # triệu VND/m²
         self.private_cs_max = 1.0
         self.charger_max = float(H.K)
         self.budget_max = float(H.BUDGET)
+        self.grid_dist_max = 3.0
+        self.grid_mw_max = 10.0
+        self.benefit_max = 5.0
+        self.capability_max = 10.0
+        self.dist_to_station_max = 10.0
 
     def scale_lon(self, v):
         return 2 * (np.clip(v, self.lon_min, self.lon_max) - self.lon_min) / (self.lon_max - self.lon_min + 1e-9) - 1
@@ -59,6 +68,21 @@ class FeatureScaler:
 
     def scale_budget(self, v):
         return 2 * (np.clip(v, 0, self.budget_max) / (self.budget_max + 1e-9)) - 1
+
+    def scale_grid_distance(self, v):
+        return 2 * np.clip(v / (self.grid_dist_max + 1e-9), 0, 1) - 1
+
+    def scale_grid_mw(self, v):
+        return 2 * np.clip(v / (self.grid_mw_max + 1e-9), 0, 1) - 1
+
+    def scale_benefit(self, v):
+        return 2 * np.clip(v / (self.benefit_max + 1e-9), 0, 1) - 1
+
+    def scale_capability(self, v):
+        return 2 * np.clip(v / (self.capability_max + 1e-9), 0, 1) - 1
+
+    def scale_nearest_station_dist(self, v):
+        return 2 * np.clip(v / (self.dist_to_station_max + 1e-9), 0, 1) - 1
 
 
 class Plan:
@@ -184,22 +208,31 @@ class StationPlacement(gym.Env):
         self.game_over = False
         self.plan_instance = Plan(self.node_list, StationPlacement.node_dict, StationPlacement.cost_dict,
                                   self.plan_file)
-        self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
-                                                       self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                       self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                       self.plan_instance.norm_fairness)
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
+            dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(
+                station_nodes)
+
+            self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+                                                             self.plan_instance.norm_benefit,
+                                                             self.plan_instance.norm_charg,
+                                                             self.plan_instance.norm_wait,
+                                                             self.plan_instance.norm_travel,
+                                                             self.plan_instance.norm_fairness, dist_penalty)
+            if cap_penalty < 0:
+                self.best_score -= 100
+        else:
+            self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+                                                             self.plan_instance.norm_benefit,
+                                                             self.plan_instance.norm_charg,
+                                                             self.plan_instance.norm_wait,
+                                                             self.plan_instance.norm_travel,
+                                                             self.plan_instance.norm_fairness)
 
         self.previous_score = self.best_score
-        # Add grid penalty to initial best_score to match evaluation logic
-        if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
-            grid_penalty = self.grid_adapter.calculate_grid_penalty(station_nodes)
-            self.best_score += grid_penalty
 
         self.best_score = max(self.best_score, -25)
         self.plan_length = len(self.plan_instance.existing_plan)
@@ -208,7 +241,8 @@ class StationPlacement(gym.Env):
         self.best_node_list = []
         self.best_node_list = []
         # Use absolute path for config lookup
-        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "processed", "config_lookup.json")
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "processed",
+                                   "config_lookup.json")
         self.config_dict = H.get_lookup(config_path)
         H.coverage(self.node_list, self.plan_instance.plan)
         obs = self.establish_observation()
@@ -225,31 +259,47 @@ class StationPlacement(gym.Env):
 
     def establish_observation(self):
         """
-        Build observation matrix
+        Build observation matrix (MLP)
         """
-        row_length = self.row_length + 1
-        width = row_length * len(self.node_list) + 1
-        obs = np.zeros(width, dtype=np.float32)
+        # Precompute capability dict to avoid nested lookups (O(M) instead of O(N*M))
+        station_caps = {s[0][0]: s[2]["capability"] for s in self.plan_instance.plan}
+
+        # Precompute distances to nearest existing station
+        station_nodes = [s[0][0] for s in self.plan_instance.plan]
+        if station_nodes:
+            nearest_dists = []
+            for node in self.node_list:
+                dist = node[1].get("distance", self.feature_scaler.dist_to_station_max)
+                nearest_dists.append(dist)
+        else:
+            nearest_dists = [self.feature_scaler.dist_to_station_max] * len(self.node_list)
+
+        node_features = np.zeros((len(self.node_list), self.row_length), dtype=np.float32)
 
         for j, node in enumerate(self.node_list):
-            i = j * row_length
-            # obs[i + 0] = self.feature_scaler.scale_lon(node[1]['x'])
-            # obs[i + 1] = self.feature_scaler.scale_lat(node[1]['y'])
-            obs[i + 0] = self.feature_scaler.scale_pop(node[1]['pop']) #* H.demand_modified(self.plan_instance.plan, node)
-            obs[i + 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
-            # obs[i + 2] = self.feature_scaler.scale_private_cs(node[1]['private_cs'])
-            obs[i + 2] = 2 * (np.clip(node[1]['grid_distance_km'], 0, 3.0) / 3.0) - 1
-            obs[i + 3] = 2 * (np.clip(node[1]['grid_available_mw'], 0, 10.0) / 10.0) - 1
-            obs[i + 4] = 2 * (np.clip(node[1]['covered'], 0, 10.0) / 10.0) - 1
+            demand = node[1]['demand']
+            # 0: static demand
+            node_features[j, 0] = self.feature_scaler.scale_demand(demand)
+            # 1: land price
+            node_features[j, 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
+            # 2: grid distance
+            node_features[j, 2] = self.feature_scaler.scale_grid_distance(node[1].get('grid_distance_km', 3.0))
+            # 3: grid capability
+            node_features[j, 3] = self.feature_scaler.scale_grid_mw(node[1].get('grid_available_mw', 0.0))
+            # 4: benefit
+            node_features[j, 4] = self.feature_scaler.scale_benefit(node[1].get('benefit', 0.0))
+            # 5: current station capability at this node
+            capability = station_caps.get(node[0], 0.0)
+            node_features[j, 5] = self.feature_scaler.scale_capability(capability)
+            # 6: distance to nearest station
+            node_features[j, 6] = self.feature_scaler.scale_nearest_station_dist(nearest_dists[j])
 
-            for station in self.plan_instance.plan:
-                if station[0][0] == node[0]:
-                    # for e in range(len(H.CHARGING_POWER)):
-                        # obs[i + self.row_length + e] = self.feature_scaler.scale_charger_count(station[1][e])
-                    obs[i + self.row_length] = station[2]["capability"] / 1000.0
-                    break
+        global_st = np.array([self.feature_scaler.scale_budget(self.budget)], dtype=np.float32)
 
-        obs[-1] = self.feature_scaler.scale_budget(self.budget)
+        width = self.row_length * len(self.node_list) + 1
+        obs = np.zeros(width, dtype=np.float32)
+        obs[:-1] = node_features.flatten()
+        obs[-1] = global_st[0]
         return obs
 
     def budget_adjustment(self, my_station):
@@ -401,17 +451,23 @@ class StationPlacement(gym.Env):
         """
         reward = 0
         self.prepare_score()
-        new_score, benefit, cost, fairness, charg_time, wait_time, cost_travel = H.norm_score(self.plan_instance.plan, self.node_list,
-                                                 self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                 self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                    self.plan_instance.norm_fairness)
 
-
-        # Add Grid Penalty (if adapter is active)
         if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
-            grid_penalty = self.grid_adapter.calculate_grid_penalty(station_nodes)
-            new_score += grid_penalty
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
+            dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+                                                             self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
+                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
+                                                             self.plan_instance.norm_fairness, dist_penalty)
+            if cap_penalty < 0:
+                new_score -= 100
+                self.game_over = True
+                # print("VIOLATED!")
+        else:
+            new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+                                                             self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
+                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
+                                                             self.plan_instance.norm_fairness)
 
         # Compare against the score from the PREVIOUS step, not the all-time best
         step_improvement = new_score - self.previous_score
@@ -424,8 +480,8 @@ class StationPlacement(gym.Env):
             # reward += (new_score - self.best_score)
             # avoid jojo learning
             self.best_score = new_score
-            self.best_plan = self.plan_instance.plan.copy()
-            self.best_node_list = self.node_list.copy()
+            self.best_plan = copy.deepcopy(self.plan_instance.plan)
+            self.best_node_list = copy.deepcopy(self.node_list)
         return reward
 
     def render(self, mode='human', close=False):
