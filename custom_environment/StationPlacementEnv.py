@@ -179,7 +179,7 @@ class StationPlacement(gym.Env):
         self.budget = None
         self.plan_instance = None
         self.plan_length = None
-        self.row_length = 5
+        self.row_length = 7
         self.best_score = None
         self.best_plan = None
         self.best_node_list = None
@@ -190,11 +190,10 @@ class StationPlacement(gym.Env):
         # action mapping:
         # 0: create by benefit, 1: create by demand,
         # 2: add by benefit, 3: add by demand,
-        # 4: create by fairness, 5: add by fairness,
-        # 6: move (steal) station
-        self.action_space = spaces.Discrete(7)
-        shape = (self.row_length + 1) * len(self.node_list) + 1
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(shape,), dtype=np.float16)
+        # 4: move (steal) station
+        self.action_space = spaces.Discrete(5)
+        shape = self.row_length * len(self.node_list) + 1
+        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
 
     def reset(self, seed=None, options=None):
         """
@@ -411,29 +410,24 @@ class StationPlacement(gym.Env):
         occupied_list = [node for node in self.node_list if node[0] not in full_station_list and node[0] in
                          station_list]  # nodes with non-full stations
         free_list = [node for node in self.node_list if node[0] not in station_list]  # nodes without stations
-        # Map discrete action to behavior. Actions 0/1/4 => build; 2/3/5 => add column; 6 => move
-        if my_action in (0, 1, 4):
-            # build new station
+        if 0 <= my_action <= 1:
+            # build
             if my_action == 0:
                 chosen_node = H.choose_node_new_benefit(free_list)
-            elif my_action == 1:
+            else:
                 chosen_node = H.choose_node_bydemand(free_list)
-            else:  # my_action == 4
-                chosen_node = H.choose_node_by_fairness(free_list)
-        elif my_action in (2, 3, 5):
+        elif 2 <= my_action <= 3:
             # add column to existing station
-            config_index = 3
+            config_index = 1
             if len(occupied_list) == 0:
                 chosen_node = choice(free_list)
             else:
                 if my_action == 2:
                     chosen_node = H.choose_node_new_benefit(occupied_list)
-                elif my_action == 3:
-                    chosen_node = H.choose_node_bydemand(occupied_list, my_plan=self.plan_instance.plan)
-                else:  # my_action == 5
-                    chosen_node = H.choose_node_by_fairness(occupied_list)
+                else:
+                    chosen_node = H.choose_node_bydemand(occupied_list)
         else:
-            # move station (steal from non-existing-plan stations)
+            # move station
             steal_plan = [s for s in self.plan_instance.plan if s[0] not in self.plan_instance.existing_plan]
             # we can not steal from the existing charging plan
             stolen_station = H.anti_choose_node_bybenefit(self.node_list, steal_plan)

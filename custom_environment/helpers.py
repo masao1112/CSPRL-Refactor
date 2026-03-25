@@ -23,38 +23,53 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     calculate the social cost for one station
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
+    node_id, station_id = my_node[0], s_pos[0]
     # check if distance has to be calculated
-    if s_pos[0] in my_node_dict[my_node[0]]:
-        distance = my_node_dict[my_node[0]][s_pos[0]]
+    if station_id in my_node_dict[node_id]:
+        distance = my_node_dict[node_id][station_id]
     else:
         distance = calculate_distance(s_pos, my_node)
-        my_node_dict[my_node[0]][s_pos[0]] = distance
+        my_node_dict[node_id][station_id] = distance
     # check if cost has to be calculated
-    try:
-        _a = my_cost_dict[my_node[0]]
-    except KeyError:
-        my_cost_dict[my_node[0]] = {}
-    if s_pos[0] in my_cost_dict[my_node[0]]:
-        cost_node = my_cost_dict[my_node[0]][s_pos[0]]
+    if node_id not in my_cost_dict:
+        my_cost_dict[node_id] = {}
+    station_signature = (
+        tuple(np.asarray(s_x).tolist()),
+        float(s_dict.get("W_s", 0.0)),
+        float(s_dict.get("service rate", 0.0)),
+    )
+    cached_entry = my_cost_dict[node_id].get(station_id)
+    if isinstance(cached_entry, dict) and cached_entry.get("state") == station_signature:
+        node_cost = cached_entry["cost"]
     else:
-        cost_travel = alpha * distance / VELOCITY
-        cost_boring = (1 - alpha) / (distance + eps) * (s_dict["W_s"] + 1 / (s_dict["service rate"] + eps))
-        cost_node = weak_demand(my_node) * (cost_travel + cost_boring)
-        my_cost_dict[my_node[0]][s_pos[0]] = cost_node
-    return cost_node, my_node_dict, my_cost_dict
+        cost_travel = alpha * (distance / VELOCITY) * (1 + weak_demand(my_node)) # demand as traffic density factor
+        cost_boring = (1 - alpha) * (s_dict["W_s"] + 1 / (s_dict["service rate"] + eps))
+        node_cost = cost_travel + cost_boring
+        my_cost_dict[node_id][station_id] = {
+            "state": station_signature,
+            "cost": node_cost
+        }
+    return node_cost, my_node_dict, my_cost_dict
+
 
 
 def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
     """
     output station assignment: Each node gets assigned the charging station with minimal social cost
     """
-    for the_node in my_node_list:
-        cost_list = [cost_single(the_node, my_station, my_node_dict, my_cost_dict) for my_station in my_plan] # search all the cost for each node wrt current stations
-        costminindex = cost_list.index(min(cost_list))
+    for node in my_node_list:
+        cost_list = []
+        for station in my_plan:
+            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict)
+            cost_list.append(node_cost)
+        costminindex = np.argmin(cost_list)
         chosen_station = my_plan[costminindex]
         s_pos = chosen_station[0]
-        the_node[1]["charging station"] = s_pos[0]
-        the_node[1]["distance"] = my_node_dict[the_node[0]][s_pos[0]]
+        node[1]["charging station"] = s_pos[0]
+        node[1]["distance"] = my_node_dict[node[0]][s_pos[0]]
+        # update cost
+        total_number_EVs(chosen_station, my_node_list)
+        W_s(chosen_station)
     return my_node_list, my_node_dict, my_cost_dict
 
 
@@ -68,7 +83,7 @@ def calculate_distance(s_pos, my_node):
         u = s_pos[0]
         v = my_node[0]
         distance = nx.shortest_path_length(graph, u, v, weight='length')
-        return distance
+        return distance / 1000.0
     except (KeyError, IndexError):
         # Fallback if node not found in matrix
         # print(f"Matrix lookup failed for {u} -> {v}, falling back to Haversine")
@@ -99,7 +114,7 @@ def charging_capability(my_station):
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
     total_capacity = np.sum(CHARGING_POWER * s_x)
-    s_dict["capability"] = total_capacity  # [capability] = kw
+    s_dict["capability"] = total_capacity / 1000.0  # [capability] = MW
     return my_station
 
 
@@ -113,8 +128,8 @@ def influence_radius(my_station):
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
     total_capacity = s_dict["capability"]
-    radius_s = RADIUS_MAX * 1 / (1 + np.exp(-total_capacity / (100 * capacity_unit)))
-    s_dict["radius"] = radius_s  # [radius] = m
+    radius_s = RADIUS_MAX * 1 / (1 + np.exp(-total_capacity / (1000 * capacity_unit))) # prev 100
+    s_dict["radius"] = radius_s  # [radius] = km
     return my_station
 
 
@@ -132,7 +147,7 @@ def haversine(s_pos, my_node):
     distance = R_earth * c  # [distance] = m
     if distance < 0.1:  # to avoid ZeroDivisionError
         distance = 0.1
-    return distance
+    return distance / 1000.0
 
 
 def node_coverage(my_plan, my_node):
@@ -198,7 +213,7 @@ def service_rate(my_station):
     returns how many cars can be served within one hour
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-    s_dict["service rate"] = s_dict["capability"] / BATTERY  # [service rate] = 1/h
+    s_dict["service rate"] = s_dict["capability"] * 1000 / BATTERY  # [service rate] = 1/h
     return my_station
 
 
@@ -460,19 +475,13 @@ def choose_node_new_benefit(free_list):
     return chosen_node
 
 
-def choose_node_bydemand(free_list, my_plan=None):
+def choose_node_bydemand(free_list):
     """
     pick location with highest weakened demand
     """
-    if my_plan:
-        # choose the node with the highest waiting time
-        wait_list = [station[2]["D_s"] * station[2]["W_s"] for station in my_plan]
-        chosen_index = wait_list.index(max(wait_list))
-        chosen_node = free_list[chosen_index]
-    else:
-        demand_list = [my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"]) for my_node in free_list]
-        chosen_index = demand_list.index(max(demand_list))
-        chosen_node = free_list[chosen_index]
+    demand_list = [my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"]) for my_node in free_list]
+    chosen_index = demand_list.index(max(demand_list))
+    chosen_node = free_list[chosen_index]
     return chosen_node
 
 
@@ -541,14 +550,14 @@ graph_file = f"custom_environment/data/Graph/{location}/{location}.graphml"
 graph = nx.read_graphml(graph_file)
 
 # Parameters ########################################################
-alpha = 0.4
+alpha = 0.8
 my_lambda = 0.5
 eps = 1e-9
 ev_per_capita = 0.022
-evs_parking_area = 15 # meter square
+evs_parking_area = 15  # meter square
 
-K = 300  # maximal number of chargers at a station
-RADIUS_MAX = 1000  # [radius_max] = m
+K = 100  # maximal number of chargers at a station
+RADIUS_MAX = 1  # [radius_max] = km
 # INSTALL_FEE = np.array([300, 750, 28000])  # fee per installing a charger of type 1, 2 or 3. [fee] = $
 # CHARGING_POWER = np.array([7, 22, 50])  # [power] = kW, rounded
 CHARGING_POWER = np.array([3, 7, 11, 20, 22, 30, 60, 80, 120, 150, 180, 250])
@@ -560,7 +569,7 @@ BUDGET = 900000
 
 time_unit = 1  # [time_unit] = h, introduced for getting the units correctly
 capacity_unit = 1  # [cap_unit] = kW, introduced for getting the units correctly
-VELOCITY = 23 * 1000  # based on m per hour, but here dimensionless
+VELOCITY = 40  # km/h
 
 my_inf = 10 ** 6
 my_dis_inf = 10 ** 7
