@@ -32,6 +32,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         self.modelname = my_modelname
         self.save_path = os.path.join(self.log_dir, self.modelname)
         self.best_mean_reward = -np.inf
+        self.best_score = -np.inf
 
     def _init_callback(self) -> None:
         # Create folder if needed
@@ -40,37 +41,33 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % self.check_freq == 0:
+            # Query the environment for the best_score
+            try:
+                # training_env is usually a VecEnv in SB3
+                env_best_score = self.training_env.get_attr('best_score')[0]
+            except Exception:
+                env_best_score = -np.inf
 
             # Retrieve training reward
             x, y = ts2xy(load_results(self.log_dir), 'timesteps')
             if len(x) > 0:
-                # Mean training reward over the last 100 episodes
+                # Mean training reward over the last 10 episodes
                 my_mean_reward = np.mean(y[-10:])
+                
                 if self.verbose > 0:
                     print("Num timesteps: {}".format(self.num_timesteps))
-                    print("Best mean reward: {:.2f} - Last mean reward per episode: {:.2f}".format(
-                        self.best_mean_reward, my_mean_reward))
+                    print("Best Score: {:.2f} (Global Best: {:.2f}) - Mean reward: {:.2f}".format(
+                        env_best_score, self.best_score, my_mean_reward))
 
-                if my_mean_reward > self.best_mean_reward:
-                    self.best_mean_reward = my_mean_reward
-                    # Example for saving best model
+                if env_best_score > self.best_score:
+                    self.best_score = env_best_score
                     if self.verbose > 0:
-                        print("New best mean reward: {:.2f}".format(self.best_mean_reward))
-                        # we want to make sure that the best models are not overwritten
+                        print("New best score: {:.2f}. Saving model...".format(self.best_score))
                         new_name = self.modelname + str(self.num_timesteps)
-                        if self.save_path is not None:
-                            os.makedirs(self.save_path, exist_ok=True)
+                        if self.log_dir is not None:
+                            os.makedirs(self.log_dir, exist_ok=True)
                         self.save_path = os.path.join(self.log_dir, new_name)
-                        print("Saving new best model to {}".format(self.save_path))
                     self.model.save(self.save_path)
-                # else:
-                #     if self.verbose > 0:
-                #         new_name = self.modelname + str(self.num_timesteps)
-                #         if self.save_path is not None:
-                #             os.makedirs(self.save_path, exist_ok=True)
-                #         self.save_path = os.path.join(self.log_dir, new_name)
-                #         print("Saving model on frequency to {}".format(self.save_path))
-                #     self.model.save(self.save_path)
 
         return True
 

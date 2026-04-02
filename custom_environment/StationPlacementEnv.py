@@ -178,7 +178,7 @@ class StationPlacement(gym.Env):
         self.budget = None
         self.plan_instance = None
         self.plan_length = None
-        self.row_length = 7  # Expanded features (added nearest station distance)
+        self.row_length = 6  # Removed grid_available_mw (moved to global_state)
         self.best_score = None
         self.best_plan = None
         self.best_node_list = None
@@ -189,8 +189,10 @@ class StationPlacement(gym.Env):
         # new action space including all charger types
         self.action_space = spaces.Discrete(5)
         
+        self.num_buses = len(self.grid_adapter.get_all_bus_capacities([])) if self.grid_adapter else 0
+
         if self.obs_type == "mlp":
-            shape = self.row_length * len(self.node_list) + 1
+            shape = self.row_length * len(self.node_list) + 1 + self.num_buses
             self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
         elif self.obs_type == "gnn":
             edges = []
@@ -206,7 +208,7 @@ class StationPlacement(gym.Env):
             self.observation_space = spaces.Dict({
                 "node_features": spaces.Box(low=-1.0, high=1.0, shape=(len(self.node_list), self.row_length), dtype=np.float32),
                 "edge_index": spaces.Box(low=0, high=len(self.node_list), shape=(2, self.edge_index_array.shape[1]), dtype=np.int32),
-                "global_state": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
+                "global_state": spaces.Box(low=-1.0, high=1.0, shape=(1 + self.num_buses,), dtype=np.float32)
             })
         else:
             raise ValueError(f"Unknown obs_type: {self.obs_type}. Must be 'mlp' or 'gnn'")
@@ -270,7 +272,7 @@ class StationPlacement(gym.Env):
         """
         Build observation matrix (MLP) or Dict (GNN)
         """
-        # Precompute capability dict to avoid nested lookups (O(M) instead of O(N*M))
+        # Precompute capability dict to avoid nested lookups
         station_caps = {s[0][0]: s[2]["capability"] for s in self.plan_instance.plan}
         
         # Precompute distances to nearest existing station
@@ -291,25 +293,29 @@ class StationPlacement(gym.Env):
             node_features[j, 0] = self.feature_scaler.scale_demand(dyn_demand)
             # 1: land price
             node_features[j, 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
-            # 2: grid distance
+            # 2: grid distance (PRESERVED)
             node_features[j, 2] = self.feature_scaler.scale_grid_distance(node[1].get('grid_distance_km', 3.0))
-            # 3: grid capability
-            node_features[j, 3] = self.feature_scaler.scale_grid_mw(node[1].get('grid_available_mw', 0.0))
-            # 4: benefit
-            node_features[j, 4] = self.feature_scaler.scale_benefit(node[1].get('benefit', 0.0))
-            # 5: current station capability at this node
+            # 3: benefit
+            node_features[j, 3] = self.feature_scaler.scale_benefit(node[1].get('benefit', 0.0))
+            # 4: current station capability at this node
             capability = station_caps.get(node[0], 0.0)
-            node_features[j, 5] = self.feature_scaler.scale_capability(capability)
-            # 6: distance to nearest station
-            node_features[j, 6] = self.feature_scaler.scale_nearest_station_dist(nearest_dists[j])
+            node_features[j, 4] = self.feature_scaler.scale_capability(capability)
+            # 5: distance to nearest station
+            node_features[j, 5] = self.feature_scaler.scale_nearest_station_dist(nearest_dists[j])
 
-        global_st = np.array([self.feature_scaler.scale_budget(self.budget)], dtype=np.float32)
+        # Global state: [budget, *all_bus_capacities]
+        budget_scaled = self.feature_scaler.scale_budget(self.budget)
+        
+        if self.grid_adapter:
+            capacities = self.grid_adapter.get_all_bus_capacities(self.plan_instance.plan)
+            scaled_caps = [self.feature_scaler.scale_grid_mw(c) for c in capacities]
+            global_st = np.array([budget_scaled] + scaled_caps, dtype=np.float32)
+        else:
+            # Fallback if no grid adapter
+            global_st = np.array([budget_scaled] + [0.0] * self.num_buses, dtype=np.float32)
 
         if self.obs_type == "mlp":
-            width = self.row_length * len(self.node_list) + 1
-            obs = np.zeros(width, dtype=np.float32)
-            obs[:-1] = node_features.flatten()
-            obs[-1] = global_st[0]
+            obs = np.concatenate([node_features.flatten(), global_st])
             return obs
         else:
             return {
