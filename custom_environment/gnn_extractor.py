@@ -31,14 +31,14 @@ class GNNFeaturesExtractor(BaseFeaturesExtractor):
         
         # Stream 2: Global State (MLP)
         self.global_mlp = nn.Sequential(
-            nn.Linear(n_global_features, 256),
+            nn.Linear(n_global_features, 128),
             nn.ReLU(),
-            nn.Linear(256, 128),
+            nn.Linear(128, 64),
             nn.ReLU()
         )
         
         # Fusion Layer
-        self.linear = nn.Linear(256 + 128, features_dim)
+        self.linear = nn.Linear(256 + 64, features_dim)
 
     def forward(self, observations):
         x = observations["node_features"]      # (B, N, F)

@@ -180,6 +180,7 @@ class StationPlacement(gym.Env):
         self.plan_length = None
         self.row_length = 6  # Removed grid_available_mw (moved to global_state)
         self.best_score = None
+        self.last_episode_best_score = 0
         self.best_plan = None
         self.best_node_list = None
         self.schritt = None
@@ -220,6 +221,9 @@ class StationPlacement(gym.Env):
         # Handle the seed for Gymnasium compatibility
         if seed is not None:
             np.random.seed(seed)
+
+        if self.best_score is not None:
+            self.last_episode_best_score = self.best_score
 
         self.budget = H.BUDGET
         self.game_over = False
@@ -307,7 +311,8 @@ class StationPlacement(gym.Env):
         budget_scaled = self.feature_scaler.scale_budget(self.budget)
         
         if self.grid_adapter:
-            capacities = self.grid_adapter.get_all_bus_capacities(self.plan_instance.plan)
+            station_items = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
+            capacities = self.grid_adapter.get_all_bus_capacities(station_items)
             scaled_caps = [self.feature_scaler.scale_grid_mw(c) for c in capacities]
             global_st = np.array([budget_scaled] + scaled_caps, dtype=np.float32)
         else:
@@ -476,7 +481,7 @@ class StationPlacement(gym.Env):
             if cap_penalty < 0:
                 new_score -= 100
                 self.game_over = True
-                print("VIOLATED!")
+                # print("VIOLATED!")
         else:
             new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
