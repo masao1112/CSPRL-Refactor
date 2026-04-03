@@ -6,6 +6,7 @@ import os
 import numpy as np
 import torch
 import random
+from collections import deque
 from custom_environment.StationPlacementEnv import StationPlacement
 
 """
@@ -31,8 +32,9 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         self.log_dir = my_log_dir
         self.modelname = my_modelname
         self.save_path = os.path.join(self.log_dir, self.modelname)
-        self.best_mean_reward = -np.inf
-        self.best_score = -np.inf
+        self.scores = deque(maxlen=10)
+        self.best_mean_score = -np.inf
+        self.n_episodes = 0
 
     def _init_callback(self) -> None:
         # Create folder if needed
@@ -40,29 +42,33 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
             os.makedirs(self.save_path, exist_ok=True)
 
     def _on_step(self) -> bool:
-        if self.n_calls % self.check_freq == 0:
-            # Query the environment for the best_score
-            try:
-                # training_env is usually a VecEnv in SB3
-                env_best_score = self.training_env.get_attr('best_score')[0]
-            except Exception:
-                env_best_score = -np.inf
+        # Check if an episode finished
+        if self.locals["dones"][0]:
+            self.n_episodes += 1
+            
+            if self.n_episodes % self.check_freq == 0:
+                # Query the environment for the best_score
+                try:
+                    # training_env is usually a VecEnv in SB3
+                    env_best_score = self.training_env.get_attr('last_episode_best_score')[0]
+                except Exception:
+                    env_best_score = -np.inf
+    
+                # Store score for mean calculation
+                self.scores.append(env_best_score)
 
-            # Retrieve training reward
-            x, y = ts2xy(load_results(self.log_dir), 'timesteps')
-            if len(x) > 0:
-                # Mean training reward over the last 10 episodes
-                my_mean_reward = np.mean(y[-10:])
+                # Mean training score over the last 10 checks
+                my_mean_score = np.mean(self.scores)
                 
                 if self.verbose > 0:
-                    print("Num timesteps: {}".format(self.num_timesteps))
-                    print("Best Score: {:.2f} (Global Best: {:.2f}) - Mean reward: {:.2f}".format(
-                        env_best_score, self.best_score, my_mean_reward))
-
-                if env_best_score > self.best_score:
-                    self.best_score = env_best_score
+                    print("Num timesteps: {}, Episode: {}".format(self.num_timesteps, self.n_episodes))
+                    print("Current best_score: {:.2f} - Mean score: {:.2f} (Best Mean: {:.2f})".format(
+                        env_best_score, my_mean_score, self.best_mean_score))
+    
+                if my_mean_score > self.best_mean_score:
+                    self.best_mean_score = my_mean_score
                     if self.verbose > 0:
-                        print("New best score: {:.2f}. Saving model...".format(self.best_score))
+                        print("New best mean score: {:.2f}. Saving model...".format(self.best_mean_score))
                         new_name = self.modelname + str(self.num_timesteps)
                         if self.log_dir is not None:
                             os.makedirs(self.log_dir, exist_ok=True)
@@ -92,7 +98,7 @@ if __name__ == '__main__':
 
     obs_type = "gnn" if use_gnn else "mlp"
     env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
-    log_dir = f"Results/tmp/gnn/{location}/"
+    log_dir = f"Results/tmp/{location}/{obs_type}"
     modelname = "best_model_" + location + "_"
 
     """
@@ -117,5 +123,5 @@ if __name__ == '__main__':
     model = DQN(policy_type, env, verbose=1, batch_size=128, buffer_size=10000, learning_rate=1e-5,
                 exploration_initial_eps=1, exploration_final_eps=0.05, exploration_fraction=0.2, policy_kwargs=policy_kwargs,
                 device='cuda' if torch.cuda.is_available() else 'cpu', seed=seed)
-    callback = SaveOnBestTrainingRewardCallback(check_freq=400, my_log_dir=log_dir, my_modelname=modelname)
+    callback = SaveOnBestTrainingRewardCallback(check_freq=5, my_log_dir=log_dir, my_modelname=modelname)
     model.learn(total_timesteps=200000, log_interval=10 ** 4, callback=callback)
