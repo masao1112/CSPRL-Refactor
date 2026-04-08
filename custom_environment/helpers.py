@@ -1,6 +1,7 @@
 import json
 import pickle
 import math
+import argparse
 import osmnx as ox
 import numpy as np
 import networkx as nx
@@ -9,6 +10,22 @@ from math import sin, cos, sqrt, atan2, radians, ceil
 """
 Utility model and help functions.
 """
+
+# Parse command-line arguments for hyperparameter tuning
+parser = argparse.ArgumentParser(description="Hyperparameter Tuning for CSLP", add_help=False)
+parser.add_argument('--lr', type=float, default=0.001, help='Learning rate for the RL model')
+parser.add_argument('--gnn_hidden_dims', type=int, default=128, help='Hidden dimensions for GNN model')
+parser.add_argument('--scaling_factor', type=float, default=0.47, help='Scaling factor for dynamic demand')
+parser.add_argument('--distance_decay_factor', type=float, default=0.89, help='Distance decay factor for dynamic demand')
+parser.add_argument('--r_search', type=float, default=0.2, help='Search radius for potential benefit')
+args, unknown = parser.parse_known_args()
+
+# Store hyperparameters as module-level variables
+LEARNING_RATE = args.lr
+GNN_HIDDEN_DIMS = args.gnn_hidden_dims
+SCALING_FACTOR = args.scaling_factor
+DISTANCE_DECAY_FACTOR = args.distance_decay_factor
+R_SEARCH = args.r_search
 
 
 def prepare_graph(my_graph_file, my_node_file):
@@ -59,6 +76,11 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
     """
     output station assignment: Each node gets assigned the charging station with minimal social cost
     """
+    # If no stations exist, skip assignment (nodes will have no charging station)
+    if len(my_plan) == 0:
+        print("No stations in plan, skipping station assignment.")
+        return my_node_list, my_node_dict, my_cost_dict
+    
     for node in my_node_list:
         cost_list = []
         for station in my_plan:
@@ -123,7 +145,13 @@ def charging_capability(my_station):
 def weak_demand(my_node):
     return my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"])
 
-def dynamic_demand(my_node, my_plan, scaling_factor=0.47, distance_decay_factor=0.89):
+def dynamic_demand(my_node, my_plan, scaling_factor=None, distance_decay_factor=None):
+    # Use global hyperparameters if not provided
+    if scaling_factor is None:
+        scaling_factor = SCALING_FACTOR
+    if distance_decay_factor is None:
+        distance_decay_factor = DISTANCE_DECAY_FACTOR
+    
     power_factor = 0
     base_demand = weak_demand(my_node)
     for station in my_plan:
@@ -409,6 +437,8 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
         my_score = 0.25 * benefit - 0.25 * cost + 0.25 * fairness + 0.25 * grid_score
     else:
         my_score = 1/3 * benefit - 1/3 * cost + 1/3 * fairness
+    # print("norm", norm_benefit, norm_charg, norm_wait, norm_travel, norm_fairness)
+    # print(my_score, benefit, cost, fairness, charg_time, wait_time, cost_travel)
     return my_score, benefit, cost, fairness, charg_time, wait_time, cost_travel
 
 
@@ -511,12 +541,15 @@ def coverage(my_node_list, my_plan):
         my_node[1]["benefit"] = cover
 
 
-def choose_node_new_benefit(free_list, all_node_list, R_search=0.1):
+def choose_node_new_benefit(free_list, all_node_list, R_search=None):
     """
     pick location with highest potential based on Potential/Coverage.
     """
+    if R_search is None:
+        R_search = R_SEARCH
+
     potential_scores = []
-    epsilon = 0.001
+    # epsilon = 0.001
     for candidate_node in free_list:
         local_demand = 0
         for node in all_node_list:
@@ -525,7 +558,7 @@ def choose_node_new_benefit(free_list, all_node_list, R_search=0.1):
                 local_demand += weak_demand(node)
 
         current_coverage = candidate_node[1].get("n_stations", 0)
-        _score = local_demand / (current_coverage + epsilon)
+        _score = local_demand / (current_coverage + eps)
 
         potential_scores.append(_score)
     best_index = np.argmax(potential_scores)
@@ -607,7 +640,7 @@ ev_per_capita = 0.022
 evs_parking_area = 15  # meter square
 
 K = 100  # maximal number of chargers at a station
-RADIUS_MAX = 1  # [radius_max] = km
+RADIUS_MAX = 0.15  # [radius_max] = km
 # INSTALL_FEE = np.array([300, 750, 28000])  # fee per installing a charger of type 1, 2 or 3. [fee] = $
 # CHARGING_POWER = np.array([7, 22, 50])  # [power] = kW, rounded
 CHARGING_POWER = np.array([3, 7, 11, 20, 22, 30, 60, 80, 120, 150, 180, 250])
@@ -615,7 +648,7 @@ INSTALL_FEE = np.array([5, 11, 12, 100, 12, 143, 278, 397, 416, 676, 956, 3272])
 BATTERY = 85  # battery capacity, [BATTERY] = kWh
 RELOCATION_FACTOR = 0.2  # Assumption: Moving costs 20% of a new one
 
-BUDGET = 900000
+BUDGET = 139701.492
 
 time_unit = 1  # [time_unit] = h, introduced for getting the units correctly
 capacity_unit = 1  # [cap_unit] = kW, introduced for getting the units correctly

@@ -91,7 +91,7 @@ def perform_test(my_node_file, my_basic_cost, my_result_file, my_norm_benefit, m
 
 
 if __name__ == '__main__':
-    location = "DongDa"
+    location = "DongDa_partial"
     base_dir = "custom_environment/data"
     graph_file = os.path.join(base_dir, "Graph", location, location + ".graphml")
     node_file = os.path.join(base_dir, "Graph", location, "nodes_extended_" + location + ".txt")
@@ -112,9 +112,9 @@ if __name__ == '__main__':
     norm_benefit, norm_cost, norm_fairness, norm_charging, norm_waiting, norm_travel = H.existing_score(plan, node_list)
     norm_score = eci_test(plan, node_list, norm_benefit, norm_charging, norm_waiting, norm_travel, norm_fairness)
     test(plan, node_list, basic_cost, norm_benefit, norm_charging, norm_waiting, norm_travel, norm_score, norm_fairness)
-    pickle.dump(plan, open("Results/" + "debug/" + location + f"/existing_plan.pkl", "wb"))
+    # pickle.dump(plan, open("Results/" + "debug/" + location + f"/existing_plan.pkl", "wb"))
     print("Reinforcement Learning")
-    step = 61600
+    step = 10800
     node_file = "Results/" + "optimal_plan/" + location + f"/nodes_RL_{step}.txt"
     result_file = "Results/" + "optimal_plan/" + location + f"/plan_RL_{step}.pkl"
     perform_test(node_file, basic_cost, result_file, norm_benefit, norm_charging, norm_waiting, norm_travel, norm_fairness, norm_score)

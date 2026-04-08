@@ -83,17 +83,24 @@ class FeatureScaler:
 
 
 class Plan:
-    def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file):
-        with (open(my_plan_file, "rb")) as f:
-            self.plan = pickle.load(f)
-        self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
-        my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict)
-        # update the dictionnary
-        self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
-        self.norm_benefit, self.norm_cost, self.norm_fairness, self.norm_charg, self.norm_wait, self.norm_travel = \
-            H.existing_score(self.plan, my_node_list)
-        self.extend_existing_plan = self.plan.copy()
-        self.existing_plan = [s[0] for s in self.extend_existing_plan]
+    def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file=None):
+        if os.path.exists(my_plan_file):
+            with (open(my_plan_file, "rb")) as f:
+                self.plan = pickle.load(f)
+            self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
+            my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict)
+            # update the dictionnary
+            self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
+            self.norm_benefit, self.norm_cost, self.norm_fairness, self.norm_charg, self.norm_wait, self.norm_travel = \
+                H.existing_score(self.plan, my_node_list)
+            self.extend_existing_plan = self.plan.copy()
+            self.existing_plan = [s[0] for s in self.extend_existing_plan]
+        else:
+            self.plan = []
+            self.existing_plan = []
+            self.norm_benefit, self.norm_cost, self.norm_fairness, self.norm_charg, self.norm_wait, self.norm_travel = \
+                H.existing_score(self.plan, my_node_list)
+
 
     def __repr__(self):
         return "The charging plan is {}".format(self.plan)
@@ -156,7 +163,7 @@ class StationPlacement(gym.Env):
     node_dict = {}
     cost_dict = {}
 
-    def __init__(self, my_graph_file, my_node_file, my_plan_file, location="DongDa", obs_type="mlp"):
+    def __init__(self, my_graph_file, my_node_file, my_plan_file=None, location="DongDa", obs_type="mlp"):
         super(StationPlacement, self).__init__()
 
         self.obs_type = obs_type
@@ -172,7 +179,7 @@ class StationPlacement(gym.Env):
         self.node_id_to_idx = {node[0]: idx for idx, node in enumerate(self.node_list)}
 
         self.node_list = [self._init(my_node) for my_node in self.node_list]
-
+        print("Number of nodes:", len(self.node_list))
         self.plan_file = my_plan_file
         self.game_over = None
         self.budget = None
@@ -228,23 +235,32 @@ class StationPlacement(gym.Env):
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
-            dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
-            
-            self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
-                                                             self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness, dist_penalty)
+            dist_penalty, cap_penalty = self.grid_adapter.calculate_grid_penalty(station_nodes)
+
+            if len(self.plan_instance.plan) > 0:
+                self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+                                                                 self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
+                                                                 self.plan_instance.norm_wait, self.plan_instance.norm_travel,
+                                                                 self.plan_instance.norm_fairness, dist_penalty)
+            else:
+                self.best_score = -np.inf
+
             if cap_penalty < 0:
                 self.best_score -= 100
         else:
-            self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
-                                                             self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness)
+            if len(self.plan_instance.plan) > 0:
+                self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+                                                                 self.plan_instance.norm_benefit,
+                                                                 self.plan_instance.norm_charg,
+                                                                 self.plan_instance.norm_wait,
+                                                                 self.plan_instance.norm_travel,
+                                                                 self.plan_instance.norm_fairness)
+            else:
+                self.best_score = -np.inf
 
+        self.best_score = max(self.best_score, -100)
         self.previous_score = self.best_score
 
-        self.best_score = max(self.best_score, -25)
         self.plan_length = len(self.plan_instance.existing_plan)
         self.schritt = 0
         self.best_plan = []
@@ -462,7 +478,7 @@ class StationPlacement(gym.Env):
 
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
-            dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            dist_penalty, cap_penalty = self.grid_adapter.calculate_grid_penalty(station_nodes)
             new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel,
@@ -470,7 +486,6 @@ class StationPlacement(gym.Env):
             if cap_penalty < 0:
                 new_score -= 100
                 self.game_over = True
-                print("VIOLATED!")
         else:
             new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
@@ -483,7 +498,7 @@ class StationPlacement(gym.Env):
         # Update previous score for the next step
         self.previous_score = new_score
 
-        new_score = max(new_score, -25)  # if negative score
+        new_score = max(new_score, -100)  # if negative score
         if new_score - self.best_score > 0:
             # reward += (new_score - self.best_score)
             # avoid jojo learning

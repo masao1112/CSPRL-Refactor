@@ -5,7 +5,7 @@ import pandas as pd
 
 
 # Path to file
-location = "ThanhXuan"
+location = "DongDa_partial"
 base_dir = os.path.join("custom_environment", "data")
 existing_plan_file = os.path.join(base_dir, "QGIS", "existing_plan", "existing_plan_filtered.csv")
 node_file = os.path.join(base_dir, "Graph", f"{location}", f"nodes_extended_{location}.txt")
