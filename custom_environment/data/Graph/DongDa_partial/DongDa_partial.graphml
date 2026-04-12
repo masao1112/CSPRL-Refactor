@@ -1,0 +1,2472 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d16" for="edge" attr.name="bridge" attr.type="string"/>
+<key id="d15" for="edge" attr.name="geometry" attr.type="string"/>
+<key id="d14" for="edge" attr.name="length" attr.type="string"/>
+<key id="d13" for="edge" attr.name="reversed" attr.type="string"/>
+<key id="d12" for="edge" attr.name="oneway" attr.type="string"/>
+<key id="d11" for="edge" attr.name="name" attr.type="string"/>
+<key id="d10" for="edge" attr.name="lanes" attr.type="string"/>
+<key id="d9" for="edge" attr.name="highway" attr.type="string"/>
+<key id="d8" for="edge" attr.name="osmid" attr.type="string"/>
+<key id="d7" for="node" attr.name="highway" attr.type="string"/>
+<key id="d6" for="node" attr.name="street_count" attr.type="string"/>
+<key id="d5" for="node" attr.name="x" attr.type="string"/>
+<key id="d4" for="node" attr.name="y" attr.type="string"/>
+<key id="d3" for="graph" attr.name="simplified" attr.type="string"/>
+<key id="d2" for="graph" attr.name="crs" attr.type="string"/>
+<key id="d1" for="graph" attr.name="created_with" attr.type="string"/>
+<key id="d0" for="graph" attr.name="created_date" attr.type="string"/>
+<graph edgedefault="directed"><data key="d0">2026-04-06 13:57:54</data>
+<data key="d1">OSMnx 2.0.7</data>
+<data key="d2">epsg:4326</data>
+<data key="d3">True</data>
+<node id="81805393">
+  <data key="d4">21.0088234</data>
+  <data key="d5">105.82426</data>
+  <data key="d6">3</data>
+</node>
+<node id="106108910">
+  <data key="d4">21.0179988</data>
+  <data key="d5">105.8241401</data>
+  <data key="d6">4</data>
+</node>
+<node id="106108917">
+  <data key="d4">21.0165348</data>
+  <data key="d5">105.8232227</data>
+  <data key="d6">3</data>
+</node>
+<node id="106109203">
+  <data key="d4">21.0153629</data>
+  <data key="d5">105.824904</data>
+  <data key="d6">3</data>
+</node>
+<node id="106109210">
+  <data key="d4">21.0163032</data>
+  <data key="d5">105.8233283</data>
+  <data key="d6">3</data>
+</node>
+<node id="106109440">
+  <data key="d4">21.0162416</data>
+  <data key="d5">105.8228924</data>
+  <data key="d6">3</data>
+</node>
+<node id="106109949">
+  <data key="d4">21.0162242</data>
+  <data key="d5">105.8222877</data>
+  <data key="d6">1</data>
+</node>
+<node id="106111360">
+  <data key="d4">21.0146258</data>
+  <data key="d5">105.8177309</data>
+  <data key="d6">3</data>
+</node>
+<node id="106111364">
+  <data key="d4">21.0124282</data>
+  <data key="d5">105.8206704</data>
+  <data key="d6">3</data>
+</node>
+<node id="106111365">
+  <data key="d4">21.0120825</data>
+  <data key="d5">105.8211088</data>
+  <data key="d6">3</data>
+</node>
+<node id="283138280">
+  <data key="d4">21.012083</data>
+  <data key="d5">105.817155</data>
+  <data key="d6">4</data>
+</node>
+<node id="318258663">
+  <data key="d4">21.0150273</data>
+  <data key="d5">105.8278801</data>
+  <data key="d6">4</data>
+</node>
+<node id="318259513">
+  <data key="d4">21.0156257</data>
+  <data key="d5">105.8229104</data>
+  <data key="d6">3</data>
+</node>
+<node id="318259517">
+  <data key="d4">21.0150856</data>
+  <data key="d5">105.8241854</data>
+  <data key="d6">4</data>
+</node>
+<node id="318259519">
+  <data key="d4">21.0151849</data>
+  <data key="d5">105.8229349</data>
+  <data key="d6">1</data>
+</node>
+<node id="318259522">
+  <data key="d4">21.014417</data>
+  <data key="d5">105.8236237</data>
+  <data key="d6">3</data>
+</node>
+<node id="318259528">
+  <data key="d4">21.0135345</data>
+  <data key="d5">105.8225238</data>
+  <data key="d6">4</data>
+</node>
+<node id="318259614">
+  <data key="d4">21.0155657</data>
+  <data key="d5">105.8245191</data>
+  <data key="d6">4</data>
+</node>
+<node id="318259616">
+  <data key="d4">21.0165492</data>
+  <data key="d5">105.8251477</data>
+  <data key="d6">4</data>
+</node>
+<node id="318259617">
+  <data key="d4">21.0163551</data>
+  <data key="d5">105.8250321</data>
+  <data key="d6">3</data>
+</node>
+<node id="318259620">
+  <data key="d4">21.0168577</data>
+  <data key="d5">105.8246077</data>
+  <data key="d6">3</data>
+</node>
+<node id="318259621">
+  <data key="d4">21.0166174</data>
+  <data key="d5">105.8244825</data>
+  <data key="d6">3</data>
+</node>
+<node id="318259622">
+  <data key="d4">21.0164709</data>
+  <data key="d5">105.8244042</data>
+  <data key="d6">3</data>
+</node>
+<node id="318259623">
+  <data key="d4">21.0162848</data>
+  <data key="d5">105.8243047</data>
+  <data key="d6">3</data>
+</node>
+<node id="318259625">
+  <data key="d4">21.0159715</data>
+  <data key="d5">105.8244025</data>
+  <data key="d6">1</data>
+</node>
+<node id="318259626">
+  <data key="d4">21.0163781</data>
+  <data key="d5">105.823586</data>
+  <data key="d6">1</data>
+</node>
+<node id="318259627">
+  <data key="d4">21.0165631</data>
+  <data key="d5">105.8237429</data>
+  <data key="d6">1</data>
+</node>
+<node id="318259628">
+  <data key="d4">21.0167517</data>
+  <data key="d5">105.8238652</data>
+  <data key="d6">1</data>
+</node>
+<node id="318259629">
+  <data key="d4">21.0165139</data>
+  <data key="d5">105.8246851</data>
+  <data key="d6">3</data>
+</node>
+<node id="320236975">
+  <data key="d4">21.0161635</data>
+  <data key="d5">105.8249146</data>
+  <data key="d6">3</data>
+</node>
+<node id="320236984">
+  <data key="d4">21.015934</data>
+  <data key="d5">105.8263639</data>
+  <data key="d6">3</data>
+</node>
+<node id="320236991">
+  <data key="d4">21.0170785</data>
+  <data key="d5">105.8270342</data>
+  <data key="d6">3</data>
+</node>
+<node id="320237777">
+  <data key="d4">21.0183198</data>
+  <data key="d5">105.8263958</data>
+  <data key="d6">4</data>
+</node>
+<node id="446030797">
+  <data key="d4">21.0137777</data>
+  <data key="d5">105.8188893</data>
+  <data key="d6">4</data>
+</node>
+<node id="1314209691">
+  <data key="d4">21.0091472</data>
+  <data key="d5">105.8248463</data>
+  <data key="d6">3</data>
+</node>
+<node id="1314209699">
+  <data key="d4">21.0092517</data>
+  <data key="d5">105.8242748</data>
+  <data key="d6">4</data>
+</node>
+<node id="1314209710">
+  <data key="d4">21.0119663</data>
+  <data key="d5">105.82105</data>
+  <data key="d6">3</data>
+</node>
+<node id="1314209717">
+  <data key="d4">21.0089148</data>
+  <data key="d5">105.824108</data>
+  <data key="d6">3</data>
+</node>
+<node id="1314209721">
+  <data key="d4">21.0106684</data>
+  <data key="d5">105.8250728</data>
+  <data key="d6">3</data>
+</node>
+<node id="1314209723">
+  <data key="d4">21.0134918</data>
+  <data key="d5">105.8268687</data>
+  <data key="d6">3</data>
+</node>
+<node id="1495020912">
+  <data key="d4">21.0092908</data>
+  <data key="d5">105.8244986</data>
+  <data key="d6">4</data>
+</node>
+<node id="1495020922">
+  <data key="d4">21.0131287</data>
+  <data key="d5">105.8197568</data>
+  <data key="d6">3</data>
+</node>
+<node id="1495023371">
+  <data key="d4">21.008217</data>
+  <data key="d5">105.8203154</data>
+  <data key="d6">3</data>
+</node>
+<node id="1497527957">
+  <data key="d4">21.015375</data>
+  <data key="d5">105.8200999</data>
+  <data key="d6">4</data>
+</node>
+<node id="1497544669">
+  <data key="d4">21.0150609</data>
+  <data key="d5">105.8278134</data>
+  <data key="d6">4</data>
+</node>
+<node id="1753897154">
+  <data key="d4">21.0152724</data>
+  <data key="d5">105.8274129</data>
+  <data key="d6">1</data>
+</node>
+<node id="1753897155">
+  <data key="d4">21.01633</data>
+  <data key="d5">105.8266047</data>
+  <data key="d6">3</data>
+</node>
+<node id="1758631175">
+  <data key="d4">21.0093907</data>
+  <data key="d5">105.8243473</data>
+  <data key="d7">traffic_signals</data>
+  <data key="d6">4</data>
+</node>
+<node id="1758633108">
+  <data key="d4">21.0082462</data>
+  <data key="d5">105.8238515</data>
+  <data key="d6">3</data>
+</node>
+<node id="1758633112">
+  <data key="d4">21.0102866</data>
+  <data key="d5">105.8249263</data>
+  <data key="d6">3</data>
+</node>
+<node id="1884765798">
+  <data key="d4">21.008971</data>
+  <data key="d5">105.8247865</data>
+  <data key="d6">3</data>
+</node>
+<node id="1884765806">
+  <data key="d4">21.0091334</data>
+  <data key="d5">105.8244253</data>
+  <data key="d7">traffic_signals</data>
+  <data key="d6">4</data>
+</node>
+<node id="1884768305">
+  <data key="d4">21.0094475</data>
+  <data key="d5">105.8239568</data>
+  <data key="d6">3</data>
+</node>
+<node id="1884769977">
+  <data key="d4">21.0097478</data>
+  <data key="d5">105.8245423</data>
+  <data key="d6">3</data>
+</node>
+<node id="1884769979">
+  <data key="d4">21.0095664</data>
+  <data key="d5">105.8239771</data>
+  <data key="d6">3</data>
+</node>
+<node id="1904342334">
+  <data key="d4">21.0176949</data>
+  <data key="d5">105.8260288</data>
+  <data key="d6">1</data>
+</node>
+<node id="1904449332">
+  <data key="d4">21.0105284</data>
+  <data key="d5">105.8193044</data>
+  <data key="d6">3</data>
+</node>
+<node id="1904449333">
+  <data key="d4">21.0104184</data>
+  <data key="d5">105.8194013</data>
+  <data key="d6">3</data>
+</node>
+<node id="1904449336">
+  <data key="d4">21.0100776</data>
+  <data key="d5">105.8187493</data>
+  <data key="d6">3</data>
+</node>
+<node id="2174649904">
+  <data key="d4">21.0164074</data>
+  <data key="d5">105.8232829</data>
+  <data key="d6">4</data>
+</node>
+<node id="2174649932">
+  <data key="d4">21.0182561</data>
+  <data key="d5">105.824457</data>
+  <data key="d6">3</data>
+</node>
+<node id="2174649940">
+  <data key="d4">21.0171907</data>
+  <data key="d5">105.8238769</data>
+  <data key="d6">3</data>
+</node>
+<node id="2174649945">
+  <data key="d4">21.0179336</data>
+  <data key="d5">105.8242829</data>
+  <data key="d6">3</data>
+</node>
+<node id="2174649960">
+  <data key="d4">21.0152392</data>
+  <data key="d5">105.8202578</data>
+  <data key="d6">4</data>
+</node>
+<node id="2175126954">
+  <data key="d4">21.0171092</data>
+  <data key="d5">105.8240572</data>
+  <data key="d6">3</data>
+</node>
+<node id="2176926218">
+  <data key="d4">21.0139023</data>
+  <data key="d5">105.8187277</data>
+  <data key="d6">4</data>
+</node>
+<node id="2291014178">
+  <data key="d4">21.0124305</data>
+  <data key="d5">105.8176724</data>
+  <data key="d6">3</data>
+</node>
+<node id="2291014992">
+  <data key="d4">21.0151996</data>
+  <data key="d5">105.8252025</data>
+  <data key="d6">1</data>
+</node>
+<node id="2291014993">
+  <data key="d4">21.0148653</data>
+  <data key="d5">105.8246077</data>
+  <data key="d6">4</data>
+</node>
+<node id="2291014994">
+  <data key="d4">21.014678</data>
+  <data key="d5">105.8239332</data>
+  <data key="d6">3</data>
+</node>
+<node id="2291046229">
+  <data key="d4">21.0187853</data>
+  <data key="d5">105.8231097</data>
+  <data key="d6">3</data>
+</node>
+<node id="2291046243">
+  <data key="d4">21.0183481</data>
+  <data key="d5">105.8243228</data>
+  <data key="d6">3</data>
+</node>
+<node id="2452431996">
+  <data key="d4">21.0119342</data>
+  <data key="d5">105.8172506</data>
+  <data key="d6">4</data>
+</node>
+<node id="5485651217">
+  <data key="d4">21.0134586</data>
+  <data key="d5">105.8269306</data>
+  <data key="d6">4</data>
+</node>
+<node id="5706871736">
+  <data key="d4">21.0186339</data>
+  <data key="d5">105.8225503</data>
+  <data key="d6">3</data>
+</node>
+<node id="5707161170">
+  <data key="d4">21.0181761</data>
+  <data key="d5">105.8246193</data>
+  <data key="d6">3</data>
+</node>
+<node id="5707655797">
+  <data key="d4">21.0141081</data>
+  <data key="d5">105.8232433</data>
+  <data key="d6">3</data>
+</node>
+<node id="5707679597">
+  <data key="d4">21.0133393</data>
+  <data key="d5">105.827148</data>
+  <data key="d6">3</data>
+</node>
+<node id="5707679615">
+  <data key="d4">21.0143762</data>
+  <data key="d5">105.8243082</data>
+  <data key="d6">3</data>
+</node>
+<node id="5710091927">
+  <data key="d4">21.0144222</data>
+  <data key="d5">105.8253872</data>
+  <data key="d6">1</data>
+</node>
+<node id="5710297030">
+  <data key="d4">21.0090523</data>
+  <data key="d5">105.8233738</data>
+  <data key="d6">1</data>
+</node>
+<node id="5710297033">
+  <data key="d4">21.0085522</data>
+  <data key="d5">105.8239207</data>
+  <data key="d6">3</data>
+</node>
+<node id="5828713073">
+  <data key="d4">21.0140586</data>
+  <data key="d5">105.8188692</data>
+  <data key="d6">3</data>
+</node>
+<node id="5828713074">
+  <data key="d4">21.0148042</data>
+  <data key="d5">105.8178555</data>
+  <data key="d6">3</data>
+</node>
+<node id="5954441639">
+  <data key="d4">21.0112777</data>
+  <data key="d5">105.8254518</data>
+  <data key="d6">3</data>
+</node>
+<node id="5954441640">
+  <data key="d4">21.0112402</data>
+  <data key="d5">105.825529</data>
+  <data key="d6">3</data>
+</node>
+<node id="6405794494">
+  <data key="d4">21.0096805</data>
+  <data key="d5">105.824699</data>
+  <data key="d6">3</data>
+</node>
+<node id="6405794495">
+  <data key="d4">21.0142179</data>
+  <data key="d5">105.8273924</data>
+  <data key="d6">3</data>
+</node>
+<node id="6644672133">
+  <data key="d4">21.0098098</data>
+  <data key="d5">105.8233913</data>
+  <data key="d6">3</data>
+</node>
+<node id="6644672135">
+  <data key="d4">21.0115675</data>
+  <data key="d5">105.8214795</data>
+  <data key="d6">3</data>
+</node>
+<node id="6659134171">
+  <data key="d4">21.0104696</data>
+  <data key="d5">105.8249685</data>
+  <data key="d6">3</data>
+</node>
+<node id="6659134172">
+  <data key="d4">21.0104207</data>
+  <data key="d5">105.8250477</data>
+  <data key="d6">3</data>
+</node>
+<node id="6662241094">
+  <data key="d4">21.0130422</data>
+  <data key="d5">105.8182137</data>
+  <data key="d6">3</data>
+</node>
+<node id="6662241095">
+  <data key="d4">21.0131584</data>
+  <data key="d5">105.8180511</data>
+  <data key="d6">3</data>
+</node>
+<node id="6688503842">
+  <data key="d4">21.0095161</data>
+  <data key="d5">105.8246137</data>
+  <data key="d6">3</data>
+</node>
+<node id="6688503847">
+  <data key="d4">21.0096285</data>
+  <data key="d5">105.8244721</data>
+  <data key="d6">3</data>
+</node>
+<node id="6689225964">
+  <data key="d4">21.0145944</data>
+  <data key="d5">105.8210635</data>
+  <data key="d6">3</data>
+</node>
+<node id="7837394427">
+  <data key="d4">21.0187625</data>
+  <data key="d5">105.8245384</data>
+  <data key="d6">3</data>
+</node>
+<node id="8034817846">
+  <data key="d4">21.0185706</data>
+  <data key="d5">105.8236582</data>
+  <data key="d6">3</data>
+</node>
+<node id="8277275975">
+  <data key="d4">21.0135916</data>
+  <data key="d5">105.8279673</data>
+  <data key="d6">1</data>
+</node>
+<node id="11201648616">
+  <data key="d4">21.0138554</data>
+  <data key="d5">105.8271703</data>
+  <data key="d6">3</data>
+</node>
+<node id="11925365306">
+  <data key="d4">21.0147424</data>
+  <data key="d5">105.824867</data>
+  <data key="d6">1</data>
+</node>
+<node id="11950483412">
+  <data key="d4">21.0089408</data>
+  <data key="d5">105.8243268</data>
+  <data key="d6">3</data>
+</node>
+<node id="11950483417">
+  <data key="d4">21.0090127</data>
+  <data key="d5">105.8241564</data>
+  <data key="d6">3</data>
+</node>
+<edge source="81805393" target="11950483412" id="0">
+  <data key="d8">684766067</data>
+  <data key="d9">primary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">14.781613106897831</data>
+</edge>
+<edge source="81805393" target="1884765798" id="0">
+  <data key="d8">9964551</data>
+  <data key="d9">primary_link</data>
+  <data key="d10">2</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">57.06991648786128</data>
+  <data key="d15">LINESTRING (105.82426 21.0088234, 105.8245019 21.0088948, 105.8246206 21.0089278, 105.8247865 21.008971)</data>
+</edge>
+<edge source="106108910" target="2174649945" id="0">
+  <data key="d8">1246265594</data>
+  <data key="d9">tertiary</data>
+  <data key="d11">Phố Mai Anh Tuấn</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">16.50028830749713</data>
+</edge>
+<edge source="106108910" target="106108917" id="0">
+  <data key="d8">1240127122</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">190.45149736644905</data>
+  <data key="d15">LINESTRING (105.8241401 21.0179988, 105.8240753 21.0178756, 105.8239134 21.0175679, 105.8237598 21.0172726, 105.8235086 21.0168221, 105.8234483 21.0167325, 105.8233877 21.0166644, 105.823334 21.0166106, 105.8232619 21.0165588, 105.8232227 21.0165348)</data>
+</edge>
+<edge source="106108910" target="5706871736" id="0">
+  <data key="d8">1246265594</data>
+  <data key="d9">tertiary</data>
+  <data key="d11">Phố Mai Anh Tuấn</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">179.60206560707533</data>
+  <data key="d15">LINESTRING (105.8241401 21.0179988, 105.8239122 21.0181018, 105.8236406 21.0182246, 105.8229511 21.0184931, 105.8225503 21.0186339)</data>
+</edge>
+<edge source="106108917" target="2174649904" id="0">
+  <data key="d8">219976145</data>
+  <data key="d9">secondary_link</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">15.483162158081575</data>
+</edge>
+<edge source="106108917" target="1497527957" id="0">
+  <data key="d8">179990709</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">376.20006791181925</data>
+  <data key="d15">LINESTRING (105.8232227 21.0165348, 105.823151 21.0165065, 105.8230767 21.0164878, 105.8230022 21.0164777, 105.8222667 21.0164636, 105.8217641 21.0164718, 105.8215293 21.0164681, 105.8213773 21.0164667, 105.8213011 21.016461, 105.8212294 21.0164488, 105.8211689 21.016422, 105.821097 21.0163809, 105.8210325 21.0163245, 105.8209323 21.0162252, 105.8207744 21.0160627, 105.8205273 21.0158203, 105.8200999 21.015375)</data>
+</edge>
+<edge source="106109203" target="2291014993" id="0">
+  <data key="d8">219973242</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">63.30397906936526</data>
+</edge>
+<edge source="106109203" target="2291014992" id="0">
+  <data key="d8">946867353</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">35.91274952152227</data>
+</edge>
+<edge source="106109203" target="318259614" id="0">
+  <data key="d8">946867353</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">45.88034920561811</data>
+  <data key="d15">LINESTRING (105.824904 21.0153629, 105.8247856 21.0154254, 105.824595 21.0155279, 105.8245191 21.0155657)</data>
+</edge>
+<edge source="106109210" target="2174649904" id="0">
+  <data key="d8">11839274</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">12.508184853378545</data>
+</edge>
+<edge source="106109210" target="318259614" id="0">
+  <data key="d8">11839274</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">149.35657515971766</data>
+  <data key="d15">LINESTRING (105.8233283 21.0163032, 105.8233767 21.0162435, 105.8234141 21.0162007, 105.8234681 21.0161568, 105.8235143 21.0161221, 105.8237745 21.0159823, 105.8240585 21.0158243, 105.8244658 21.0156021, 105.8245191 21.0155657)</data>
+</edge>
+<edge source="106109210" target="106109440" id="0">
+  <data key="d8">1194666255</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">46.35821807075221</data>
+  <data key="d15">LINESTRING (105.8233283 21.0163032, 105.8231509 21.0162468, 105.8230719 21.0162373, 105.8228924 21.0162416)</data>
+</edge>
+<edge source="106109440" target="106109949" id="0">
+  <data key="d8">675260246</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">62.7966206783405</data>
+</edge>
+<edge source="106109440" target="318259513" id="0">
+  <data key="d8">28947134</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 95 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">68.5442282118357</data>
+  <data key="d15">LINESTRING (105.8228924 21.0162416, 105.8229123 21.0159143, 105.8229104 21.0156257)</data>
+</edge>
+<edge source="106109440" target="106109210" id="0">
+  <data key="d8">1194666255</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">46.35821807075221</data>
+  <data key="d15">LINESTRING (105.8228924 21.0162416, 105.8230719 21.0162373, 105.8231509 21.0162468, 105.8233283 21.0163032)</data>
+</edge>
+<edge source="106109949" target="106109440" id="0">
+  <data key="d8">675260246</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">62.7966206783405</data>
+</edge>
+<edge source="106111360" target="5828713074" id="0">
+  <data key="d8">29101513</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 88 Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">23.717068481832214</data>
+  <data key="d15">LINESTRING (105.8177309 21.0146258, 105.8177845 21.0147133, 105.8178555 21.0148042)</data>
+</edge>
+<edge source="106111360" target="2176926218" id="0">
+  <data key="d8">[33407729, 1266983913]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">131.06593369085726</data>
+  <data key="d15">LINESTRING (105.8177309 21.0146258, 105.8181474 21.0143279, 105.8184105 21.014135, 105.8185877 21.0140051, 105.8187277 21.0139023)</data>
+</edge>
+<edge source="106111364" target="1314209710" id="0">
+  <data key="d8">707072728</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">65.75514950672391</data>
+  <data key="d15">LINESTRING (105.8206704 21.0124282, 105.8206978 21.0123321, 105.8207957 21.0122357, 105.82105 21.0119663)</data>
+</edge>
+<edge source="106111364" target="1495020922" id="0">
+  <data key="d8">[711362080, 709017803]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">['2', '4']</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">122.8626655687138</data>
+  <data key="d15">LINESTRING (105.8206704 21.0124282, 105.82039 21.0126687, 105.8200948 21.0128667, 105.8200099 21.0129304, 105.8197568 21.0131287)</data>
+</edge>
+<edge source="106111365" target="318259528" id="0">
+  <data key="d8">29133244</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trung Liệt</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">218.52852434886648</data>
+  <data key="d15">LINESTRING (105.8211088 21.0120825, 105.8211255 21.0120968, 105.821145 21.0121156, 105.8211633 21.0121331, 105.8215113 21.0124679, 105.8218331 21.0128444, 105.8218555 21.0128691, 105.8221246 21.0131656, 105.8224742 21.0134887, 105.8225238 21.0135345)</data>
+</edge>
+<edge source="106111365" target="106111364" id="0">
+  <data key="d8">707072727</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">61.77069780117792</data>
+  <data key="d15">LINESTRING (105.8211088 21.0120825, 105.820774 21.0124176, 105.8206704 21.0124282)</data>
+</edge>
+<edge source="283138280" target="2452431996" id="0">
+  <data key="d8">961661884</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Thịnh</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">19.29347561286975</data>
+</edge>
+<edge source="318258663" target="1497544669" id="0">
+  <data key="d8">711492064</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">7.86716645215187</data>
+</edge>
+<edge source="318259513" target="318259519" id="0">
+  <data key="d8">28947134</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 95 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">49.16374433064579</data>
+  <data key="d15">LINESTRING (105.8229104 21.0156257, 105.822924 21.0152299, 105.8229349 21.0151849)</data>
+</edge>
+<edge source="318259513" target="106109440" id="0">
+  <data key="d8">28947134</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 95 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">68.5442282118357</data>
+  <data key="d15">LINESTRING (105.8229104 21.0156257, 105.8229123 21.0159143, 105.8228924 21.0162416)</data>
+</edge>
+<edge source="318259513" target="318259517" id="0">
+  <data key="d8">683852462</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 56 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">147.4541096475071</data>
+  <data key="d15">LINESTRING (105.8229104 21.0156257, 105.8231408 21.0156158, 105.823228 21.0155802, 105.823473 21.0154605, 105.8237853 21.0153101, 105.8241854 21.0150856)</data>
+</edge>
+<edge source="318259517" target="2291014993" id="0">
+  <data key="d8">1231370732</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">50.21473871585404</data>
+</edge>
+<edge source="318259517" target="318259513" id="0">
+  <data key="d8">683852462</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 56 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">147.4541096475071</data>
+  <data key="d15">LINESTRING (105.8241854 21.0150856, 105.8237853 21.0153101, 105.823473 21.0154605, 105.823228 21.0155802, 105.8231408 21.0156158, 105.8229104 21.0156257)</data>
+</edge>
+<edge source="318259517" target="318259614" id="0">
+  <data key="d8">1231370731</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">63.637300353913346</data>
+  <data key="d15">LINESTRING (105.8241854 21.0150856, 105.8244649 21.0154881, 105.8245191 21.0155657)</data>
+</edge>
+<edge source="318259517" target="2291014994" id="0">
+  <data key="d8">1231374926</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">52.36239412416098</data>
+  <data key="d15">LINESTRING (105.8241854 21.0150856, 105.8240193 21.0148304, 105.8239332 21.014678)</data>
+</edge>
+<edge source="318259519" target="318259513" id="0">
+  <data key="d8">28947134</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 95 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">49.16374433064579</data>
+  <data key="d15">LINESTRING (105.8229349 21.0151849, 105.822924 21.0152299, 105.8229104 21.0156257)</data>
+</edge>
+<edge source="318259522" target="5707655797" id="0">
+  <data key="d8">28947147</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">52.33599132724243</data>
+  <data key="d15">LINESTRING (105.8236237 21.014417, 105.8234184 21.0142527, 105.8232433 21.0141081)</data>
+</edge>
+<edge source="318259522" target="5707655797" id="1">
+  <data key="d8">[675260248, 600127339, 675260247]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 75 Phố Trần Quang Diệu', 'Ngõ 9 Phố Trần Quang Diệu']</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">296.2320223317045</data>
+  <data key="d15">LINESTRING (105.8236237 21.014417, 105.8239701 21.0140508, 105.8240045 21.0140144, 105.8243404 21.0136591, 105.8243647 21.0136334, 105.8240608 21.0133644, 105.8239442 21.0132562, 105.8234644 21.0138572, 105.8232433 21.0141081)</data>
+</edge>
+<edge source="318259522" target="2291014994" id="0">
+  <data key="d8">28947147</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">43.34023518117036</data>
+  <data key="d15">LINESTRING (105.8236237 21.014417, 105.8238018 21.0145551, 105.8239332 21.014678)</data>
+</edge>
+<edge source="318259528" target="1314209721" id="0">
+  <data key="d8">11839377</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Đặng Tiến Đông</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">414.607591750323</data>
+  <data key="d15">LINESTRING (105.8225238 21.0135345, 105.8226259 21.0133911, 105.822827 21.0131538, 105.8233114 21.0126032, 105.8234373 21.0124676, 105.8239175 21.0119573, 105.8244837 21.0113735, 105.8250128 21.0107629, 105.8250728 21.0106684)</data>
+</edge>
+<edge source="318259528" target="5707655797" id="0">
+  <data key="d8">28947147</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">98.2255649315452</data>
+  <data key="d15">LINESTRING (105.8225238 21.0135345, 105.8226792 21.0136623, 105.8228833 21.0138304, 105.8232433 21.0141081)</data>
+</edge>
+<edge source="318259528" target="6689225964" id="0">
+  <data key="d8">946867352</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Đặng Tiến Đông</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">200.9635272266355</data>
+  <data key="d15">LINESTRING (105.8225238 21.0135345, 105.8223954 21.0136686, 105.822267 21.0138022, 105.8218192 21.0142681, 105.8215857 21.0144987, 105.8215302 21.0145287, 105.8214686 21.0145445, 105.8214068 21.0145481, 105.821207 21.0145527, 105.8211339 21.0145675, 105.8210635 21.0145944)</data>
+</edge>
+<edge source="318259614" target="106109210" id="0">
+  <data key="d8">11839274</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">149.35657515971766</data>
+  <data key="d15">LINESTRING (105.8245191 21.0155657, 105.8244658 21.0156021, 105.8240585 21.0158243, 105.8237745 21.0159823, 105.8235143 21.0161221, 105.8234681 21.0161568, 105.8234141 21.0162007, 105.8233767 21.0162435, 105.8233283 21.0163032)</data>
+</edge>
+<edge source="318259614" target="106109203" id="0">
+  <data key="d8">946867353</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">45.88034920561811</data>
+  <data key="d15">LINESTRING (105.8245191 21.0155657, 105.824595 21.0155279, 105.8247856 21.0154254, 105.824904 21.0153629)</data>
+</edge>
+<edge source="318259614" target="320236975" id="0">
+  <data key="d8">946867354</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">78.15054692088893</data>
+  <data key="d15">LINESTRING (105.8245191 21.0155657, 105.8245682 21.0156339, 105.8247025 21.015827, 105.8249146 21.0161635)</data>
+</edge>
+<edge source="318259614" target="318259517" id="0">
+  <data key="d8">1231370731</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">63.637300353913346</data>
+  <data key="d15">LINESTRING (105.8245191 21.0155657, 105.8244649 21.0154881, 105.8241854 21.0150856)</data>
+</edge>
+<edge source="318259616" target="318259617" id="0">
+  <data key="d8">946867354</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">24.694166917277766</data>
+</edge>
+<edge source="318259616" target="318259620" id="0">
+  <data key="d8">28947149</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">66.41880071827765</data>
+  <data key="d15">LINESTRING (105.8251477 21.0165492, 105.8250368 21.0166564, 105.8246077 21.0168577)</data>
+</edge>
+<edge source="318259616" target="320236984" id="0">
+  <data key="d8">29113024</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">143.5843563467072</data>
+  <data key="d15">LINESTRING (105.8251477 21.0165492, 105.825414 21.0164123, 105.8256894 21.0162757, 105.8263639 21.015934)</data>
+</edge>
+<edge source="318259616" target="5707161170" id="0">
+  <data key="d8">[946867354, 28947148]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Phố Trần Quang Diệu', 'Ngõ 59 Phố Hoàng Cầu']</data>
+  <data key="d12">False</data>
+  <data key="d13">[False, True]</data>
+  <data key="d14">265.6938302794994</data>
+  <data key="d15">LINESTRING (105.8251477 21.0165492, 105.8252152 21.0166618, 105.8252672 21.0167486, 105.8253228 21.0168412, 105.8254488 21.0170513, 105.8255206 21.0171711, 105.8256394 21.0173821, 105.8257516 21.0175813, 105.825672 21.0176194, 105.8254319 21.0177396, 105.8249931 21.0179814, 105.8247913 21.0180949, 105.8246193 21.0181761)</data>
+</edge>
+<edge source="318259617" target="318259629" id="0">
+  <data key="d8">28947154</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 8 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">40.11346040658269</data>
+</edge>
+<edge source="318259617" target="320236975" id="0">
+  <data key="d8">946867354</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">24.548964558442353</data>
+</edge>
+<edge source="318259617" target="318259616" id="0">
+  <data key="d8">946867354</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">24.694166917277766</data>
+</edge>
+<edge source="318259620" target="318259621" id="0">
+  <data key="d8">28947150</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 25 Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">29.712807292065868</data>
+</edge>
+<edge source="318259620" target="2175126954" id="0">
+  <data key="d8">28947149</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">63.6200082873899</data>
+  <data key="d15">LINESTRING (105.8246077 21.0168577, 105.8244344 21.016938, 105.8241839 21.0170539, 105.8240572 21.0171092)</data>
+</edge>
+<edge source="318259620" target="318259616" id="0">
+  <data key="d8">28947149</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">66.41880071827765</data>
+  <data key="d15">LINESTRING (105.8246077 21.0168577, 105.8250368 21.0166564, 105.8251477 21.0165492)</data>
+</edge>
+<edge source="318259621" target="318259622" id="0">
+  <data key="d8">28947150</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 25 Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">18.204974992902333</data>
+</edge>
+<edge source="318259621" target="318259620" id="0">
+  <data key="d8">28947150</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 25 Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">29.712807292065868</data>
+</edge>
+<edge source="318259621" target="318259629" id="0">
+  <data key="d8">28947154</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 8 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">23.97267239695682</data>
+</edge>
+<edge source="318259622" target="318259623" id="0">
+  <data key="d8">28947150</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 25 Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">23.12753508801063</data>
+</edge>
+<edge source="318259622" target="318259621" id="0">
+  <data key="d8">28947150</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 25 Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">18.204974992902333</data>
+</edge>
+<edge source="318259622" target="318259628" id="0">
+  <data key="d8">28947153</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 67 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">64.07134540849938</data>
+  <data key="d15">LINESTRING (105.8244042 21.0164709, 105.8239015 21.0167318, 105.8238652 21.0167517)</data>
+</edge>
+<edge source="318259623" target="318259622" id="0">
+  <data key="d8">28947150</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 25 Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">23.12753508801063</data>
+</edge>
+<edge source="318259623" target="318259626" id="0">
+  <data key="d8">[28947150, 28947151]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 25 Phố Võ Văn Dũng', 'Ngõ 81 Phố Hoàng Cầu']</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">96.5800874011127</data>
+  <data key="d15">LINESTRING (105.8243047 21.0162848, 105.8241963 21.0160821, 105.8236173 21.0163632, 105.823586 21.0163781)</data>
+</edge>
+<edge source="318259623" target="318259627" id="0">
+  <data key="d8">28947152</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 73 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">66.01763095052272</data>
+  <data key="d15">LINESTRING (105.8243047 21.0162848, 105.8237776 21.016547, 105.8237429 21.0165631)</data>
+</edge>
+<edge source="318259625" target="318259629" id="0">
+  <data key="d8">28947155</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngách 8/9 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">67.0672098401128</data>
+</edge>
+<edge source="318259626" target="318259623" id="0">
+  <data key="d8">[28947150, 28947151]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 25 Phố Võ Văn Dũng', 'Ngõ 81 Phố Hoàng Cầu']</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">96.5800874011127</data>
+  <data key="d15">LINESTRING (105.823586 21.0163781, 105.8236173 21.0163632, 105.8241963 21.0160821, 105.8243047 21.0162848)</data>
+</edge>
+<edge source="318259627" target="318259623" id="0">
+  <data key="d8">28947152</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 73 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">66.01763095052272</data>
+  <data key="d15">LINESTRING (105.8237429 21.0165631, 105.8237776 21.016547, 105.8243047 21.0162848)</data>
+</edge>
+<edge source="318259628" target="318259622" id="0">
+  <data key="d8">28947153</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 67 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">64.07134540849938</data>
+  <data key="d15">LINESTRING (105.8238652 21.0167517, 105.8239015 21.0167318, 105.8244042 21.0164709)</data>
+</edge>
+<edge source="318259629" target="318259617" id="0">
+  <data key="d8">28947154</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 8 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">40.11346040658269</data>
+</edge>
+<edge source="318259629" target="318259621" id="0">
+  <data key="d8">28947154</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 8 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">23.97267239695682</data>
+</edge>
+<edge source="318259629" target="318259625" id="0">
+  <data key="d8">28947155</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngách 8/9 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">67.0672098401128</data>
+</edge>
+<edge source="320236975" target="318259617" id="0">
+  <data key="d8">946867354</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">24.548964558442353</data>
+</edge>
+<edge source="320236975" target="320236984" id="0">
+  <data key="d8">[29113026, 29113022]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 19 Phố Trần Quang Diệu', 'Ngách 64/49 Phố Nguyễn Lương Bằng']</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">196.65864589159938</data>
+  <data key="d15">LINESTRING (105.8249146 21.0161635, 105.8251677 21.0160241, 105.8255605 21.0158078, 105.8257648 21.015693, 105.8261041 21.0155161, 105.8263639 21.015934)</data>
+</edge>
+<edge source="320236975" target="318259614" id="0">
+  <data key="d8">946867354</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">78.15054692088891</data>
+  <data key="d15">LINESTRING (105.8249146 21.0161635, 105.8247025 21.015827, 105.8245682 21.0156339, 105.8245191 21.0155657)</data>
+</edge>
+<edge source="320236984" target="318259616" id="0">
+  <data key="d8">29113024</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">143.5843563467072</data>
+  <data key="d15">LINESTRING (105.8263639 21.015934, 105.8256894 21.0162757, 105.825414 21.0164123, 105.8251477 21.0165492)</data>
+</edge>
+<edge source="320236984" target="1753897155" id="0">
+  <data key="d8">29113026</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngách 64/49 Phố Nguyễn Lương Bằng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">50.634444404708745</data>
+  <data key="d15">LINESTRING (105.8263639 21.015934, 105.8265442 21.0162339, 105.8266047 21.01633)</data>
+</edge>
+<edge source="320236984" target="320236975" id="0">
+  <data key="d8">[29113026, 29113022]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 19 Phố Trần Quang Diệu', 'Ngách 64/49 Phố Nguyễn Lương Bằng']</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">196.65864589159938</data>
+  <data key="d15">LINESTRING (105.8263639 21.015934, 105.8261041 21.0155161, 105.8257648 21.015693, 105.8255605 21.0158078, 105.8251677 21.0160241, 105.8249146 21.0161635)</data>
+</edge>
+<edge source="320236991" target="320237777" id="0">
+  <data key="d8">[28947038, 29113026, 1413201182]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngách 64/49 Phố Nguyễn Lương Bằng', 'Ngõ 64 Phố Nguyễn Lương Bằng', 'Ngõ 31 Phố Hoàng Cầu']</data>
+  <data key="d12">False</data>
+  <data key="d13">[False, True]</data>
+  <data key="d14">203.78710523270917</data>
+  <data key="d15">LINESTRING (105.8270342 21.0170785, 105.827028 21.0171801, 105.8273287 21.0176954, 105.8266464 21.0180589, 105.8266728 21.0181048, 105.8266628 21.0181729, 105.8265914 21.0182225, 105.8263958 21.0183198)</data>
+</edge>
+<edge source="320236991" target="1753897155" id="0">
+  <data key="d8">29113026</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngách 64/49 Phố Nguyễn Lương Bằng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">94.44138272762373</data>
+  <data key="d15">LINESTRING (105.8270342 21.0170785, 105.8269464 21.0169095, 105.8268983 21.0168242, 105.8267334 21.016548, 105.8266047 21.01633)</data>
+</edge>
+<edge source="320236991" target="1753897155" id="1">
+  <data key="d8">[163711328, 675260226, 163711331]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 178 Nguyễn Lương Bằng', 'Ngõ 59 Phố Hoàng Cầu']</data>
+  <data key="d12">False</data>
+  <data key="d13">[False, True]</data>
+  <data key="d14">327.49543707242304</data>
+  <data key="d15">LINESTRING (105.8270342 21.0170785, 105.8272054 21.0170074, 105.8273422 21.0169397, 105.8273771 21.0169234, 105.8277655 21.016742, 105.8277817 21.0167344, 105.8279999 21.016637, 105.8278825 21.0164168, 105.8277656 21.0161977, 105.8275652 21.0158218, 105.8274258 21.0158955, 105.8273004 21.0159617, 105.8271688 21.0160313, 105.8271426 21.0160451, 105.8270847 21.0160754, 105.8270042 21.0161175, 105.8268627 21.0161917, 105.8267446 21.0162535, 105.8266047 21.01633)</data>
+</edge>
+<edge source="320237777" target="320236991" id="0">
+  <data key="d8">[29113026, 28947038, 1413201182]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngách 64/49 Phố Nguyễn Lương Bằng', 'Ngõ 64 Phố Nguyễn Lương Bằng', 'Ngõ 31 Phố Hoàng Cầu']</data>
+  <data key="d12">False</data>
+  <data key="d13">[False, True]</data>
+  <data key="d14">203.78710523270917</data>
+  <data key="d15">LINESTRING (105.8263958 21.0183198, 105.8265914 21.0182225, 105.8266628 21.0181729, 105.8266728 21.0181048, 105.8266464 21.0180589, 105.8273287 21.0176954, 105.827028 21.0171801, 105.8270342 21.0170785)</data>
+</edge>
+<edge source="320237777" target="1904342334" id="0">
+  <data key="d8">29113046</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 31 Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">79.2507040954234</data>
+  <data key="d15">LINESTRING (105.8263958 21.0183198, 105.8262938 21.0181528, 105.8261566 21.0179093, 105.8260288 21.0176949)</data>
+</edge>
+<edge source="446030797" target="2176926218" id="0">
+  <data key="d8">709017802</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">21.75609830548741</data>
+</edge>
+<edge source="446030797" target="2174649960" id="0">
+  <data key="d8">709017800</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">216.04892112069618</data>
+  <data key="d15">LINESTRING (105.8188893 21.0137777, 105.8189577 21.0138533, 105.8191639 21.0140959, 105.8199289 21.0149374, 105.8200004 21.0150085, 105.8201265 21.015125, 105.8202026 21.0151912, 105.8202578 21.0152392)</data>
+</edge>
+<edge source="446030797" target="1495020922" id="0">
+  <data key="d8">[711362081, 711368897]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">115.57306893070356</data>
+  <data key="d15">LINESTRING (105.8188893 21.0137777, 105.8190224 21.0137032, 105.8193356 21.0134551, 105.8195129 21.0133157, 105.8195569 21.0132807, 105.8196471 21.0132139, 105.8197568 21.0131287)</data>
+</edge>
+<edge source="1314209691" target="1495020912" id="0">
+  <data key="d8">708614256</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Chùa Bộc</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">39.47686187266695</data>
+  <data key="d15">LINESTRING (105.8248463 21.0091472, 105.8246237 21.0092349, 105.8244986 21.0092908)</data>
+</edge>
+<edge source="1314209691" target="6405794494" id="0">
+  <data key="d8">1210949543</data>
+  <data key="d9">primary_link</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">61.240601907337464</data>
+  <data key="d15">LINESTRING (105.8248463 21.0091472, 105.8247896 21.0093491, 105.8247219 21.0095996, 105.824699 21.0096805)</data>
+</edge>
+<edge source="1314209699" target="11950483417" id="0">
+  <data key="d8">219977622</data>
+  <data key="d9">primary</data>
+  <data key="d10">4</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">29.27994696218298</data>
+</edge>
+<edge source="1314209699" target="1884765806" id="0">
+  <data key="d8">708573722</data>
+  <data key="d9">secondary</data>
+  <data key="d10">4</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">20.422935385389952</data>
+  <data key="d15">LINESTRING (105.8242748 21.0092517, 105.8243959 21.0091565, 105.8244253 21.0091334)</data>
+</edge>
+<edge source="1314209710" target="1904449333" id="0">
+  <data key="d8">136257252</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trung Liệt</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">248.50294016872695</data>
+  <data key="d15">LINESTRING (105.82105 21.0119663, 105.8210168 21.0119249, 105.8208248 21.0117203, 105.8207531 21.0116376, 105.8204464 21.0113199, 105.8202843 21.0111365, 105.8198981 21.0106845, 105.8197282 21.0106808, 105.8194686 21.0104724, 105.8194013 21.0104184)</data>
+</edge>
+<edge source="1314209710" target="6644672135" id="0">
+  <data key="d8">707072728</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">63.99444260085997</data>
+  <data key="d15">LINESTRING (105.82105 21.0119663, 105.8213615 21.0116163, 105.8214795 21.0115675)</data>
+</edge>
+<edge source="1314209717" target="5710297033" id="0">
+  <data key="d8">1012665674</data>
+  <data key="d9">primary</data>
+  <data key="d10">4</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">44.76221120927543</data>
+</edge>
+<edge source="1314209721" target="6659134171" id="0">
+  <data key="d8">711404113</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">24.61445496450636</data>
+</edge>
+<edge source="1314209721" target="318259528" id="0">
+  <data key="d8">11839377</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Đặng Tiến Đông</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">414.607591750323</data>
+  <data key="d15">LINESTRING (105.8250728 21.0106684, 105.8250128 21.0107629, 105.8244837 21.0113735, 105.8239175 21.0119573, 105.8234373 21.0124676, 105.8233114 21.0126032, 105.822827 21.0131538, 105.8226259 21.0133911, 105.8225238 21.0135345)</data>
+</edge>
+<edge source="1314209723" target="5485651217" id="0">
+  <data key="d8">570571994</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Hồ Đắc Di</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">7.410267998483248</data>
+</edge>
+<edge source="1314209723" target="5954441639" id="0">
+  <data key="d8">[711083507, 219977702]</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">286.89468113544393</data>
+  <data key="d15">LINESTRING (105.8268687 21.0134918, 105.8268116 21.0133965, 105.8264424 21.0127857, 105.8263259 21.0125946, 105.8261641 21.0123389, 105.8259248 21.0119543, 105.8255555 21.011431, 105.8254518 21.0112777)</data>
+</edge>
+<edge source="1495020912" target="1758631175" id="0">
+  <data key="d8">708573721</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">19.236838781544236</data>
+</edge>
+<edge source="1495020912" target="6688503842" id="0">
+  <data key="d8">1333363797</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">27.755423290846398</data>
+</edge>
+<edge source="1495020922" target="106111364" id="0">
+  <data key="d8">[711362080, 709017803]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">['4', '2']</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">122.86266556871381</data>
+  <data key="d15">LINESTRING (105.8197568 21.0131287, 105.8200099 21.0129304, 105.8200948 21.0128667, 105.82039 21.0126687, 105.8206704 21.0124282)</data>
+</edge>
+<edge source="1495020922" target="446030797" id="0">
+  <data key="d8">[711368897, 711362081]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">115.57306893070353</data>
+  <data key="d15">LINESTRING (105.8197568 21.0131287, 105.8196471 21.0132139, 105.8195569 21.0132807, 105.8195129 21.0133157, 105.8193356 21.0134551, 105.8190224 21.0137032, 105.8188893 21.0137777)</data>
+</edge>
+<edge source="1495023371" target="1904449336" id="0">
+  <data key="d8">37972515</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Thịnh</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">263.17889001171665</data>
+  <data key="d15">LINESTRING (105.8203154 21.008217, 105.8202844 21.0082517, 105.8202485 21.008295, 105.820046 21.0085341, 105.8198943 21.0087156, 105.8198311 21.0087912, 105.8197973 21.0088353, 105.8196695 21.0089918, 105.8196417 21.0090258, 105.8196131 21.0090608, 105.8195695 21.0091142, 105.8195631 21.0091246, 105.8193895 21.0093226, 105.8193538 21.0093637, 105.8192785 21.0094491, 105.818971 21.0097992, 105.8187493 21.0100776)</data>
+</edge>
+<edge source="1497527957" target="2174649960" id="0">
+  <data key="d8">708960889</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">22.285553896802902</data>
+</edge>
+<edge source="1497527957" target="5828713073" id="0">
+  <data key="d8">[1266449985, 707362060]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">['3', '4']</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">194.29048915062478</data>
+  <data key="d15">LINESTRING (105.8200999 21.015375, 105.8200522 21.0153245, 105.8190842 21.0142984, 105.8188692 21.0140586)</data>
+</edge>
+<edge source="1497544669" target="318258663" id="0">
+  <data key="d8">711492064</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">7.86716645215187</data>
+</edge>
+<edge source="1497544669" target="1753897154" id="0">
+  <data key="d8">675260216</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 180 Phố Nguyễn Lương Bằng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">47.7627185756616</data>
+  <data key="d15">LINESTRING (105.8278134 21.0150609, 105.8277728 21.0150825, 105.8274129 21.0152724)</data>
+</edge>
+<edge source="1497544669" target="1314209723" id="0">
+  <data key="d8">[1266014434, 1204846893]</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">['Phố Tây Sơn', 'Phố Nguyễn Lương Bằng']</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">200.14462602325486</data>
+  <data key="d15">LINESTRING (105.8278134 21.0150609, 105.8277726 21.0149933, 105.8271365 21.0139395, 105.8269118 21.0135652, 105.8268687 21.0134918)</data>
+</edge>
+<edge source="1753897154" target="1497544669" id="0">
+  <data key="d8">675260216</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 180 Phố Nguyễn Lương Bằng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">47.7627185756616</data>
+  <data key="d15">LINESTRING (105.8274129 21.0152724, 105.8277728 21.0150825, 105.8278134 21.0150609)</data>
+</edge>
+<edge source="1753897155" target="320236991" id="0">
+  <data key="d8">29113026</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngách 64/49 Phố Nguyễn Lương Bằng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">94.44138272762373</data>
+  <data key="d15">LINESTRING (105.8266047 21.01633, 105.8267334 21.016548, 105.8268983 21.0168242, 105.8269464 21.0169095, 105.8270342 21.0170785)</data>
+</edge>
+<edge source="1753897155" target="320236991" id="1">
+  <data key="d8">[163711328, 675260226, 163711331]</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">[False, True]</data>
+  <data key="d14">327.49543707242304</data>
+  <data key="d11">['Ngõ 178 Nguyễn Lương Bằng', 'Ngõ 59 Phố Hoàng Cầu']</data>
+  <data key="d15">LINESTRING (105.8266047 21.01633, 105.8267446 21.0162535, 105.8268627 21.0161917, 105.8270042 21.0161175, 105.8270847 21.0160754, 105.8271426 21.0160451, 105.8271688 21.0160313, 105.8273004 21.0159617, 105.8274258 21.0158955, 105.8275652 21.0158218, 105.8277656 21.0161977, 105.8278825 21.0164168, 105.8279999 21.016637, 105.8277817 21.0167344, 105.8277655 21.016742, 105.8273771 21.0169234, 105.8273422 21.0169397, 105.8272054 21.0170074, 105.8270342 21.0170785)</data>
+</edge>
+<edge source="1753897155" target="320236984" id="0">
+  <data key="d8">29113026</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngách 64/49 Phố Nguyễn Lương Bằng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">50.634444404708745</data>
+  <data key="d15">LINESTRING (105.8266047 21.01633, 105.8265442 21.0162339, 105.8263639 21.015934)</data>
+</edge>
+<edge source="1758631175" target="1314209699" id="0">
+  <data key="d8">711404120</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">17.190929039739537</data>
+</edge>
+<edge source="1758631175" target="1884769979" id="0">
+  <data key="d8">707072725</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">43.29023145152392</data>
+  <data key="d15">LINESTRING (105.8243473 21.0093907, 105.8242549 21.0094523, 105.8239771 21.0095664)</data>
+</edge>
+<edge source="1758633108" target="1758633112" id="0">
+  <data key="d8">164211345</data>
+  <data key="d16">yes</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Cầu vượt Tây Sơn</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">252.82992407753383</data>
+</edge>
+<edge source="1758633112" target="6659134172" id="0">
+  <data key="d8">164211342</data>
+  <data key="d9">primary</data>
+  <data key="d10">1</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">19.522964830323033</data>
+</edge>
+<edge source="1758633112" target="1758633108" id="0">
+  <data key="d8">164211345</data>
+  <data key="d16">yes</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Cầu vượt Tây Sơn</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">252.82992407753383</data>
+</edge>
+<edge source="1884765806" target="1495020912" id="0">
+  <data key="d8">1177158045</data>
+  <data key="d9">primary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">19.0844730099725</data>
+</edge>
+<edge source="1884765806" target="1884765798" id="0">
+  <data key="d8">708573719</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Chùa Bộc</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">42.12770939291696</data>
+  <data key="d15">LINESTRING (105.8244253 21.0091334, 105.8245318 21.0090573, 105.8246396 21.0090109, 105.824726 21.0089861, 105.8247865 21.008971)</data>
+</edge>
+<edge source="1884768305" target="1314209717" id="0">
+  <data key="d8">178091745</data>
+  <data key="d9">primary_link</data>
+  <data key="d10">2</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">61.28439312629972</data>
+  <data key="d15">LINESTRING (105.8239568 21.0094475, 105.8240597 21.0091001, 105.824108 21.0089148)</data>
+</edge>
+<edge source="1884768305" target="1314209699" id="0">
+  <data key="d8">708570281</data>
+  <data key="d9">secondary</data>
+  <data key="d10">4</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">39.577791362802174</data>
+  <data key="d15">LINESTRING (105.8239568 21.0094475, 105.824179 21.009319, 105.8242748 21.0092517)</data>
+</edge>
+<edge source="1884769977" target="6688503847" id="0">
+  <data key="d8">711404121</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">15.135230107518696</data>
+</edge>
+<edge source="1884769977" target="1884769979" id="0">
+  <data key="d8">178091760</data>
+  <data key="d9">primary_link</data>
+  <data key="d10">2</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">62.103665529828845</data>
+  <data key="d15">LINESTRING (105.8245423 21.0097478, 105.8243881 21.0096863, 105.8239771 21.0095664)</data>
+</edge>
+<edge source="1884769979" target="6644672133" id="0">
+  <data key="d8">707072725</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">66.90144409402097</data>
+  <data key="d15">LINESTRING (105.8239771 21.0095664, 105.823491 21.0097925, 105.8233913 21.0098098)</data>
+</edge>
+<edge source="1904342334" target="320237777" id="0">
+  <data key="d8">29113046</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 31 Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">79.25070409542339</data>
+  <data key="d15">LINESTRING (105.8260288 21.0176949, 105.8261566 21.0179093, 105.8262938 21.0181528, 105.8263958 21.0183198)</data>
+</edge>
+<edge source="1904449332" target="1904449333" id="0">
+  <data key="d8">1257401635</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Nguyễn Văn Tuyết</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">15.83606026070685</data>
+</edge>
+<edge source="1904449332" target="2291014178" id="0">
+  <data key="d8">1257401278</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Nguyễn Văn Tuyết</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">271.0802929844259</data>
+  <data key="d15">LINESTRING (105.8193044 21.0105284, 105.818765 21.0111418, 105.8186413 21.0112924, 105.8181696 21.0118804, 105.8180442 21.0120291, 105.8177234 21.0123765, 105.8176724 21.0124305)</data>
+</edge>
+<edge source="1904449332" target="1904449336" id="0">
+  <data key="d8">1257401279</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trung Liệt</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">76.38291151802018</data>
+  <data key="d15">LINESTRING (105.8193044 21.0105284, 105.8191269 21.010388, 105.8187931 21.0101104, 105.8187493 21.0100776)</data>
+</edge>
+<edge source="1904449333" target="1904449332" id="0">
+  <data key="d8">1257401635</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Nguyễn Văn Tuyết</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">15.83606026070685</data>
+</edge>
+<edge source="1904449336" target="1495023371" id="0">
+  <data key="d8">37972515</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Thịnh</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">263.1788900117166</data>
+  <data key="d15">LINESTRING (105.8187493 21.0100776, 105.818971 21.0097992, 105.8192785 21.0094491, 105.8193538 21.0093637, 105.8193895 21.0093226, 105.8195631 21.0091246, 105.8195695 21.0091142, 105.8196131 21.0090608, 105.8196417 21.0090258, 105.8196695 21.0089918, 105.8197973 21.0088353, 105.8198311 21.0087912, 105.8198943 21.0087156, 105.820046 21.0085341, 105.8202485 21.008295, 105.8202844 21.0082517, 105.8203154 21.008217)</data>
+</edge>
+<edge source="1904449336" target="2452431996" id="0">
+  <data key="d8">[1262812936, 1262812937]</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Thịnh</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">258.74040109718635</data>
+  <data key="d15">LINESTRING (105.8187493 21.0100776, 105.8186654 21.0101674, 105.8184378 21.0104356, 105.8182224 21.0106917, 105.8182123 21.0107088, 105.8180256 21.0109232, 105.8177405 21.0112634, 105.817583 21.0114637, 105.8175611 21.0114925, 105.8174337 21.0116693, 105.8173176 21.0118305, 105.8172506 21.0119342)</data>
+</edge>
+<edge source="2174649904" target="106109210" id="0">
+  <data key="d8">11839274</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">12.508184853378545</data>
+</edge>
+<edge source="2174649904" target="106108917" id="0">
+  <data key="d8">219976145</data>
+  <data key="d9">secondary_link</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">15.483162158081575</data>
+</edge>
+<edge source="2174649904" target="2174649940" id="0">
+  <data key="d8">1432500749</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">108.94140948994325</data>
+  <data key="d15">LINESTRING (105.8232829 21.0164074, 105.8233386 21.0164392, 105.8234107 21.0164858, 105.8234818 21.016541, 105.8235513 21.0166104, 105.8236045 21.0166859, 105.823712 21.0168842, 105.8238769 21.0171907)</data>
+</edge>
+<edge source="2174649932" target="5707161170" id="0">
+  <data key="d8">28947148</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 59 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">19.050653583185714</data>
+</edge>
+<edge source="2174649940" target="2175126954" id="0">
+  <data key="d8">28947149</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">20.793448351828665</data>
+</edge>
+<edge source="2174649940" target="2174649945" id="0">
+  <data key="d8">1432500749</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">92.73844441485845</data>
+  <data key="d15">LINESTRING (105.8238769 21.0171907, 105.8240346 21.0174868, 105.8242141 21.0178097, 105.8242829 21.0179336)</data>
+</edge>
+<edge source="2174649945" target="106108910" id="0">
+  <data key="d8">1246265594</data>
+  <data key="d9">tertiary</data>
+  <data key="d11">Phố Mai Anh Tuấn</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">16.50028830749713</data>
+</edge>
+<edge source="2174649945" target="2174649932" id="0">
+  <data key="d8">207272547</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">40.15634731591608</data>
+  <data key="d15">LINESTRING (105.8242829 21.0179336, 105.8243187 21.0179999, 105.824457 21.0182561)</data>
+</edge>
+<edge source="2174649960" target="1497527957" id="0">
+  <data key="d8">708960889</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">22.285553896802902</data>
+</edge>
+<edge source="2174649960" target="6689225964" id="0">
+  <data key="d8">946867352</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Đặng Tiến Đông</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">110.19240117322666</data>
+  <data key="d15">LINESTRING (105.8202578 21.0152392, 105.8203056 21.0151994, 105.8206402 21.0149202, 105.8210064 21.0146337, 105.8210635 21.0145944)</data>
+</edge>
+<edge source="2174649960" target="2174649904" id="0">
+  <data key="d8">[1266449984, 946867355]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">['3', '2']</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">364.0633288983951</data>
+  <data key="d15">LINESTRING (105.8202578 21.0152392, 105.8205926 21.0155885, 105.8206455 21.0156423, 105.8208212 21.0158353, 105.820951 21.0159706, 105.8210564 21.016068, 105.8211518 21.0161416, 105.8212396 21.0161966, 105.821313 21.0162338, 105.8213793 21.0162608, 105.821463 21.0162902, 105.821546 21.0163076, 105.8216139 21.0163209, 105.8216918 21.016325, 105.8219248 21.0163274, 105.822287 21.0163195, 105.8230077 21.0163297, 105.8230933 21.0163416, 105.8231929 21.0163678, 105.8232829 21.0164074)</data>
+</edge>
+<edge source="2175126954" target="2174649940" id="0">
+  <data key="d8">28947149</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">20.793448351828665</data>
+</edge>
+<edge source="2175126954" target="318259620" id="0">
+  <data key="d8">28947149</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">63.6200082873899</data>
+  <data key="d15">LINESTRING (105.8240572 21.0171092, 105.8241839 21.0170539, 105.8244344 21.016938, 105.8246077 21.0168577)</data>
+</edge>
+<edge source="2175126954" target="5707161170" id="0">
+  <data key="d8">600037946</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">132.20940166515965</data>
+  <data key="d15">LINESTRING (105.8240572 21.0171092, 105.8241398 21.0172674, 105.8241613 21.0173094, 105.8244878 21.0179187, 105.8245158 21.0179728, 105.8246193 21.0181761)</data>
+</edge>
+<edge source="2176926218" target="446030797" id="0">
+  <data key="d8">709017802</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">21.75609830548741</data>
+</edge>
+<edge source="2176926218" target="6662241095" id="0">
+  <data key="d8">962493747</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Yên Lãng</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">108.51186542897631</data>
+  <data key="d15">LINESTRING (105.8187277 21.0139023, 105.8186483 21.0138146, 105.8182598 21.0133855, 105.8180511 21.0131584)</data>
+</edge>
+<edge source="2176926218" target="106111360" id="0">
+  <data key="d8">[1266983913, 33407729]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">131.06593369085726</data>
+  <data key="d15">LINESTRING (105.8187277 21.0139023, 105.8185877 21.0140051, 105.8184105 21.014135, 105.8181474 21.0143279, 105.8177309 21.0146258)</data>
+</edge>
+<edge source="2291014178" target="1904449332" id="0">
+  <data key="d8">1257401278</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Nguyễn Văn Tuyết</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">271.0802929844259</data>
+  <data key="d15">LINESTRING (105.8176724 21.0124305, 105.8177234 21.0123765, 105.8180442 21.0120291, 105.8181696 21.0118804, 105.8186413 21.0112924, 105.818765 21.0111418, 105.8193044 21.0105284)</data>
+</edge>
+<edge source="2291014178" target="6662241094" id="0">
+  <data key="d8">1349903768</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Yên Lãng</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">88.23021008617393</data>
+  <data key="d15">LINESTRING (105.8176724 21.0124305, 105.8178365 21.0126228, 105.8181703 21.0129939, 105.8182137 21.0130422)</data>
+</edge>
+<edge source="2291014992" target="106109203" id="0">
+  <data key="d8">946867353</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Võ Văn Dũng</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">35.91274952152227</data>
+</edge>
+<edge source="2291014993" target="106109203" id="0">
+  <data key="d8">219973242</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">63.30397906936526</data>
+</edge>
+<edge source="2291014993" target="5707679615" id="0">
+  <data key="d8">600131699</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">62.6437765333712</data>
+</edge>
+<edge source="2291014993" target="11925365306" id="0">
+  <data key="d8">1231370732</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">30.185779421000667</data>
+</edge>
+<edge source="2291014993" target="318259517" id="0">
+  <data key="d8">1231370732</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">50.21473871585404</data>
+</edge>
+<edge source="2291014994" target="318259522" id="0">
+  <data key="d8">28947147</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">43.34023518117036</data>
+  <data key="d15">LINESTRING (105.8239332 21.014678, 105.8238018 21.0145551, 105.8236237 21.014417)</data>
+</edge>
+<edge source="2291014994" target="5707679615" id="0">
+  <data key="d8">600131703</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 71 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">51.40437257320061</data>
+  <data key="d15">LINESTRING (105.8239332 21.014678, 105.8241259 21.0145291, 105.8243082 21.0143762)</data>
+</edge>
+<edge source="2291014994" target="318259517" id="0">
+  <data key="d8">1231374926</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">52.36239412416098</data>
+  <data key="d15">LINESTRING (105.8239332 21.014678, 105.8240193 21.0148304, 105.8241854 21.0150856)</data>
+</edge>
+<edge source="2291046229" target="8034817846" id="0">
+  <data key="d8">219976146</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">61.73530243658771</data>
+</edge>
+<edge source="2291046243" target="8034817846" id="0">
+  <data key="d8">871891997</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">74.44983200708666</data>
+  <data key="d15">LINESTRING (105.8243228 21.0183481, 105.8242603 21.0183718, 105.8241717 21.0184077, 105.8237568 21.01858, 105.8236582 21.0185706)</data>
+</edge>
+<edge source="2291046243" target="106108910" id="0">
+  <data key="d8">1240127122</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">43.23230439726558</data>
+  <data key="d15">LINESTRING (105.8243228 21.0183481, 105.8242123 21.0181278, 105.8241771 21.0180648, 105.8241401 21.0179988)</data>
+</edge>
+<edge source="2452431996" target="283138280" id="0">
+  <data key="d8">961661884</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Thịnh</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">19.29347561286975</data>
+</edge>
+<edge source="2452431996" target="2291014178" id="0">
+  <data key="d8">709301078</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Yên Lãng</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">70.45060952831088</data>
+  <data key="d15">LINESTRING (105.8172506 21.0119342, 105.817333 21.0120362, 105.8175711 21.0123141, 105.8176724 21.0124305)</data>
+</edge>
+<edge source="2452431996" target="1904449336" id="0">
+  <data key="d8">[1262812936, 1262812937]</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Thịnh</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">258.74040109718635</data>
+  <data key="d15">LINESTRING (105.8172506 21.0119342, 105.8173176 21.0118305, 105.8174337 21.0116693, 105.8175611 21.0114925, 105.817583 21.0114637, 105.8177405 21.0112634, 105.8180256 21.0109232, 105.8182123 21.0107088, 105.8182224 21.0106917, 105.8184378 21.0104356, 105.8186654 21.0101674, 105.8187493 21.0100776)</data>
+</edge>
+<edge source="5485651217" target="1314209723" id="0">
+  <data key="d8">570571994</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Hồ Đắc Di</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">7.410267998483248</data>
+</edge>
+<edge source="5485651217" target="11201648616" id="0">
+  <data key="d8">1266014435</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">50.65399457129252</data>
+</edge>
+<edge source="5485651217" target="5707679597" id="0">
+  <data key="d8">11711997</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Hồ Đắc Di</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">26.179018231426294</data>
+  <data key="d15">LINESTRING (105.8269306 21.0134586, 105.8269985 21.0134231, 105.827148 21.0133393)</data>
+</edge>
+<edge source="5706871736" target="106108910" id="0">
+  <data key="d8">1246265594</data>
+  <data key="d9">tertiary</data>
+  <data key="d11">Phố Mai Anh Tuấn</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">179.60206560707533</data>
+  <data key="d15">LINESTRING (105.8225503 21.0186339, 105.8229511 21.0184931, 105.8236406 21.0182246, 105.8239122 21.0181018, 105.8241401 21.0179988)</data>
+</edge>
+<edge source="5707161170" target="2174649932" id="0">
+  <data key="d8">28947148</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 59 Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">19.050653583185714</data>
+</edge>
+<edge source="5707161170" target="318259616" id="0">
+  <data key="d8">[946867354, 28947148]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 59 Phố Hoàng Cầu', 'Phố Trần Quang Diệu']</data>
+  <data key="d12">False</data>
+  <data key="d13">[False, True]</data>
+  <data key="d14">265.6938302794995</data>
+  <data key="d15">LINESTRING (105.8246193 21.0181761, 105.8247913 21.0180949, 105.8249931 21.0179814, 105.8254319 21.0177396, 105.825672 21.0176194, 105.8257516 21.0175813, 105.8256394 21.0173821, 105.8255206 21.0171711, 105.8254488 21.0170513, 105.8253228 21.0168412, 105.8252672 21.0167486, 105.8252152 21.0166618, 105.8251477 21.0165492)</data>
+</edge>
+<edge source="5707161170" target="2175126954" id="0">
+  <data key="d8">600037946</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">132.20940166515965</data>
+  <data key="d15">LINESTRING (105.8246193 21.0181761, 105.8245158 21.0179728, 105.8244878 21.0179187, 105.8241613 21.0173094, 105.8241398 21.0172674, 105.8240572 21.0171092)</data>
+</edge>
+<edge source="5707655797" target="318259528" id="0">
+  <data key="d8">28947147</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">98.2255649315452</data>
+  <data key="d15">LINESTRING (105.8232433 21.0141081, 105.8228833 21.0138304, 105.8226792 21.0136623, 105.8225238 21.0135345)</data>
+</edge>
+<edge source="5707655797" target="318259522" id="0">
+  <data key="d8">28947147</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">52.33599132724243</data>
+  <data key="d15">LINESTRING (105.8232433 21.0141081, 105.8234184 21.0142527, 105.8236237 21.014417)</data>
+</edge>
+<edge source="5707655797" target="318259522" id="1">
+  <data key="d8">[675260248, 600127339, 675260247]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 75 Phố Trần Quang Diệu', 'Ngõ 9 Phố Trần Quang Diệu']</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">296.2320223317045</data>
+  <data key="d15">LINESTRING (105.8232433 21.0141081, 105.8234644 21.0138572, 105.8239442 21.0132562, 105.8240608 21.0133644, 105.8243647 21.0136334, 105.8243404 21.0136591, 105.8240045 21.0140144, 105.8239701 21.0140508, 105.8236237 21.014417)</data>
+</edge>
+<edge source="5707679597" target="11201648616" id="0">
+  <data key="d8">1208987653</data>
+  <data key="d9">primary_link</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">57.43444641798182</data>
+</edge>
+<edge source="5707679597" target="5485651217" id="0">
+  <data key="d8">11711997</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Hồ Đắc Di</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">26.179018231426294</data>
+  <data key="d15">LINESTRING (105.827148 21.0133393, 105.8269985 21.0134231, 105.8269306 21.0134586)</data>
+</edge>
+<edge source="5707679615" target="2291014993" id="0">
+  <data key="d8">600131699</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">62.6437765333712</data>
+</edge>
+<edge source="5707679615" target="2291014994" id="0">
+  <data key="d8">600131703</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 71 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">51.40437257320061</data>
+  <data key="d15">LINESTRING (105.8243082 21.0143762, 105.8241259 21.0145291, 105.8239332 21.014678)</data>
+</edge>
+<edge source="5707679615" target="5710091927" id="0">
+  <data key="d8">[1285547694, 600131703]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 61 Trần Quang Diệu', 'Ngõ 71 Phố Trần Quang Diệu']</data>
+  <data key="d12">False</data>
+  <data key="d13">[False, True]</data>
+  <data key="d14">153.08346717453244</data>
+  <data key="d15">LINESTRING (105.8243082 21.0143762, 105.8245233 21.0142623, 105.8246319 21.0142066, 105.8248703 21.0145482, 105.8249448 21.0146704, 105.8251467 21.0145524, 105.8253872 21.0144222)</data>
+</edge>
+<edge source="5710091927" target="5707679615" id="0">
+  <data key="d8">[1285547694, 600131703]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 61 Trần Quang Diệu', 'Ngõ 71 Phố Trần Quang Diệu']</data>
+  <data key="d12">False</data>
+  <data key="d13">[False, True]</data>
+  <data key="d14">153.08346717453242</data>
+  <data key="d15">LINESTRING (105.8253872 21.0144222, 105.8251467 21.0145524, 105.8249448 21.0146704, 105.8248703 21.0145482, 105.8246319 21.0142066, 105.8245233 21.0142623, 105.8243082 21.0143762)</data>
+</edge>
+<edge source="5710297030" target="5710297033" id="0">
+  <data key="d8">1454173818</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 218 Phố Tây Sơn</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">86.08169689749901</data>
+  <data key="d15">LINESTRING (105.8233738 21.0090523, 105.8235081 21.0089365, 105.8234668 21.0088862, 105.8236331 21.0087485, 105.8238687 21.0085877, 105.8239207 21.0085522)</data>
+</edge>
+<edge source="5710297033" target="5710297030" id="0">
+  <data key="d8">1454173818</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 218 Phố Tây Sơn</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">86.081696897499</data>
+  <data key="d15">LINESTRING (105.8239207 21.0085522, 105.8238687 21.0085877, 105.8236331 21.0087485, 105.8234668 21.0088862, 105.8235081 21.0089365, 105.8233738 21.0090523)</data>
+</edge>
+<edge source="5828713073" target="2176926218" id="0">
+  <data key="d8">884156407</data>
+  <data key="d9">secondary</data>
+  <data key="d10">4</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">22.754889773701883</data>
+  <data key="d15">LINESTRING (105.8188692 21.0140586, 105.818796 21.0139777, 105.8187277 21.0139023)</data>
+</edge>
+<edge source="5828713073" target="5828713074" id="0">
+  <data key="d8">1344929478</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">133.96610136068472</data>
+  <data key="d15">LINESTRING (105.8188692 21.0140586, 105.8188025 21.014106, 105.8179434 21.0147431, 105.8178962 21.0147763, 105.8178555 21.0148042)</data>
+</edge>
+<edge source="5828713074" target="106111360" id="0">
+  <data key="d8">29101513</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 88 Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">23.717068481832214</data>
+  <data key="d15">LINESTRING (105.8178555 21.0148042, 105.8177845 21.0147133, 105.8177309 21.0146258)</data>
+</edge>
+<edge source="5828713074" target="5828713073" id="0">
+  <data key="d8">1344929478</data>
+  <data key="d9">residential</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">133.9661013606847</data>
+  <data key="d15">LINESTRING (105.8178555 21.0148042, 105.8178962 21.0147763, 105.8179434 21.0147431, 105.8188025 21.014106, 105.8188692 21.0140586)</data>
+</edge>
+<edge source="5954441639" target="5954441640" id="0">
+  <data key="d8">630659252</data>
+  <data key="d9">primary_link</data>
+  <data key="d10">2</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">9.033461713659444</data>
+</edge>
+<edge source="5954441639" target="1314209721" id="0">
+  <data key="d8">838425497</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">78.36130131377034</data>
+  <data key="d15">LINESTRING (105.8254518 21.0112777, 105.8252161 21.0109128, 105.8250728 21.0106684)</data>
+</edge>
+<edge source="5954441640" target="5954441639" id="0">
+  <data key="d8">630659252</data>
+  <data key="d9">primary_link</data>
+  <data key="d10">2</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">9.033461713659444</data>
+</edge>
+<edge source="5954441640" target="5485651217" id="0">
+  <data key="d8">838425496</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">286.45412020208994</data>
+  <data key="d15">LINESTRING (105.825529 21.0112402, 105.8256022 21.0113449, 105.8261096 21.0121079, 105.8263454 21.0124958, 105.8264707 21.0127067, 105.8265514 21.0128356, 105.8266951 21.0130651, 105.8268746 21.013363, 105.8269306 21.0134586)</data>
+</edge>
+<edge source="6405794494" target="6659134172" id="0">
+  <data key="d8">[875229041, 708658351]</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">90.12868904722704</data>
+  <data key="d15">LINESTRING (105.824699 21.0096805, 105.8247576 21.0097896, 105.8248203 21.0099099, 105.8248412 21.0099501, 105.8249485 21.0101564, 105.8250014 21.0102688, 105.8250477 21.0104207)</data>
+</edge>
+<edge source="6405794495" target="8277275975" id="0">
+  <data key="d8">683849351</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ Liên Việt</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">116.65169629753068</data>
+  <data key="d15">LINESTRING (105.8273924 21.0142179, 105.827427 21.014198, 105.8278551 21.0139626, 105.8281063 21.0138457, 105.8279673 21.0135916)</data>
+</edge>
+<edge source="6405794495" target="318258663" id="0">
+  <data key="d8">1204846892</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Nguyễn Lương Bằng</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">103.26140707819924</data>
+  <data key="d15">LINESTRING (105.8273924 21.0142179, 105.8278367 21.0149552, 105.8278801 21.0150273)</data>
+</edge>
+<edge source="6644672133" target="6644672135" id="0">
+  <data key="d8">707066366</data>
+  <data key="d9">secondary</data>
+  <data key="d10">4</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">280.6064593100852</data>
+  <data key="d15">LINESTRING (105.8233913 21.0098098, 105.8232738 21.0098628, 105.8232193 21.0098933, 105.8231539 21.0099321, 105.8231383 21.0099413, 105.8230483 21.0099994, 105.8228879 21.0101223, 105.8227787 21.010206, 105.8224489 21.0105177, 105.8224293 21.0105363, 105.8223202 21.0106446, 105.8222015 21.0107624, 105.8217896 21.0112419, 105.8216885 21.011357, 105.8214795 21.0115675)</data>
+</edge>
+<edge source="6644672133" target="1884768305" id="0">
+  <data key="d8">[707072726, 711401502]</data>
+  <data key="d9">secondary</data>
+  <data key="d10">['4', '2']</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">72.39795302734528</data>
+  <data key="d15">LINESTRING (105.8233913 21.0098098, 105.82346 21.0097113, 105.8238079 21.0095271, 105.8239568 21.0094475)</data>
+</edge>
+<edge source="6644672135" target="6644672133" id="0">
+  <data key="d8">707066366</data>
+  <data key="d9">secondary</data>
+  <data key="d10">4</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">280.6064593100852</data>
+  <data key="d15">LINESTRING (105.8214795 21.0115675, 105.8216885 21.011357, 105.8217896 21.0112419, 105.8222015 21.0107624, 105.8223202 21.0106446, 105.8224293 21.0105363, 105.8224489 21.0105177, 105.8227787 21.010206, 105.8228879 21.0101223, 105.8230483 21.0099994, 105.8231383 21.0099413, 105.8231539 21.0099321, 105.8232193 21.0098933, 105.8232738 21.0098628, 105.8233913 21.0098098)</data>
+</edge>
+<edge source="6644672135" target="106111365" id="0">
+  <data key="d8">707072727</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Thái Hà</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">70.63589707451244</data>
+  <data key="d15">LINESTRING (105.8214795 21.0115675, 105.8214679 21.0116729, 105.8211088 21.0120825)</data>
+</edge>
+<edge source="6659134171" target="1758633112" id="0">
+  <data key="d8">164211343</data>
+  <data key="d9">primary</data>
+  <data key="d10">1</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">20.814850982563307</data>
+</edge>
+<edge source="6659134171" target="1884769977" id="0">
+  <data key="d8">[875229040, 711404114]</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">91.93763339350173</data>
+  <data key="d15">LINESTRING (105.8249685 21.0104696, 105.8248506 21.0103259, 105.824642 21.0099284, 105.8245423 21.0097478)</data>
+</edge>
+<edge source="6659134172" target="5954441640" id="0">
+  <data key="d8">[28103241, 711404115]</data>
+  <data key="d9">primary</data>
+  <data key="d10">['3', '2']</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">104.00244120358968</data>
+  <data key="d15">LINESTRING (105.8250477 21.0104207, 105.8251515 21.010617, 105.8252306 21.0107648, 105.8252977 21.0108828, 105.8253888 21.0110281, 105.825529 21.0112402)</data>
+</edge>
+<edge source="6662241094" target="6662241095" id="0">
+  <data key="d8">708994999</data>
+  <data key="d9">secondary_link</data>
+  <data key="d10">2</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">21.255919081607004</data>
+</edge>
+<edge source="6662241094" target="446030797" id="0">
+  <data key="d8">962493748</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Yên Lãng</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">107.75254865823717</data>
+  <data key="d15">LINESTRING (105.8182137 21.0130422, 105.8185435 21.0133935, 105.8188156 21.0136887, 105.8188893 21.0137777)</data>
+</edge>
+<edge source="6662241095" target="6662241094" id="0">
+  <data key="d8">708994999</data>
+  <data key="d9">secondary_link</data>
+  <data key="d10">2</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">21.255919081607004</data>
+</edge>
+<edge source="6662241095" target="283138280" id="0">
+  <data key="d8">512285541</data>
+  <data key="d9">secondary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Yên Lãng</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">151.5448114620198</data>
+  <data key="d15">LINESTRING (105.8180511 21.0131584, 105.8180142 21.0131157, 105.817792 21.0128587, 105.8177325 21.0127939, 105.8175715 21.0126089, 105.8173722 21.0123548, 105.8172131 21.0121586, 105.817155 21.012083)</data>
+</edge>
+<edge source="6688503842" target="6405794494" id="0">
+  <data key="d8">1333363797</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">20.311961707933413</data>
+</edge>
+<edge source="6688503847" target="1758631175" id="0">
+  <data key="d8">711404121</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">29.445055530113613</data>
+</edge>
+<edge source="6688503847" target="6688503842" id="0">
+  <data key="d8">711404119</data>
+  <data key="d9">primary_link</data>
+  <data key="d10">1</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">23.940603237401078</data>
+  <data key="d15">LINESTRING (105.8244721 21.0096285, 105.8244753 21.0095875, 105.8244854 21.0095486, 105.8245144 21.00952, 105.8245631 21.0095097, 105.8245859 21.0095091, 105.8246137 21.0095161)</data>
+</edge>
+<edge source="6689225964" target="1495020922" id="0">
+  <data key="d8">[136257259, 1262811878, 711461982]</data>
+  <data key="d9">residential</data>
+  <data key="d11">['Ngõ 178 Thái Hà', 'Ngõ 178 Phố Thái Hà']</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">212.09746030998343</data>
+  <data key="d15">LINESTRING (105.8210635 21.0145944, 105.8208288 21.0143372, 105.8206878 21.0141672, 105.8206372 21.0141077, 105.8203335 21.0137557, 105.8200679 21.0134521, 105.8198119 21.0131859, 105.8197568 21.0131287)</data>
+</edge>
+<edge source="6689225964" target="2174649960" id="0">
+  <data key="d8">946867352</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Đặng Tiến Đông</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">110.19240117322666</data>
+  <data key="d15">LINESTRING (105.8210635 21.0145944, 105.8210064 21.0146337, 105.8206402 21.0149202, 105.8203056 21.0151994, 105.8202578 21.0152392)</data>
+</edge>
+<edge source="6689225964" target="318259528" id="0">
+  <data key="d8">946867352</data>
+  <data key="d9">tertiary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Đặng Tiến Đông</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">200.9635272266355</data>
+  <data key="d15">LINESTRING (105.8210635 21.0145944, 105.8211339 21.0145675, 105.821207 21.0145527, 105.8214068 21.0145481, 105.8214686 21.0145445, 105.8215302 21.0145287, 105.8215857 21.0144987, 105.8218192 21.0142681, 105.822267 21.0138022, 105.8223954 21.0136686, 105.8225238 21.0135345)</data>
+</edge>
+<edge source="7837394427" target="2291046243" id="0">
+  <data key="d8">1240127122</data>
+  <data key="d9">secondary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Hoàng Cầu</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">51.22593472090444</data>
+</edge>
+<edge source="8034817846" target="2291046229" id="0">
+  <data key="d8">219976146</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">False</data>
+  <data key="d14">61.73530243658771</data>
+</edge>
+<edge source="8034817846" target="2291046243" id="0">
+  <data key="d8">871891997</data>
+  <data key="d9">residential</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">74.44983200708666</data>
+  <data key="d15">LINESTRING (105.8236582 21.0185706, 105.8237568 21.01858, 105.8241717 21.0184077, 105.8242603 21.0183718, 105.8243228 21.0183481)</data>
+</edge>
+<edge source="8277275975" target="6405794495" id="0">
+  <data key="d8">683849351</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ Liên Việt</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">116.65169629753068</data>
+  <data key="d15">LINESTRING (105.8279673 21.0135916, 105.8281063 21.0138457, 105.8278551 21.0139626, 105.827427 21.014198, 105.8273924 21.0142179)</data>
+</edge>
+<edge source="11201648616" target="6405794495" id="0">
+  <data key="d8">1204846892</data>
+  <data key="d9">primary</data>
+  <data key="d10">2</data>
+  <data key="d11">Phố Nguyễn Lương Bằng</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">46.436125386030604</data>
+  <data key="d15">LINESTRING (105.8271703 21.0138554, 105.8272249 21.0139467, 105.8273924 21.0142179)</data>
+</edge>
+<edge source="11925365306" target="2291014993" id="0">
+  <data key="d8">1231370732</data>
+  <data key="d9">residential</data>
+  <data key="d11">Ngõ 61 Phố Trần Quang Diệu</data>
+  <data key="d12">False</data>
+  <data key="d13">True</data>
+  <data key="d14">30.185779421000667</data>
+</edge>
+<edge source="11950483412" target="1884765806" id="0">
+  <data key="d8">684766067</data>
+  <data key="d9">primary</data>
+  <data key="d10">3</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">23.751103946911073</data>
+  <data key="d15">LINESTRING (105.8243268 21.0089408, 105.8243765 21.009028, 105.8244253 21.0091334)</data>
+</edge>
+<edge source="11950483412" target="11950483417" id="0">
+  <data key="d8">1288742163</data>
+  <data key="d9">primary_link</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">22.03024004770991</data>
+  <data key="d15">LINESTRING (105.8243268 21.0089408, 105.8243063 21.0089724, 105.8242778 21.0090043, 105.8242355 21.0090232, 105.8242006 21.0090255, 105.8241564 21.0090127)</data>
+</edge>
+<edge source="11950483417" target="1314209717" id="0">
+  <data key="d8">219977622</data>
+  <data key="d9">primary</data>
+  <data key="d10">4</data>
+  <data key="d11">Phố Tây Sơn</data>
+  <data key="d12">True</data>
+  <data key="d13">False</data>
+  <data key="d14">11.989426738899166</data>
+</edge>
+</graph></graphml>
