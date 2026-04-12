@@ -1,7 +1,8 @@
 from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
+from stable_baselines3.common.utils import get_linear_fn, LinearSchedule
 import os
 import numpy as np
 import torch
@@ -45,17 +46,17 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         # Check if an episode finished
         if self.locals["dones"][0]:
             self.n_episodes += 1
-            
+            # Query the environment for the best_score
+            try:
+                # training_env is usually a VecEnv in SB3
+                env_best_score = self.training_env.get_attr('last_episode_best_score')[0]
+            except Exception:
+                env_best_score = -np.inf
+
+            # Store score for mean calculation
+            self.scores.append(env_best_score)
+
             if self.n_episodes % self.check_freq == 0:
-                # Query the environment for the best_score
-                try:
-                    # training_env is usually a VecEnv in SB3
-                    env_best_score = self.training_env.get_attr('last_episode_best_score')[0]
-                except Exception:
-                    env_best_score = -np.inf
-    
-                # Store score for mean calculation
-                self.scores.append(env_best_score)
 
                 # Mean training score over the last 10 checks
                 my_mean_score = np.mean(self.scores)
@@ -119,9 +120,40 @@ if __name__ == '__main__':
     else:
         policy_kwargs = dict(net_arch=[256, 256]) # hidden layers
         policy_type = "MlpPolicy"
+
+    lr_schedule = LinearSchedule(
+        start=3e-4,  # bắt đầu cao
+        end=1e-5,  # giảm dần khi gần kết thúc
+        end_fraction=1.0
+    )
     
-    model = DQN(policy_type, env, verbose=1, batch_size=128, buffer_size=10000, learning_rate=1e-5,
-                exploration_initial_eps=1, exploration_final_eps=0.05, exploration_fraction=0.2, policy_kwargs=policy_kwargs,
-                device='cuda' if torch.cuda.is_available() else 'cpu', seed=seed)
-    callback = SaveOnBestTrainingRewardCallback(check_freq=5, my_log_dir=log_dir, my_modelname=modelname)
-    model.learn(total_timesteps=200000, log_interval=10 ** 4, callback=callback)
+    model = DQN(policy_type, env,
+                verbose=1,
+                batch_size=256,  # tăng để gradient ổn định hơn
+                buffer_size=50000,  # ~333 episode — đủ đa dạng
+                learning_rate=lr_schedule,  # chuẩn Adam cho RL
+                learning_starts=2000,  # bắt đầu học sau 2000 bước random
+                train_freq=4,  # học mỗi 4 bước env
+                target_update_interval=500,
+                exploration_initial_eps=1.0,
+                exploration_final_eps=0.05,
+                exploration_fraction=0.5,  # khám phá đến 100K bước (50%)
+                gamma=0.99,
+                policy_kwargs=policy_kwargs,
+                device='cuda' if torch.cuda.is_available() else 'cpu',
+                seed=seed
+                )
+    # callback = SaveOnBestTrainingRewardCallback(check_freq=3, my_log_dir=log_dir, my_modelname=modelname)
+    # Using EvalCallback instead of creating one
+    eval_env = StationPlacement(graph_file, node_file, plan_file,
+                                location=location, obs_type=obs_type)
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=log_dir,
+        log_path=log_dir,
+        eval_freq=5000,  # đánh giá mỗi 5000 bước
+        n_eval_episodes=5,  # trung bình 5 episode
+        deterministic=True,
+        render=False
+    )
+    model.learn(total_timesteps=200000, log_interval=10 ** 4, callback=eval_callback)

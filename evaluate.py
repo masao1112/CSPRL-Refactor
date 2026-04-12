@@ -34,7 +34,7 @@ os.makedirs(log_dir, exist_ok=True)
 env = Monitor(env, log_dir)  # new environment for evaluation
 G = ox.load_graphml(graph_file)
 
-step = 66400
+step = 49036
 if use_gnn:
     from custom_environment.gnn_extractor import GNNFeaturesExtractor
     custom_objects = {"GNNFeaturesExtractor": GNNFeaturesExtractor}

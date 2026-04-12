@@ -250,7 +250,7 @@ class StationPlacement(gym.Env):
 
         self.previous_score = self.best_score
 
-        self.best_score = max(self.best_score, -25)
+        # self.best_score = max(self.best_score, -25)
         self.plan_length = len(self.plan_instance.existing_plan)
         self.schritt = 0
         self.best_plan = []
@@ -407,10 +407,12 @@ class StationPlacement(gym.Env):
         self.schritt += 1
         if self.schritt >= len(self.node_list) / 2:
             self.game_over = True
-        # if self.game_over:
-        #     print("Best score {}.".format(self.best_score))
-        # Return gymnasium format: (obs, reward, terminated, truncated, info)
-        # best_node_list, best_plan = self.render()
+
+        if self.game_over:
+            # Thưởng terminal = chất lượng tổng thể của kế hoạch tốt nhất
+            terminal_bonus = self.best_score * 5.0
+            reward += terminal_bonus
+
         return obs, reward, self.game_over, False, {}
 
     def station_config_check(self, my_station):
@@ -494,13 +496,14 @@ class StationPlacement(gym.Env):
         # Update previous score for the next step
         self.previous_score = new_score
 
-        new_score = max(new_score, -25)  # if negative score
+        # new_score = max(new_score, -25)  # if negative score
         if new_score - self.best_score > 0:
             # reward += (new_score - self.best_score)
             # avoid jojo learning
             self.best_score = new_score
             self.best_plan = copy.deepcopy(self.plan_instance.plan)
             self.best_node_list = copy.deepcopy(self.node_list)
+
         return reward
 
     def render(self, mode='human', close=False):

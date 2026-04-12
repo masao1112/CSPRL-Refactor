@@ -123,7 +123,7 @@ def charging_capability(my_station):
 def weak_demand(my_node):
     return my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"])
 
-def dynamic_demand(my_node, my_plan, scaling_factor=0.47, distance_decay_factor=0.89):
+def dynamic_demand(my_node, my_plan, scaling_factor=0.3, distance_decay_factor=0.7):
     power_factor = 0
     base_demand = weak_demand(my_node)
     for station in my_plan:
@@ -403,12 +403,16 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     fairness = social_fairness(my_node_list) / norm_fairness
     # print(norm_benefit, norm_charg, norm_wait, norm_travel, norm_fairness)
     # print(social_benefit(my_plan, my_node_list), charging_time(my_plan), waiting_time(my_plan), travel_cost(my_node_list), social_fairness(my_node_list))
+    # Luôn tính grid_score — neutral (1.0) khi không có grid
     if grid_penalty is not None:
         avg_penalty = abs(grid_penalty) / max(1, len(my_plan))
-        grid_score = max(0.0, 1.0 - avg_penalty)
-        my_score = 0.25 * benefit - 0.25 * cost + 0.25 * fairness + 0.25 * grid_score
+        grid_score = max(0.0, 1.0 - min(avg_penalty, 1.0))  # clamp ratio
     else:
-        my_score = 1/3 * benefit - 1/3 * cost + 1/3 * fairness
+        grid_score = 1.0  # neutral
+
+    # Trọng số CỐ ĐỊNH — không phụ thuộc vào grid có bật hay không
+    my_score = 0.3 * benefit - 0.3 * cost + 0.2 * fairness + 0.2 * grid_score
+
     return my_score, benefit, cost, fairness, charg_time, wait_time, cost_travel
 
 
@@ -511,12 +515,12 @@ def coverage(my_node_list, my_plan):
         my_node[1]["benefit"] = cover
 
 
-def choose_node_new_benefit(free_list, all_node_list, R_search=0.1):
+def choose_node_new_benefit(free_list, all_node_list, R_search=0.2):
     """
     pick location with highest potential based on Potential/Coverage.
     """
     potential_scores = []
-    epsilon = 0.001
+    # epsilon = 0.001
     for candidate_node in free_list:
         local_demand = 0
         for node in all_node_list:
@@ -525,7 +529,7 @@ def choose_node_new_benefit(free_list, all_node_list, R_search=0.1):
                 local_demand += weak_demand(node)
 
         current_coverage = candidate_node[1].get("n_stations", 0)
-        _score = local_demand / (current_coverage + epsilon)
+        _score = local_demand / (current_coverage + eps)
 
         potential_scores.append(_score)
     best_index = np.argmax(potential_scores)
@@ -602,7 +606,7 @@ graph = nx.read_graphml(graph_file)
 # Parameters ########################################################
 alpha = 0.8
 my_lambda = 0.5
-eps = 1e-9
+eps = 1e-6
 ev_per_capita = 0.022
 evs_parking_area = 15  # meter square
 
