@@ -1,10 +1,41 @@
 import json
+import os
 import pickle
 import math
 import osmnx as ox
 import numpy as np
 import networkx as nx
 from math import sin, cos, sqrt, atan2, radians, ceil
+
+# ---------------------------------------------------------------------------
+# 9.1: All-pairs shortest-path distance matrix (O(1) lookup after loading)
+# ---------------------------------------------------------------------------
+_dist_matrix: dict = {}
+_dist_matrix_location: str = ""
+
+def get_dist_matrix(location: str = "DongDa") -> dict:
+    """
+    Lazy-load the precomputed distance matrix for *location*.
+    Returns an empty dict if the file does not exist yet (triggers fallback
+    to Dijkstra inside calculate_distance).
+    Run src/preprocessing/precompute_dist_matrix.py once to generate the file.
+    """
+    global _dist_matrix, _dist_matrix_location
+    if _dist_matrix and _dist_matrix_location == location:
+        return _dist_matrix
+    # Try both relative (cwd = project root) and absolute paths
+    candidates = [
+        os.path.join("custom_environment", "data", "Graph", location, f"dist_matrix_{location}.pkl"),
+        os.path.join(os.path.dirname(__file__), "data", "Graph", location, f"dist_matrix_{location}.pkl"),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                _dist_matrix = pickle.load(f)
+            _dist_matrix_location = location
+            print(f"[helpers] Loaded precomputed distance matrix for '{location}' from {path}")
+            return _dist_matrix
+    return {}
 
 """
 Utility model and help functions.
@@ -75,25 +106,27 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
     return my_node_list, my_node_dict, my_cost_dict
 
 
-def calculate_distance(s_pos, my_node):
+def calculate_distance(s_pos, my_node, location: str = "DongDa"):
     """
-    Calculates distance between two nodes using the precomputed distance matrix.
-    Falls back to haversine if matrix lookup fails.
+    Returns road-network distance (km) between s_pos and my_node.
+    Priority: precomputed dict (O(1)) → Dijkstra → Haversine fallback.
     """
+    u = s_pos[0]
+    v = my_node[0]
+    # 9.1: O(1) lookup from precomputed all-pairs matrix
+    dm = get_dist_matrix(location)
+    if dm:
+        try:
+            return dm[u][v] / 1000.0
+        except KeyError:
+            pass
+    # Fallback: Dijkstra on the module-level graph
     try:
-        # s_pos[0] and my_node[0] là the OSM node IDs
-        u = s_pos[0]
-        v = my_node[0]
         distance = nx.shortest_path_length(graph, u, v, weight='length')
         return distance / 1000.0
-    except (KeyError, IndexError):
-        # Fallback if node not found in matrix
-        # print(f"Matrix lookup failed for {u} -> {v}, falling back to Haversine")
+    except Exception:
         pass
-    except Exception as e:
-        # print(f"Distance loader error: {e}")
-        pass
-    # if not available, use haversine instead
+    # Last resort: Haversine straight-line distance
     return haversine(s_pos, my_node)
 
 

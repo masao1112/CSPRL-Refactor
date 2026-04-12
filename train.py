@@ -110,9 +110,14 @@ if __name__ == '__main__':
     
     if use_gnn:
         from custom_environment.gnn_extractor import GNNFeaturesExtractor
+        # 7.1: pass edge_index so norm_adj is cached once at init time
+        _base_env = env.env if hasattr(env, 'env') else env
         policy_kwargs = dict(
             features_extractor_class=GNNFeaturesExtractor,
-            features_extractor_kwargs=dict(features_dim=256),
+            features_extractor_kwargs=dict(
+                features_dim=256,
+                edge_index_np=_base_env.edge_index_array
+            ),
             net_arch=[256, 256]
         )
         policy_type = "MultiInputPolicy"

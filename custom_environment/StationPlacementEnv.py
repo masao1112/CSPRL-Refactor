@@ -153,8 +153,6 @@ class Station:
 
 class StationPlacement(gym.Env):
     """Custom Environment that follows gym interface"""
-    node_dict = {}
-    cost_dict = {}
 
     def __init__(self, my_graph_file, my_node_file, my_plan_file, location="DongDa", obs_type="mlp"):
         super(StationPlacement, self).__init__()
@@ -186,7 +184,19 @@ class StationPlacement(gym.Env):
         self.schritt = None
         self.config_dict = None
         self.previous_score = None
+        self.phi_prev = 0.0
+        self.node_dict = {node[0]: {} for node in self.node_list}
+        self.cost_dict = {node[0]: {} for node in self.node_list}
+
         self.feature_scaler = FeatureScaler()
+        # 2.4: update lon/lat bounds from actual node data instead of hardcoded values
+        lons = [n[1]['x'] for n in self.node_list]
+        lats = [n[1]['y'] for n in self.node_list]
+        self.feature_scaler.lon_min = min(lons) - 0.01
+        self.feature_scaler.lon_max = max(lons) + 0.01
+        self.feature_scaler.lat_min = min(lats) - 0.01
+        self.feature_scaler.lat_max = max(lats) + 0.01
+
         # new action space including all charger types
         self.action_space = spaces.Discrete(5)
         
@@ -227,7 +237,7 @@ class StationPlacement(gym.Env):
 
         self.budget = H.BUDGET
         self.game_over = False
-        self.plan_instance = Plan(self.node_list, StationPlacement.node_dict, StationPlacement.cost_dict,
+        self.plan_instance = Plan(self.node_list, self.node_dict, self.cost_dict,
                                   self.plan_file)
 
         # Extend node features with grid data (if available)
@@ -260,14 +270,13 @@ class StationPlacement(gym.Env):
         config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "processed", "config_lookup.json")
         self.config_dict = H.get_lookup(config_path)
         H.coverage(self.node_list, self.plan_instance.plan)
+        self.phi_prev = self._potential()
         obs = self.establish_observation()
 
         # Return obs AND an empty info dict (Required by new SB3/Gymnasium)
         return obs, {}
 
     def _init(self, my_node):
-        StationPlacement.node_dict[my_node[0]] = {}  # prepare node_dict
-        StationPlacement.cost_dict[my_node[0]] = {}
         my_node[1]["charging station"] = None
         my_node[1]["distance"] = None
         return my_node
@@ -347,12 +356,10 @@ class StationPlacement(gym.Env):
 
     def prepare_score(self):
         """
-        We have to make a loop to reorganise the station assignment
+        Reorganise station assignment — single pass is sufficient for a static plan.
         """
-        for j in range(2):
-            self.node_list, _, _ = H.station_seeking(self.plan_instance.plan, self.node_list,
-                                                      StationPlacement.node_dict,
-                                                      StationPlacement.cost_dict)
+        self.node_list, _, _ = H.station_seeking(self.plan_instance.plan, self.node_list,
+                                                  self.node_dict, self.cost_dict)
 
 
     def step(self, my_action):
@@ -400,6 +407,10 @@ class StationPlacement(gym.Env):
         # Step: calculate reward
         reward = self.evaluation()
         H.coverage(self.node_list, self.plan_instance.plan)
+        # 1.5: Potential-based reward shaping — does not change optimal policy
+        phi_after = self._potential()
+        reward += 0.99 * phi_after - self.phi_prev
+        self.phi_prev = phi_after
         obs = self.establish_observation()
         # episode end conditions
         if len(self.plan_instance.plan) == len(self.node_list):
@@ -505,6 +516,42 @@ class StationPlacement(gym.Env):
             self.best_node_list = copy.deepcopy(self.node_list)
 
         return reward
+
+    def action_masks(self) -> np.ndarray:
+        """
+        Returns boolean mask: True = action is valid.
+        Used by MaskablePPO (sb3-contrib) to exclude illegal actions.
+        """
+        station_list  = [s[0][0] for s in self.plan_instance.plan]
+        full_stations = [s[0][0] for s in self.plan_instance.plan
+                         if not self.station_config_check(s)]
+        free_list     = [n for n in self.node_list if n[0] not in station_list]
+        occupied_list = [n for n in self.node_list
+                         if n[0] in station_list and n[0] not in full_stations]
+        steal_plan    = [s for s in self.plan_instance.plan
+                         if s[0] not in self.plan_instance.existing_plan]
+        return np.array([
+            len(free_list) > 0,       # action 0: build new by benefit
+            len(free_list) > 0,       # action 1: build new by demand
+            len(occupied_list) > 0,   # action 2: add charger by benefit
+            len(occupied_list) > 0,   # action 3: add charger by demand
+            len(steal_plan) > 0,      # action 4: relocate charger
+        ], dtype=bool)
+
+    def _potential(self):
+        """
+        Potential function Φ(s) for reward shaping (Ng et al., 1999).
+        Returns fraction of total population covered by at least one station.
+        n_stations is updated by H.coverage() at the end of each step.
+        """
+        total_pop = sum(n[1].get('pop', 0) for n in self.node_list)
+        if total_pop <= 0:
+            return 0.0
+        covered_pop = sum(
+            n[1].get('pop', 0) for n in self.node_list
+            if n[1].get('n_stations', 0) > 0
+        )
+        return covered_pop / total_pop
 
     def render(self, mode='human', close=False):
         """
