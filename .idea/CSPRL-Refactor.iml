@@ -6,7 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/Results/tmp" />
       <excludeFolder url="file://$MODULE_DIR$/custom_environment/data" />
     </content>
-    <orderEntry type="jdk" jdkName="pcrl_fork" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="reinforce" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

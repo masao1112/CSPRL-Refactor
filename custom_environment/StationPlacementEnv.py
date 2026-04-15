@@ -36,6 +36,11 @@ class FeatureScaler:
         self.private_cs_max = 1.0
         self.charger_max = float(H.K)
         self.budget_max = float(H.BUDGET)
+        self.grid_dist_max = 3.0
+        self.grid_mw_max = 10.0
+        self.benefit_max = 5.0
+        self.capability_max = 10.0
+        self.dist_to_station_max = 10.0
 
     def scale_lon(self, v):
         return 2 * (np.clip(v, self.lon_min, self.lon_max) - self.lon_min) / (self.lon_max - self.lon_min + 1e-9) - 1
@@ -60,7 +65,21 @@ class FeatureScaler:
 
     def scale_budget(self, v):
         return 2 * (np.clip(v, 0, self.budget_max) / (self.budget_max + 1e-9)) - 1
-
+        
+    def scale_grid_distance(self, v):
+        return 2 * np.clip(v / (self.grid_dist_max + 1e-9), 0, 1) - 1
+        
+    def scale_grid_mw(self, v):
+        return 2 * np.clip(v / (self.grid_mw_max + 1e-9), 0, 1) - 1
+        
+    def scale_benefit(self, v):
+        return 2 * np.clip(v / (self.benefit_max + 1e-9), 0, 1) - 1
+        
+    def scale_capability(self, v):
+        return 2 * np.clip(v / (self.capability_max + 1e-9), 0, 1) - 1
+        
+    def scale_nearest_station_dist(self, v):
+        return 2 * np.clip(v / (self.dist_to_station_max + 1e-9), 0, 1) - 1
 
 class Plan:
     def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file):
@@ -156,13 +175,14 @@ class StationPlacement(gym.Env):
         self.budget = None
         self.plan_instance = None
         self.plan_length = None
-        self.row_length = 6
+        self.row_length = 7
         self.best_score = None
         self.best_plan = None
         self.best_node_list = None
         self.schritt = None
         self.config_dict = None
         self.previous_score = None
+        self.last_episode_best_score = 0
         self.feature_scaler = FeatureScaler()
         # new action space including all charger types
         self.action_space = spaces.Discrete(5)
@@ -176,6 +196,9 @@ class StationPlacement(gym.Env):
         # Handle the seed for Gymnasium compatibility
         if seed is not None:
             np.random.seed(seed)
+
+        if self.best_score is not None:
+            self.last_episode_best_score = self.best_score
 
         self.budget = H.BUDGET
         self.game_over = False
@@ -232,21 +255,31 @@ class StationPlacement(gym.Env):
         width = row_length * len(self.node_list) + 1
         obs = np.zeros(width, dtype=np.float32)
 
+        # Precompute distances to nearest existing station
+        station_nodes = [s[0][0] for s in self.plan_instance.plan]
+        if station_nodes:
+            nearest_dists = []
+            for node in self.node_list:
+                dist = node[1].get("distance", self.feature_scaler.dist_to_station_max)
+                nearest_dists.append(dist)
+        else:
+            nearest_dists = [self.feature_scaler.dist_to_station_max] * len(self.node_list)
+
         for j, node in enumerate(self.node_list):
             i = j * row_length
             dyn_demand = H.dynamic_demand(node, self.plan_instance.plan)
-            obs[i + 0] = 2 * (np.clip(dyn_demand, 0, 1) - 0.5)
+            obs[i + 0] = self.feature_scaler.scale_demand(dyn_demand)
             obs[i + 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
-            obs[i + 2] = 2 * (np.clip(node[1].get('grid_distance_km', 3.0), 0, 3.0) / 3.0 - 0.5)  # Fixed to -1..1
-            obs[i + 3] = 2 * (np.clip(node[1].get('grid_available_mw', 0.0), 0, 10.0) / 10.0 - 0.5)
-            benefit = node[1].get('benefit', 0.0)
-            obs[i + 4] = 2 * (np.clip(benefit / 5.0, 0, 1) - 0.5)
+            obs[i + 2] = self.feature_scaler.scale_grid_distance(node[1].get('grid_distance_km', 3.0))
+            obs[i + 3] = self.feature_scaler.scale_grid_mw(node[1].get('grid_available_mw', 0.0))
+            obs[i + 4] = self.feature_scaler.scale_benefit(node[1].get('benefit', 0.0))
+            obs[i + 5] = self.feature_scaler.scale_nearest_station_dist(nearest_dists[j])
             capability = 0.0
             for station in self.plan_instance.plan:
                 if station[0][0] == node[0]:
                     capability = station[2]["capability"]
                     break
-            obs[i + 5] = 2 * (np.clip(capability / 10.0, 0, 1) - 0.5)
+            obs[i + 6] = self.feature_scaler.scale_capability(capability)
 
         # Globals (last 1)
         global_i = self.row_length * len(self.node_list)
