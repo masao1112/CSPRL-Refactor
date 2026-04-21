@@ -2,6 +2,7 @@ from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.utils import LinearSchedule
 import os
 import numpy as np
 import torch
@@ -32,9 +33,10 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         self.log_dir = my_log_dir
         self.modelname = my_modelname
         self.save_path = os.path.join(self.log_dir, self.modelname)
-        self.scores = deque(maxlen=10)
+        self.scores = deque(maxlen=5)
         self.best_mean_score = -np.inf
         self.n_episodes = 0
+        self.best_score = -np.inf
 
     def _init_callback(self) -> None:
         # Create folder if needed
@@ -45,34 +47,38 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         # Check if an episode finished
         if self.locals["dones"][0]:
             self.n_episodes += 1
-            
-            if self.n_episodes % self.check_freq == 0:
-                # Query the environment for the best_score
-                try:
-                    # training_env is usually a VecEnv in SB3
-                    env_best_score = self.training_env.get_attr('last_episode_best_score')[0]
-                except Exception:
-                    env_best_score = -np.inf
-    
-                # Store score for mean calculation
-                self.scores.append(env_best_score)
+            # Query the environment for the best_score
+            try:
+                # training_env is usually a VecEnv in SB3
+                env_best_score = self.training_env.get_attr('last_episode_best_score')[0]
+            except Exception:
+                env_best_score = -np.inf
 
+            # Store score for mean calculation
+            self.scores.append(env_best_score)
+
+            if self.n_episodes % self.check_freq == 0:
                 # Mean training score over the last 10 checks
                 my_mean_score = np.mean(self.scores)
-                
+
                 if self.verbose > 0:
                     print("Num timesteps: {}, Episode: {}".format(self.num_timesteps, self.n_episodes))
-                    print("Current best_score: {:.2f} - Mean score: {:.2f} (Best Mean: {:.2f})".format(
+                    print("Current best_score: {:.3f} - Mean score: {:.3f} (Best Mean: {:.3f})".format(
                         env_best_score, my_mean_score, self.best_mean_score))
-    
-                if my_mean_score > self.best_mean_score:
+
+                if my_mean_score > self.best_mean_score or env_best_score >= self.best_score:
                     self.best_mean_score = my_mean_score
+                    self.best_score = env_best_score
                     if self.verbose > 0:
-                        print("New best mean score: {:.2f}. Saving model...".format(self.best_mean_score))
                         new_name = self.modelname + str(self.num_timesteps)
                         if self.log_dir is not None:
                             os.makedirs(self.log_dir, exist_ok=True)
                         self.save_path = os.path.join(self.log_dir, new_name)
+                        if env_best_score >= self.best_score:
+                            print("New best score: {:.3f}. Saving model to path {}".format(self.best_mean_score, self.save_path))
+                        else:
+                            print("New best mean score: {:.3f}. Saving model to path {}".format(self.best_mean_score, self.save_path))
+
                     self.model.save(self.save_path)
 
         return True
@@ -106,7 +112,7 @@ if __name__ == '__main__':
     """
     os.makedirs(log_dir, exist_ok=True)
     env = Monitor(env, os.path.join(log_dir, "monitor.csv"))
-    
+    lr_scheduler = LinearSchedule(start=1e-4, end=1e-5, end_fraction=0.5)
     if use_gnn:
         from custom_environment.gnn_extractor import GNNFeaturesExtractor
         policy_kwargs = dict(
@@ -119,9 +125,9 @@ if __name__ == '__main__':
     else:
         policy_kwargs = dict(net_arch=[256, 256]) # hidden layers
         policy_type = "MlpPolicy"
-    
-    model = DQN(policy_type, env, verbose=1, batch_size=128, buffer_size=10000, learning_rate=1e-5,
+
+    model = DQN(policy_type, env, verbose=1, batch_size=128, buffer_size=10000, learning_rate=lr_scheduler,
                 exploration_initial_eps=1, exploration_final_eps=0.05, exploration_fraction=0.2, policy_kwargs=policy_kwargs,
                 device='cuda' if torch.cuda.is_available() else 'cpu', seed=seed)
-    callback = SaveOnBestTrainingRewardCallback(check_freq=5, my_log_dir=log_dir, my_modelname=modelname)
+    callback = SaveOnBestTrainingRewardCallback(check_freq=1, my_log_dir=log_dir, my_modelname=modelname)
     model.learn(total_timesteps=200000, log_interval=10 ** 4, callback=callback)

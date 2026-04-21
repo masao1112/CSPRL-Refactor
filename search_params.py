@@ -91,7 +91,7 @@ def test_parameters(scaling_factor, distance_decay_factor, node_list, iterations
     return fairness, benefit, cost
 
 if __name__ == "__main__":
-    location = "BaDinh"
+    location = "CauGiay"
     base_dir = "custom_environment/data"
     node_file = os.path.join(base_dir, "Graph", location, "nodes_extended_" + location + ".txt")
     

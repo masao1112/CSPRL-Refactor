@@ -234,7 +234,7 @@ def compare(location="DongDa"):
     node_file = os.path.join(base_dir, "Graph", location, f"nodes_extended_{location}.txt")
     plan_file = os.path.join(base_dir, "Graph", location, f"existingplan_{location}.pkl")
 
-    use_gnn = False  # Set to True to evaluate the GNN model
+    use_gnn = True  # Set to True to evaluate the GNN model
     obs_type = "gnn" if use_gnn else "mlp"
     
     # Env for testing
@@ -281,7 +281,7 @@ def compare(location="DongDa"):
     G = ox.load_graphml(graph_file)
 
     # 1. Load RL (DQN) Model
-    step = 66400
+    step = 62657
     rl_log_dir = os.path.join("Results", "tmp", location, obs_type)
     best_rl_model = None
     if os.path.exists(rl_log_dir):
