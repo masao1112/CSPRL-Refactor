@@ -181,6 +181,7 @@ if __name__ == '__main__':
     parser.add_argument("--exploration_final_eps", type=float, default=0.05, help="Final exploration epsilon (default: 0.05)")
     parser.add_argument("--exploration_fraction", type=float, default=0.3, help="Exploration fraction (default: 0.3)")
     parser.add_argument("--total_timesteps", type=int, default=100000, help="Total training timesteps (default: 200000)")
+    parser.add_argument("--target_update_interval", type=int, default=500, help="Target network update interval (default: 1000)")
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
     parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
     args = parser.parse_args()
@@ -237,6 +238,7 @@ if __name__ == '__main__':
                 exploration_initial_eps=args.exploration_initial_eps,
                 exploration_final_eps=args.exploration_final_eps,
                 exploration_fraction=args.exploration_fraction,
+                target_update_interval=args.target_update_interval,
                 policy_kwargs=policy_kwargs,
                 device='cuda' if torch.cuda.is_available() else 'cpu',
                 seed=args.seed)
