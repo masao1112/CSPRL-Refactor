@@ -48,8 +48,8 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
     def _init_callback(self) -> None:
         # Create folder if needed
-        if self.save_path is not None:
-            os.makedirs(self.save_path, exist_ok=True)
+        if self.log_dir is not None:
+            os.makedirs(self.log_dir, exist_ok=True)
 
     def _on_step(self) -> bool:
         # Check if an episode finished
@@ -110,6 +110,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
     def save_history(self, path: str):
         """Save episode history to a CSV file."""
+        os.makedirs(path, exist_ok=True)
         csv_path = os.path.join(path, "episode_history.csv")
         with open(csv_path, "w", newline="") as f:
             writer = csv.writer(f)
@@ -156,6 +157,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
         plt.title("Training Progress")
         fig.tight_layout()
+        os.makedirs(path, exist_ok=True)
         plot_path = os.path.join(path, "training_plot.png")
         fig.savefig(plot_path, dpi=150)
         plt.close(fig)
@@ -180,6 +182,7 @@ if __name__ == '__main__':
     parser.add_argument("--exploration_fraction", type=float, default=0.3, help="Exploration fraction (default: 0.3)")
     parser.add_argument("--total_timesteps", type=int, default=100000, help="Total training timesteps (default: 200000)")
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
+    parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
     args = parser.parse_args()
 
     if args.no_gnn:
