@@ -255,7 +255,6 @@ class StationPlacement(gym.Env):
         self.schritt = 0
         self.best_plan = []
         self.best_node_list = []
-        self.best_node_list = []
         # Use absolute path for config lookup
         config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "processed", "config_lookup.json")
         self.config_dict = H.get_lookup(config_path)
@@ -494,7 +493,7 @@ class StationPlacement(gym.Env):
         # Update previous score for the next step
         self.previous_score = new_score
 
-        new_score = max(new_score, -25)  # if negative score
+        # new_score = max(new_score, -25)  # if negative score
         if new_score - self.best_score > 0:
             # reward += (new_score - self.best_score)
             # avoid jojo learning
