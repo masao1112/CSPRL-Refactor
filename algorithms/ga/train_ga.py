@@ -51,7 +51,7 @@ def train_ga(args):
         model = GAPolicy(input_dim, output_dim, hidden_dim)
         population.append(flatten_weights(model))
 
-    best_overall_reward = -np.inf
+    best_overall_score = -np.inf
     best_overall_chromosome = None
 
     log_dir = f"Results/ga/{location}/"
@@ -75,21 +75,21 @@ def train_ga(args):
         fitness_rewards = np.array(fitness_rewards)
         fitness_scores = np.array(fitness_scores)
         
-        # Sort by reward (or score)
-        idx = np.argsort(fitness_rewards)[::-1]
+        # Sort by score
+        idx = np.argsort(fitness_scores)[::-1]
         population = [population[i] for i in idx]
         
         current_best_reward = fitness_rewards[idx[0]]
         current_best_score = fitness_scores[idx[0]]
 
-        if current_best_reward > best_overall_reward:
-            best_overall_reward = current_best_reward
+        if current_best_score > best_overall_score:
+            best_overall_score = current_best_score
             best_overall_chromosome = population[0]
             # Save the best model
             torch.save(best_overall_chromosome, os.path.join(log_dir, f"best_ga_model_{location}.pt"))
-            print(f"Gen {gen}: New best reward: {best_overall_reward:.2f}")
+            print(f"Gen {gen}: New best score: {best_overall_score:.2f}")
 
-        print(f"Gen {gen}: Best Reward: {current_best_reward:.2f}, Best Score: {current_best_score:.2f}, Avg Reward: {np.mean(fitness_rewards):.2f}")
+        print(f"Gen {gen}: Best Score: {current_best_score:.2f}, Best Reward: {current_best_reward:.2f}, Avg Reward: {np.mean(fitness_rewards):.2f}")
 
         # Selection (Elitism)
         new_population = population[:args.elitism]
@@ -108,7 +108,7 @@ def train_ga(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--location", type=str, default="DongDa")
+    parser.add_argument("--location", type=str, default="TayHo")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--pop_size", type=int, default=50)
     parser.add_argument("--generations", type=int, default=100)

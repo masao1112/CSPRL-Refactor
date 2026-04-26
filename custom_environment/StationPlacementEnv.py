@@ -83,11 +83,11 @@ class FeatureScaler:
 
 
 class Plan:
-    def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file):
+    def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file, graph):
         with (open(my_plan_file, "rb")) as f:
             self.plan = pickle.load(f)
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
-        my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict)
+        my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict, graph)
         # update the dictionnary
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
         self.norm_benefit, self.norm_cost, self.norm_fairness, self.norm_charg, self.norm_wait, self.norm_travel = \
@@ -169,6 +169,7 @@ class StationPlacement(gym.Env):
             self.grid_adapter = None
 
         _graph, self.node_list = H.prepare_graph(my_graph_file, my_node_file)
+        self.graph = _graph
         self.node_id_to_idx = {node[0]: idx for idx, node in enumerate(self.node_list)}
 
         self.node_list = [self._init(my_node) for my_node in self.node_list]
@@ -228,7 +229,7 @@ class StationPlacement(gym.Env):
         self.budget = H.BUDGET
         self.game_over = False
         self.plan_instance = Plan(self.node_list, StationPlacement.node_dict, StationPlacement.cost_dict,
-                                  self.plan_file)
+                                  self.plan_file, self.graph)
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
@@ -250,7 +251,7 @@ class StationPlacement(gym.Env):
 
         self.previous_score = self.best_score
 
-        self.best_score = max(self.best_score, -25)
+        # self.best_score = max(self.best_score, -25)
         self.plan_length = len(self.plan_instance.existing_plan)
         self.schritt = 0
         self.best_plan = []
@@ -351,7 +352,8 @@ class StationPlacement(gym.Env):
         for j in range(2):
             self.node_list, _, _ = H.station_seeking(self.plan_instance.plan, self.node_list,
                                                       StationPlacement.node_dict,
-                                                      StationPlacement.cost_dict)
+                                                      StationPlacement.cost_dict,
+                                                      self.graph)
 
 
     def step(self, my_action):

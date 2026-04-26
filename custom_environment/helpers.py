@@ -21,7 +21,7 @@ def prepare_graph(my_graph_file, my_node_file):
     return my_graph, my_node_list
 
 
-def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
+def cost_single(my_node, my_station, my_node_dict, my_cost_dict, graph):
     """
     calculate the social cost for one station
     """
@@ -31,7 +31,7 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     if station_id in my_node_dict[node_id]:
         distance = my_node_dict[node_id][station_id]
     else:
-        distance = calculate_distance(s_pos, my_node)
+        distance = calculate_distance(s_pos, my_node, graph)
         my_node_dict[node_id][station_id] = distance
     # check if cost has to be calculated
     if node_id not in my_cost_dict:
@@ -55,14 +55,14 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     return node_cost, my_node_dict, my_cost_dict
 
 
-def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
+def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict, graph):
     """
     output station assignment: Each node gets assigned the charging station with minimal social cost
     """
     for node in my_node_list:
         cost_list = []
         for station in my_plan:
-            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict)
+            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict, graph)
             cost_list.append(node_cost)
         costminindex = np.argmin(cost_list)
         chosen_station = my_plan[costminindex]
@@ -75,7 +75,7 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
     return my_node_list, my_node_dict, my_cost_dict
 
 
-def calculate_distance(s_pos, my_node):
+def calculate_distance(s_pos, my_node, graph):
     """
     Calculates distance between two nodes using the precomputed distance matrix.
     Falls back to haversine if matrix lookup fails.
@@ -123,7 +123,7 @@ def charging_capability(my_station):
 def weak_demand(my_node):
     return my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"])
 
-def dynamic_demand(my_node, my_plan, scaling_factor=0.47, distance_decay_factor=0.89):
+def dynamic_demand(my_node, my_plan, scaling_factor=0.84, distance_decay_factor=0.21):
     power_factor = 0
     base_demand = weak_demand(my_node)
     for station in my_plan:
@@ -488,7 +488,7 @@ def initial_solution(my_config_dict, my_node_list, s_pos):
     get the initial solution for the charging configuration
     """
     W = 0  # minimum capacity constraint
-    radius = 50
+    radius = RADIUS_MAX
     # search for all nodes within station radius
     for my_node in my_node_list:
         if haversine(s_pos, my_node) <= radius:
@@ -592,11 +592,6 @@ def support_stations(my_plan, free_list):
             chosen_node = free_list[min_index]
     return chosen_node
 
-
-# Load graph file for travel distance computing
-location = "DongDa"
-graph_file = f"custom_environment/data/Graph/{location}/{location}.graphml"
-graph = nx.read_graphml(graph_file)
 
 # Parameters ########################################################
 alpha = 0.8
