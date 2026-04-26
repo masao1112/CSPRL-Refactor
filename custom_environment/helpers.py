@@ -21,7 +21,7 @@ def prepare_graph(my_graph_file, my_node_file):
     return my_graph, my_node_list
 
 
-def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
+def cost_single(my_node, my_station, my_node_dict, my_cost_dict, graph):
     """
     calculate the social cost for one station
     """
@@ -31,7 +31,7 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     if station_id in my_node_dict[node_id]:
         distance = my_node_dict[node_id][station_id]
     else:
-        distance = calculate_distance(s_pos, my_node)
+        distance = calculate_distance(s_pos, my_node, graph)
         my_node_dict[node_id][station_id] = distance
     # check if cost has to be calculated
     if node_id not in my_cost_dict:
@@ -55,14 +55,14 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     return node_cost, my_node_dict, my_cost_dict
 
 
-def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
+def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict, graph):
     """
     output station assignment: Each node gets assigned the charging station with minimal social cost
     """
     for node in my_node_list:
         cost_list = []
         for station in my_plan:
-            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict)
+            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict, graph)
             cost_list.append(node_cost)
         costminindex = np.argmin(cost_list)
         chosen_station = my_plan[costminindex]
@@ -75,7 +75,7 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
     return my_node_list, my_node_dict, my_cost_dict
 
 
-def calculate_distance(s_pos, my_node):
+def calculate_distance(s_pos, my_node, graph):
     """
     Calculates distance between two nodes using the precomputed distance matrix.
     Falls back to haversine if matrix lookup fails.
@@ -123,7 +123,7 @@ def charging_capability(my_station):
 def weak_demand(my_node):
     return my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"])
 
-def dynamic_demand(my_node, my_plan, scaling_factor=0.47, distance_decay_factor=0.89):
+def dynamic_demand(my_node, my_plan, scaling_factor=0.84, distance_decay_factor=0.21):
     power_factor = 0
     base_demand = weak_demand(my_node)
     for station in my_plan:
@@ -488,7 +488,7 @@ def initial_solution(my_config_dict, my_node_list, s_pos):
     get the initial solution for the charging configuration
     """
     W = 0  # minimum capacity constraint
-    radius = 50
+    radius = RADIUS_MAX
     # search for all nodes within station radius
     for my_node in my_node_list:
         if haversine(s_pos, my_node) <= radius:
@@ -516,7 +516,6 @@ def choose_node_new_benefit(free_list, all_node_list, R_search=0.1):
     pick location with highest potential based on Potential/Coverage.
     """
     potential_scores = []
-    epsilon = 0.001
     for candidate_node in free_list:
         local_demand = 0
         for node in all_node_list:
@@ -525,7 +524,7 @@ def choose_node_new_benefit(free_list, all_node_list, R_search=0.1):
                 local_demand += weak_demand(node)
 
         current_coverage = candidate_node[1].get("n_stations", 0)
-        _score = local_demand / (current_coverage + epsilon)
+        _score = local_demand / (current_coverage +eps)
 
         potential_scores.append(_score)
     best_index = np.argmax(potential_scores)
@@ -594,22 +593,15 @@ def support_stations(my_plan, free_list):
     return chosen_node
 
 
-# Load graph file for travel distance computing
-location = "DongDa"
-graph_file = f"custom_environment/data/Graph/{location}/{location}.graphml"
-graph = nx.read_graphml(graph_file)
-
 # Parameters ########################################################
 alpha = 0.8
 my_lambda = 0.5
-eps = 1e-9
+eps = 1e-6
 ev_per_capita = 0.022
 evs_parking_area = 15  # meter square
 
 K = 100  # maximal number of chargers at a station
 RADIUS_MAX = 1  # [radius_max] = km
-# INSTALL_FEE = np.array([300, 750, 28000])  # fee per installing a charger of type 1, 2 or 3. [fee] = $
-# CHARGING_POWER = np.array([7, 22, 50])  # [power] = kW, rounded
 CHARGING_POWER = np.array([3, 7, 11, 20, 22, 30, 60, 80, 120, 150, 180, 250])
 INSTALL_FEE = np.array([5, 11, 12, 100, 12, 143, 278, 397, 416, 676, 956, 3272])
 BATTERY = 85  # battery capacity, [BATTERY] = kWh

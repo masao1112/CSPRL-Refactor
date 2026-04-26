@@ -179,11 +179,11 @@ class CSPRLGridAdapter:
                 # Base available capacity from power flow
                 capacity_info = self.loader.get_available_capacity(idx)
                 available = capacity_info.get('available_mw', 0.0)
-
+                
                 # Subtract cumulative required load from EV stations
                 if idx in bus_loads:
                     available -= bus_loads[idx]['required']
-
+                
                 capacities.append(max(0.0, available))
 
         return np.array(capacities, dtype=np.float32)
@@ -343,7 +343,7 @@ class CSPRLGridAdapter:
             grid_utilization_list.append(required / (available + 1e-9))
             if required > available and required > 0:
                 shortage = required - available
-                # Penalty proportional to overload ratio, but let it grow beyond 1.0
+                # Penalty proportional to overload ratio, but let it grow beyond 1.0 
                 # to provide gradient for the RL agent even when highly overloaded.
                 ratio = shortage / available if available > 0 else shortage / self.ev_station_power_mw
                 bus_penalty = PENALTY_CAPACITY_WEIGHT * ratio

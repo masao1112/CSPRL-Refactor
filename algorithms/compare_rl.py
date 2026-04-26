@@ -21,7 +21,7 @@ from custom_environment.StationPlacementEnv import StationPlacement
 from algorithms.ga.ga_utils import GAPolicy, unflatten_weights
 
 
-def prepare_existing_plan(my_plan, my_node_list):
+def prepare_existing_plan(my_plan, my_node_list, graph):
     my_cost_dict = {}
     my_node_dict = {}
     for my_node in my_node_list:
@@ -32,7 +32,7 @@ def prepare_existing_plan(my_plan, my_node_list):
     for index in range(len(my_plan)):
         my_plan[index] = H.s_dictionnary(my_plan[index], my_node_list)
 
-    my_node_list, _, _ = H.station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict)
+    my_node_list, _, _ = H.station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict, graph)
 
     for index in range(len(my_plan)):
         my_plan[index] = H.s_dictionnary(my_plan[index], my_node_list)
@@ -234,7 +234,7 @@ def compare(location="DongDa"):
     node_file = os.path.join(base_dir, "Graph", location, f"nodes_extended_{location}.txt")
     plan_file = os.path.join(base_dir, "Graph", location, f"existingplan_{location}.pkl")
 
-    use_gnn = False  # Set to True to evaluate the GNN model
+    use_gnn = True  # Set to True to evaluate the GNN model
     obs_type = "gnn" if use_gnn else "mlp"
     
     # Env for testing
@@ -247,7 +247,7 @@ def compare(location="DongDa"):
     with open(plan_file, "rb") as f:
         baseline_plan = pickle.load(f)
         
-    baseline_node_list, baseline_plan = prepare_existing_plan(baseline_plan, baseline_node_list)
+    baseline_node_list, baseline_plan = prepare_existing_plan(baseline_plan, baseline_node_list, env.graph)
     
     (
         b_norm_benefit,
@@ -281,7 +281,7 @@ def compare(location="DongDa"):
     G = ox.load_graphml(graph_file)
 
     # 1. Load RL (DQN) Model
-    step = 66400
+    step = 26364
     rl_log_dir = os.path.join("Results", "tmp", location, obs_type)
     best_rl_model = None
     if os.path.exists(rl_log_dir):
@@ -409,5 +409,5 @@ def compare(location="DongDa"):
 
 
 if __name__ == "__main__":
-    compare()
+    compare(location="TayHo")
 

@@ -63,7 +63,7 @@ def test(my_plan, my_node_list, my_basic_cost, my_norm_benefit, my_norm_charging
     print("Used budget: {} \n".format(total_inst_cost * 100))
 
 
-def prepare_existing_plan(my_plan, my_node_list):
+def prepare_existing_plan(my_plan, my_node_list, graph):
     my_cost_dict = {}
     my_node_dict = {}
     for my_node in my_node_list:
@@ -73,7 +73,7 @@ def prepare_existing_plan(my_plan, my_node_list):
 
     for index in range(len(my_plan)):
         my_plan[index] = H.s_dictionnary(my_plan[index], my_node_list)
-    my_node_list, _, _ = H.station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict)
+    my_node_list, _, _ = H.station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict, graph)
     for index in range(len(my_plan)):
         my_plan[index] = H.s_dictionnary(my_plan[index], my_node_list)
     return my_node_list, my_plan
@@ -107,14 +107,14 @@ if __name__ == '__main__':
         plan = pickle.load(f)
     print("Number of already existing charging stations: {}".format(len(plan)))
 
-    node_list, plan = prepare_existing_plan(plan, node_list)
+    node_list, plan = prepare_existing_plan(plan, node_list, env.graph)
     basic_cost = sum([station[2]["fee"] for station in plan])
     norm_benefit, norm_cost, norm_fairness, norm_charging, norm_waiting, norm_travel = H.existing_score(plan, node_list)
     norm_score = eci_test(plan, node_list, norm_benefit, norm_charging, norm_waiting, norm_travel, norm_fairness)
     test(plan, node_list, basic_cost, norm_benefit, norm_charging, norm_waiting, norm_travel, norm_score, norm_fairness)
-    pickle.dump(plan, open("Results/" + "debug/" + location + f"/existing_plan.pkl", "wb"))
+    # pickle.dump(plan, open("Results/" + "debug/" + location + f"/existing_plan.pkl", "wb"))
     print("Reinforcement Learning")
-    step = 61600
+    step = 31116
     node_file = "Results/" + "optimal_plan/" + location + f"/nodes_RL_{step}.txt"
     result_file = "Results/" + "optimal_plan/" + location + f"/plan_RL_{step}.pkl"
     perform_test(node_file, basic_cost, result_file, norm_benefit, norm_charging, norm_waiting, norm_travel, norm_fairness, norm_score)
