@@ -123,7 +123,7 @@ def charging_capability(my_station):
 def weak_demand(my_node):
     return my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"])
 
-def dynamic_demand(my_node, my_plan, scaling_factor=0.84, distance_decay_factor=0.21):
+def dynamic_demand(my_node, my_plan, scaling_factor=0.47, distance_decay_factor=0.89):
     power_factor = 0
     base_demand = weak_demand(my_node)
     for station in my_plan:
