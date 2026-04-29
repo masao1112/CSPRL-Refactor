@@ -255,7 +255,6 @@ class StationPlacement(gym.Env):
         self.schritt = 0
         self.best_plan = []
         self.best_node_list = []
-        self.best_node_list = []
         # Use absolute path for config lookup
         config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "processed", "config_lookup.json")
         self.config_dict = H.get_lookup(config_path)

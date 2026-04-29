@@ -488,7 +488,7 @@ def initial_solution(my_config_dict, my_node_list, s_pos):
     get the initial solution for the charging configuration
     """
     W = 0  # minimum capacity constraint
-    radius = 50
+    radius = RADIUS_MAX # previously 50
     # search for all nodes within station radius
     for my_node in my_node_list:
         if haversine(s_pos, my_node) <= radius:
