@@ -21,7 +21,7 @@ def prepare_graph(my_graph_file, my_node_file):
     return my_graph, my_node_list
 
 
-def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
+def cost_single(my_node, my_station, my_node_dict, my_cost_dict, graph):
     """
     calculate the social cost for one station
     """
@@ -31,7 +31,7 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     if station_id in my_node_dict[node_id]:
         distance = my_node_dict[node_id][station_id]
     else:
-        distance = calculate_distance(s_pos, my_node)
+        distance = calculate_distance(s_pos, my_node, graph)
         my_node_dict[node_id][station_id] = distance
     # check if cost has to be calculated
     if node_id not in my_cost_dict:
@@ -55,14 +55,14 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     return node_cost, my_node_dict, my_cost_dict
 
 
-def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
+def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict, graph):
     """
     output station assignment: Each node gets assigned the charging station with minimal social cost
     """
     for node in my_node_list:
         cost_list = []
         for station in my_plan:
-            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict)
+            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict, graph)
             cost_list.append(node_cost)
         costminindex = np.argmin(cost_list)
         chosen_station = my_plan[costminindex]
@@ -75,7 +75,7 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
     return my_node_list, my_node_dict, my_cost_dict
 
 
-def calculate_distance(s_pos, my_node):
+def calculate_distance(s_pos, my_node, graph):
     """
     Calculates distance between two nodes using the precomputed distance matrix.
     Falls back to haversine if matrix lookup fails.
@@ -592,11 +592,6 @@ def support_stations(my_plan, free_list):
             chosen_node = free_list[min_index]
     return chosen_node
 
-
-# Load graph file for travel distance computing
-location = "DongDa"
-graph_file = f"custom_environment/data/Graph/{location}/{location}.graphml"
-graph = nx.read_graphml(graph_file)
 
 # Parameters ########################################################
 alpha = 0.8

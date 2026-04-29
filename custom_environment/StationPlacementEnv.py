@@ -83,11 +83,11 @@ class FeatureScaler:
 
 
 class Plan:
-    def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file):
+    def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file, graph):
         with (open(my_plan_file, "rb")) as f:
             self.plan = pickle.load(f)
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
-        my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict)
+        my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict, graph)
         # update the dictionnary
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
         self.norm_benefit, self.norm_cost, self.norm_fairness, self.norm_charg, self.norm_wait, self.norm_travel = \
@@ -168,7 +168,7 @@ class StationPlacement(gym.Env):
             print(f"Warning: Could not initialize Power Grid Adapter ({ascii(e)}). Grid constraints will be ignored.")
             self.grid_adapter = None
 
-        _graph, self.node_list = H.prepare_graph(my_graph_file, my_node_file)
+        self.graph, self.node_list = H.prepare_graph(my_graph_file, my_node_file)
         self.node_id_to_idx = {node[0]: idx for idx, node in enumerate(self.node_list)}
 
         self.node_list = [self._init(my_node) for my_node in self.node_list]
@@ -197,7 +197,7 @@ class StationPlacement(gym.Env):
             self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
         elif self.obs_type == "gnn":
             edges = []
-            for u, v in _graph.edges():
+            for u, v in self.graph.edges():
                 if u in self.node_id_to_idx and v in self.node_id_to_idx:
                     edges.append([self.node_id_to_idx[u], self.node_id_to_idx[v]])
             
@@ -228,7 +228,7 @@ class StationPlacement(gym.Env):
         self.budget = H.BUDGET
         self.game_over = False
         self.plan_instance = Plan(self.node_list, StationPlacement.node_dict, StationPlacement.cost_dict,
-                                  self.plan_file)
+                                  self.plan_file, self.graph)
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
@@ -250,7 +250,7 @@ class StationPlacement(gym.Env):
 
         self.previous_score = self.best_score
 
-        self.best_score = max(self.best_score, -25)
+        # self.best_score = max(self.best_score, -25)
         self.plan_length = len(self.plan_instance.existing_plan)
         self.schritt = 0
         self.best_plan = []
@@ -352,7 +352,8 @@ class StationPlacement(gym.Env):
         for j in range(2):
             self.node_list, _, _ = H.station_seeking(self.plan_instance.plan, self.node_list,
                                                       StationPlacement.node_dict,
-                                                      StationPlacement.cost_dict)
+                                                      StationPlacement.cost_dict,
+                                                      self.graph)
 
 
     def step(self, my_action):
@@ -494,7 +495,7 @@ class StationPlacement(gym.Env):
         # Update previous score for the next step
         self.previous_score = new_score
 
-        new_score = max(new_score, -25)  # if negative score
+        # new_score = max(new_score, -25)  # if negative score
         if new_score - self.best_score > 0:
             # reward += (new_score - self.best_score)
             # avoid jojo learning
