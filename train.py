@@ -1,7 +1,7 @@
 from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.utils import LinearSchedule
 import os
 import numpy as np
@@ -19,94 +19,57 @@ from custom_environment.StationPlacementEnv import StationPlacement
 Train the model by reinforcement learning.
 """
 
-class SaveOnBestTrainingRewardCallback(BaseCallback):
+class CustomEvalCallback(EvalCallback):
     """
-    Code from Stable Baselines3,
-    https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/monitor_training.ipynb
-    Callback for saving a model (the check is done every ``check_freq`` steps)
-    based on the training reward (in practice, we recommend using ``EvalCallback``).
-
-    :param check_freq: (int)
-    :param my_log_dir: (str) Path to the folder where the model will be saved.
-      It must contains the file created by the ``Monitor`` wrapper.
-    :param verbose: (int)
+    Custom EvalCallback that uses the evaluation environment's highest evaluated score
+    to save the best model using the custom naming logic.
     """
 
-    def __init__(self, check_freq: int, my_log_dir: str, my_modelname: str, verbose=1):
-        super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
-        self.check_freq = check_freq
-        self.log_dir = my_log_dir
+    def __init__(self, eval_env, check_freq: int, my_log_dir: str, my_modelname: str, verbose=1):
+        super(CustomEvalCallback, self).__init__(
+            eval_env=eval_env,
+            best_model_save_path=my_log_dir,
+            log_path=my_log_dir,
+            eval_freq=check_freq,
+            verbose=verbose
+        )
         self.modelname = my_modelname
-        self.save_path = os.path.join(self.log_dir, self.modelname)
-        self.scores = deque(maxlen=5)
-        self.best_mean_score = -np.inf
-        self.n_episodes = 0
-        self.best_score = -np.inf
+        self.best_eval_score = -np.inf
         # Episode history for plotting
-        self.episode_rewards = []    # total reward per episode
-        self.episode_best_scores = []  # best_score per episode
-
-    def _init_callback(self) -> None:
-        # Create folder if needed
-        if self.log_dir is not None:
-            os.makedirs(self.log_dir, exist_ok=True)
+        self.episode_rewards = []    # mean reward per evaluation
+        self.episode_best_scores = []  # best_score per evaluation
+        self.eval_episodes = []
 
     def _on_step(self) -> bool:
-        # Check if an episode finished
-        if self.locals["dones"][0]:
-            self.n_episodes += 1
+        continue_training = super(CustomEvalCallback, self)._on_step()
+
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
             # Query the environment for the best_score
             try:
-                # training_env is usually a VecEnv in SB3
-                env_best_score = self.training_env.get_attr('last_episode_best_score')[0]
+                # eval_env is usually a VecEnv in SB3
+                env_best_score = self.eval_env.get_attr('last_episode_best_score')[0]
             except Exception:
                 env_best_score = -np.inf
 
-            # Get total episode reward from Monitor wrapper
-            info = self.locals["infos"][0]
-            episode_reward = info.get("episode", {}).get("r", 0.0) if info else 0.0
-
             # Record history
-            self.episode_rewards.append(episode_reward)
+            self.episode_rewards.append(self.last_mean_reward)
             self.episode_best_scores.append(env_best_score)
+            self.eval_episodes.append(self.num_timesteps)
 
-            # Store score for mean calculation
-            self.scores.append(env_best_score)
+            new_best_score = env_best_score > self.best_eval_score
 
-            if self.n_episodes % self.check_freq == 0:
-                # Mean training score over the last 10 checks
-                my_mean_score = np.mean(self.scores)
+            if new_best_score:
+                new_name = self.modelname + str(self.num_timesteps)
+                if self.best_model_save_path is not None:
+                    os.makedirs(self.best_model_save_path, exist_ok=True)
+                save_path = os.path.join(self.best_model_save_path, new_name)
 
-                if self.verbose > 0:
-                    print("Num timesteps: {}, Episode: {}".format(self.num_timesteps, self.n_episodes))
-                    print("Current best_score: {:.3f} - Mean score: {:.3f} (Best Mean: {:.3f})".format(
-                        env_best_score, my_mean_score, self.best_mean_score))
+                print("New best evaluated score: {:.3f}. Saving to {}".format(env_best_score, save_path))
 
-                new_best_mean = my_mean_score > self.best_mean_score
-                new_best_score = env_best_score > self.best_score
+                self.best_eval_score = env_best_score
+                self.model.save(save_path)
 
-                if new_best_mean or new_best_score:
-                    new_name = self.modelname + str(self.num_timesteps)
-                    if self.log_dir is not None:
-                        os.makedirs(self.log_dir, exist_ok=True)
-                    self.save_path = os.path.join(self.log_dir, new_name)
-
-                    if new_best_mean and new_best_score:
-                        print("New best mean score: {:.3f} and new best score: {:.3f}. Saving to {}".format(
-                            my_mean_score, env_best_score, self.save_path))
-                    elif new_best_mean:
-                        print("New best mean score: {:.3f}. Saving to {}".format(my_mean_score, self.save_path))
-                    else:
-                        print("New best score: {:.3f}. Saving to {}".format(env_best_score, self.save_path))
-
-                    if new_best_mean:
-                        self.best_mean_score = my_mean_score
-                    if new_best_score:
-                        self.best_score = env_best_score
-
-                    self.model.save(self.save_path)
-
-        return True
+        return continue_training
 
     def save_history(self, path: str):
         """Save episode history to a CSV file."""
@@ -114,18 +77,18 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         csv_path = os.path.join(path, "episode_history.csv")
         with open(csv_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["episode", "total_reward", "best_score"])
-            for i, (r, s) in enumerate(zip(self.episode_rewards, self.episode_best_scores), 1):
-                writer.writerow([i, r, s])
+            writer.writerow(["timestep", "mean_eval_reward", "eval_best_score"])
+            for t, r, s in zip(self.eval_episodes, self.episode_rewards, self.episode_best_scores):
+                writer.writerow([t, r, s])
         if self.verbose > 0:
-            print(f"Episode history saved to {csv_path}")
+            print(f"Evaluation history saved to {csv_path}")
 
     def plot_history(self, path: str):
-        """Plot total reward and best score per episode and save the figure."""
+        """Plot mean eval reward and best score per evaluation and save the figure."""
         if not self.episode_rewards:
             return
 
-        episodes = np.arange(1, len(self.episode_rewards) + 1)
+        timesteps = np.array(self.eval_episodes)
         rewards = np.array(self.episode_rewards)
         best_scores = np.array(self.episode_best_scores)
 
@@ -135,34 +98,34 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         color_score = "#ef4444"    # red
 
         # Plot total reward
-        ax1.set_xlabel("Episode")
-        ax1.set_ylabel("Total Reward", color=color_reward)
-        ax1.plot(episodes, rewards, color=color_reward, alpha=0.3, linewidth=0.8, label="Total Reward")
+        ax1.set_xlabel("Timesteps")
+        ax1.set_ylabel("Mean Eval Reward", color=color_reward)
+        ax1.plot(timesteps, rewards, color=color_reward, alpha=0.3, linewidth=0.8, label="Mean Eval Reward")
         # Smoothed (rolling mean, window=10)
         if len(rewards) >= 10:
             smooth_r = np.convolve(rewards, np.ones(10) / 10, mode="valid")
-            ax1.plot(episodes[9:], smooth_r, color=color_reward, linewidth=2, label="Reward (MA-10)")
+            ax1.plot(timesteps[9:], smooth_r, color=color_reward, linewidth=2, label="Reward (MA-10)")
         ax1.tick_params(axis="y", labelcolor=color_reward)
         ax1.legend(loc="upper left")
 
         # Plot best score on secondary y-axis
         ax2 = ax1.twinx()
-        ax2.set_ylabel("Best Score", color=color_score)
-        ax2.plot(episodes, best_scores, color=color_score, alpha=0.3, linewidth=0.8, label="Best Score")
+        ax2.set_ylabel("Eval Best Score", color=color_score)
+        ax2.plot(timesteps, best_scores, color=color_score, alpha=0.3, linewidth=0.8, label="Eval Best Score")
         if len(best_scores) >= 10:
             smooth_s = np.convolve(best_scores, np.ones(10) / 10, mode="valid")
-            ax2.plot(episodes[9:], smooth_s, color=color_score, linewidth=2, label="Best Score (MA-10)")
+            ax2.plot(timesteps[9:], smooth_s, color=color_score, linewidth=2, label="Best Score (MA-10)")
         ax2.tick_params(axis="y", labelcolor=color_score)
         ax2.legend(loc="upper right")
 
-        plt.title("Training Progress")
+        plt.title("Evaluation Progress")
         fig.tight_layout()
         os.makedirs(path, exist_ok=True)
         plot_path = os.path.join(path, "training_plot.png")
         fig.savefig(plot_path, dpi=150)
         plt.close(fig)
         if self.verbose > 0:
-            print(f"Training plot saved to {plot_path}")
+            print(f"Evaluation plot saved to {plot_path}")
 
 
 if __name__ == '__main__':
@@ -180,8 +143,8 @@ if __name__ == '__main__':
     parser.add_argument("--exploration_initial_eps", type=float, default=1.0, help="Initial exploration epsilon (default: 1.0)")
     parser.add_argument("--exploration_final_eps", type=float, default=0.05, help="Final exploration epsilon (default: 0.05)")
     parser.add_argument("--exploration_fraction", type=float, default=0.2, help="Exploration fraction (default: 0.3)")
-    parser.add_argument("--total_timesteps", type=int, default=200000, help="Total training timesteps (default: 200000)")
-    parser.add_argument("--target_update_interval", type=int, default=2000, help="Target network update interval (default: 1000)")
+    parser.add_argument("--total_timesteps", type=int, default=100000, help="Total training timesteps (default: 200000)")
+    parser.add_argument("--target_update_interval", type=int, default=10000, help="Target network update interval (default: 1000)")
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
     parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
     args = parser.parse_args()
@@ -242,7 +205,16 @@ if __name__ == '__main__':
                 policy_kwargs=policy_kwargs,
                 device='cuda' if torch.cuda.is_available() else 'cpu',
                 seed=args.seed)
-    callback = SaveOnBestTrainingRewardCallback(check_freq=1, my_log_dir=log_dir, my_modelname=modelname)
+    
+    eval_env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
+    eval_env = Monitor(eval_env, os.path.join(log_dir, "eval_monitor.csv"))
+
+    callback = CustomEvalCallback(
+        eval_env=eval_env,
+        check_freq=max(1000, args.total_timesteps // 100),
+        my_log_dir=log_dir,
+        my_modelname=modelname
+    )
     model.learn(total_timesteps=args.total_timesteps, log_interval=10 ** 4, callback=callback)
 
     # Save config, episode history, and plot
