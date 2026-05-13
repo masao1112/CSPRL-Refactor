@@ -250,6 +250,7 @@ class StationPlacement(gym.Env):
                                                              self.plan_instance.norm_fairness)
 
         self.previous_score = self.best_score
+        self.starting_score = self.best_score  # baseline for the entire episode
 
         # self.best_score = max(self.best_score, -25)
         self.plan_length = len(self.plan_instance.existing_plan)
@@ -408,10 +409,13 @@ class StationPlacement(gym.Env):
         self.schritt += 1
         if self.schritt >= len(self.node_list) / 2:
             self.game_over = True
-        # if self.game_over:
-        #     print("Best score {}.".format(self.best_score))
+
+        # ── Terminal reward: bonus/penalty for final score vs starting score ──
+        if self.game_over:
+            terminal_improvement = self.best_score - self.starting_score
+            reward += 5.0 * terminal_improvement  # strong signal at episode end
+
         # Return gymnasium format: (obs, reward, terminated, truncated, info)
-        # best_node_list, best_plan = self.render()
         return obs, reward, self.game_over, False, {}
 
     def station_config_check(self, my_station):
@@ -467,7 +471,8 @@ class StationPlacement(gym.Env):
 
     def evaluation(self):
         """
-        Calculate the reward
+        Calculate the reward.
+        Reward is aligned with the score objective to prevent reward-score divergence.
         """
         reward = 0
         self.prepare_score()
@@ -482,23 +487,33 @@ class StationPlacement(gym.Env):
             if cap_penalty < 0:
                 new_score -= 100
                 self.game_over = True
-                # print("VIOLATED!")
         else:
             new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel,
                                                              self.plan_instance.norm_fairness)
 
-        # Compare against the score from the PREVIOUS step, not the all-time best
-        step_improvement = new_score - self.previous_score
-        reward += step_improvement
+        # ── Reward Component 1: Score-relative improvement ──
+        # Reward proportional to improvement over the STARTING score of this episode.
+        # This ensures cumulative reward correlates with final score improvement.
+        improvement_over_start = new_score - self.starting_score
+        reward += improvement_over_start
+
+        # ── Reward Component 2: Step-level delta (smaller weight) ──
+        # Small bonus for positive step-wise progress, penalty for regression
+        step_delta = new_score - self.previous_score
+        reward += 0.1 * step_delta
+
+        # ── Reward Component 3: Step cost ──
+        # Small penalty per step to discourage idle/wasted actions
+        reward -= 0.01
+
         # Update previous score for the next step
         self.previous_score = new_score
 
-        # new_score = max(new_score, -25)  # if negative score
         if new_score - self.best_score > 0:
-            # reward += (new_score - self.best_score)
-            # avoid jojo learning
+            # ── Reward Component 4: New best bonus ──
+            reward += 1.0  # significant bonus for reaching a new all-time best
             self.best_score = new_score
             self.best_plan = copy.deepcopy(self.plan_instance.plan)
             self.best_node_list = copy.deepcopy(self.node_list)
