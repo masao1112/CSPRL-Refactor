@@ -90,7 +90,7 @@ class Plan:
         my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict, graph)
         # update the dictionnary
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
-        self.norm_benefit, self.norm_cost, self.norm_fairness, self.norm_charg, self.norm_wait, self.norm_travel = \
+        self.norm_benefit, self.norm_cost, self.norm_charg, self.norm_wait, self.norm_travel = \
             H.existing_score(self.plan, my_node_list)
         self.extend_existing_plan = self.plan.copy()
         self.existing_plan = [s[0] for s in self.extend_existing_plan]
@@ -237,17 +237,16 @@ class StationPlacement(gym.Env):
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
             
-            self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+            self.best_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness, dist_penalty)
+                                                             dist_penalty)
             if cap_penalty < 0:
                 self.best_score -= 100
         else:
-            self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+            self.best_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness)
+                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
         self.previous_score = self.best_score
         self.starting_score = self.best_score  # baseline for the entire episode
@@ -480,18 +479,17 @@ class StationPlacement(gym.Env):
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
-            new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+            new_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness, dist_penalty)
+                                                             dist_penalty)
             if cap_penalty < 0:
                 new_score -= 100
                 self.game_over = True
         else:
-            new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+            new_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness)
+                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
         # ── Reward Component 1: Score-relative improvement ──
         # Reward proportional to improvement over the STARTING score of this episode.
