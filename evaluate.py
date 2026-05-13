@@ -22,9 +22,12 @@ plan_file = os.path.join(base_dir, "Graph", location, "existingplan_" + location
 use_gnn = True  # Set to True if evaluating a GNN model
 obs_type = "gnn" if use_gnn else "mlp"
 env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
-
+ns = "target_10000"
 # Updated to match the log directory used in train.py (Results/tmp/gnn/)
-log_dir = f"Results/tmp/{location}/{obs_type}/"
+if ns is not None:
+    log_dir = f"Results/tmp/{location}/{obs_type}/{ns}/"
+else:
+    log_dir = f"Results/tmp/{location}/{obs_type}/"
 
 """
 Start evaluating
@@ -34,11 +37,17 @@ os.makedirs(log_dir, exist_ok=True)
 env = Monitor(env, log_dir)  # new environment for evaluation
 G = ox.load_graphml(graph_file)
 
-step = 62657
+step = 22534
 if use_gnn:
     from custom_environment.gnn_extractor import GNNFeaturesExtractor
+
     custom_objects = {"GNNFeaturesExtractor": GNNFeaturesExtractor}
-    model = DQN.load(log_dir + "best_model_gnn_" + location + f"_{step}.zip", env=env, custom_objects=custom_objects)
+    if ns is not None:
+        model = DQN.load(log_dir + "best_model_gnn_" + location + f"_{ns}_{step}.zip", env=env,
+                         custom_objects=custom_objects)
+    else:
+        model = DQN.load(log_dir + "best_model_gnn_" + location + f"_{step}.zip", env=env,
+                         custom_objects=custom_objects)
 else:
     model = DQN.load(log_dir + "best_model_" + location + f"_{step}.zip", env=env)
 
@@ -50,10 +59,10 @@ total_reward = 0
 while not done:
     action, _states = model.predict(obs, deterministic=True)
     action_history.append(action.item())
-    
+
     # Gymnasium steps return 5 variables
     obs, reward, done, truncated, info = env.step(action)
-    env.render() # print out the evaluation
+    env.render()  # print out the evaluation
 
     # In StationPlacementEnv, done acts as terminated
     if done or truncated:
