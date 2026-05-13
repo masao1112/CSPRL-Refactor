@@ -50,16 +50,7 @@ def test_parameters(scaling_factor, distance_decay_factor, node_list, iterations
         
         my_plan.append(station)
 
-    # Calculate coverage for each node so fairness works
-    for node in my_node_list:
-        station_counts = 0
-        for my_station in my_plan:
-            s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-            radius_s = s_dict["radius"]
-            distance = H.haversine(s_pos, node)
-            if distance <= radius_s:
-                station_counts += 1
-        node[1]['n_stations'] = station_counts
+
 
     # Evaluate the plan precisely to set distances and cost metrics
     my_node_dict = {node[0]: {} for node in my_node_list}
@@ -82,13 +73,12 @@ def test_parameters(scaling_factor, distance_decay_factor, node_list, iterations
             my_plan[i] = H.total_number_EVs(my_plan[i], my_node_list)
             my_plan[i] = H.avg_waiting(my_plan[i])
 
-    fairness = H.social_fairness(my_node_list)
     benefit = H.social_benefit(my_plan, my_node_list)
     cost = H.social_cost(my_plan, my_node_list)
     
     # Restore old function
     H.dynamic_demand = old_dynamic_demand
-    return fairness, benefit, cost
+    return benefit, cost
 
 if __name__ == "__main__":
     location = "CauGiay"
@@ -112,17 +102,16 @@ if __name__ == "__main__":
             old_stdout = sys.stdout
             sys.stdout = io.StringIO()
             
-            fairness, benefit, cost = test_parameters(sf, df, node_list, iterations=40)
+            benefit, cost = test_parameters(sf, df, node_list, iterations=40)
             
             sys.stdout = old_stdout
-            results.append((sf, df, fairness, benefit, cost))
+            results.append((sf, df, benefit, cost))
             
     # Calculate min and max for normalization
-    f_vals = [r[2] for r in results]
-    b_vals = [r[3] for r in results]
-    c_vals = [r[4] for r in results]
+    # Calculate min and max for normalization
+    b_vals = [r[2] for r in results]
+    c_vals = [r[3] for r in results]
     
-    min_f, max_f = min(f_vals), max(f_vals)
     min_b, max_b = min(b_vals), max(b_vals)
     min_c, max_c = min(c_vals), max(c_vals)
     
@@ -130,22 +119,21 @@ if __name__ == "__main__":
         return (val - min_val) / (max_val - min_val) if max_val > min_val else 0
 
     scored_results = []
-    for sf, df, f, b, c in results:
-        norm_f = normalize(f, min_f, max_f)
+    for sf, df, b, c in results:
         norm_b = normalize(b, min_b, max_b)
         # Cost is lower is better, so we invert it for the score
         norm_c = 1.0 - normalize(c, min_c, max_c)
         
         # Combined score with equal weights
-        combined_score = (norm_f + norm_b + norm_c) / 3.0
-        scored_results.append((sf, df, f, b, c, combined_score))
+        combined_score = (norm_b + norm_c) / 2.0
+        scored_results.append((sf, df, b, c, combined_score))
             
     # Sort results
     scored_results.sort(key=lambda x: x[5], reverse=True)
     
-    print("\nTop 5 optimal parameters balancing fairness, benefit, and cost:")
+    print("\nTop 5 optimal parameters balancing benefit, and cost:")
     for i in range(5):
         best = scored_results[i]
         print(f"Rank {i+1} -> Scaling Factor: {best[0]:.2f}, Distance Decay Factor: {best[1]:.2f}")
-        print(f"         Fairness: {best[2]:.5f}, Benefit: {best[3]:.5f}, Cost: {best[4]:.5f}")
-        print(f"         Combined Score: {best[5]:.5f}\n")
+        print(f"         Benefit: {best[2]:.5f}, Cost: {best[3]:.5f}")
+        print(f"         Combined Score: {best[4]:.5f}\n")

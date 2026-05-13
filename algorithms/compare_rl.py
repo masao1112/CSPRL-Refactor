@@ -72,17 +72,15 @@ def eci_test(
     my_norm_charging,
     my_norm_waiting,
     my_norm_travel,
-    my_norm_fairness,
     grid_penalty=None,
 ):
-    score, benefit, cost, fairness, charg_time, wait_time, cost_travel = H.norm_score(
+    score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(
         my_plan,
         my_node_list,
         my_norm_benefit,
         my_norm_charging,
         my_norm_waiting,
         my_norm_travel,
-        my_norm_fairness,
         grid_penalty,
     )
     return score
@@ -117,21 +115,20 @@ def run_episode(agent, env, agent_type="rl"):
     norm_charg = env.plan_instance.norm_charg
     norm_wait = env.plan_instance.norm_wait
     norm_travel = env.plan_instance.norm_travel
-    norm_fairness = env.plan_instance.norm_fairness
+
 
     grid_penalty = None
     if env.grid_adapter:
         station_nodes = [(s[0], s[2]["capability"]) for s in best_plan]
         grid_penalty, cap_penalty, _, _ = env.grid_adapter.calculate_grid_penalty(station_nodes)
 
-    score, benefit, cost, fairness, charg_time, wait_time, cost_travel = H.norm_score(
+    score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(
         best_plan,
         best_node_list,
         norm_benefit,
         norm_charg,
         norm_wait,
         norm_travel,
-        norm_fairness,
         grid_penalty,
     )
 
@@ -150,7 +147,7 @@ def run_episode(agent, env, agent_type="rl"):
         "score": score * 100,
         "benefit": benefit * 100,
         "cost": cost * 100,
-        "fairness": fairness * 100,
+
         "charg_time": charg_time * 100,
         "wait_time": wait_time * 100,
         "cost_travel": cost_travel * 100,
@@ -252,7 +249,6 @@ def compare(location="DongDa"):
     (
         b_norm_benefit,
         b_norm_cost,
-        b_norm_fairness,
         b_norm_charging,
         b_norm_waiting,
         b_norm_travel,
@@ -270,7 +266,6 @@ def compare(location="DongDa"):
         b_norm_charging,
         b_norm_waiting,
         b_norm_travel,
-        b_norm_fairness,
         baseline_grid_penalty,
     )
     if env.grid_adapter and baseline_cap_penalty < 0:
@@ -355,7 +350,7 @@ def compare(location="DongDa"):
         print(f"  Score (raw): {m['score']:.2f}")
         print(f"  Score (relative to baseline): {rel_score:.2f}%")
         print(f"  Benefit: {m['benefit']:.2f}%")
-        print(f"  Fairness: {m['fairness']:.2f}%")
+
         print(
             f"  Waiting time: {m['wait_time']:.2f}%, "
             f"Travel time: {m['cost_travel']:.2f}%, "
@@ -409,5 +404,5 @@ def compare(location="DongDa"):
 
 
 if __name__ == "__main__":
-    compare(location="TayHo")
+    compare(location="DongDa")
 
