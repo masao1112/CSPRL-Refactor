@@ -55,6 +55,10 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         # Check if an episode finished
         if self.locals["dones"][0]:
             self.n_episodes += 1
+            
+            # Access current learning rate from optimizer
+            lr = self.model.policy.optimizer.param_groups[0]["lr"]
+            
             # Query the environment for the best_score
             try:
                 # training_env is usually a VecEnv in SB3
@@ -74,11 +78,13 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
             self.scores.append(env_best_score)
 
             if self.n_episodes % self.check_freq == 0:
-                # Mean training score over the last 10 checks
+                # Mean training score over the last check_freq episodes
                 my_mean_score = np.mean(self.scores)
 
                 if self.verbose > 0:
+                    print("-" * 20)
                     print("Num timesteps: {}, Episode: {}".format(self.num_timesteps, self.n_episodes))
+                    print("Current LR: {:.2e}".format(lr))
                     print("Current best_score: {:.3f} - Mean score: {:.3f} (Best Mean: {:.3f})".format(
                         env_best_score, my_mean_score, self.best_mean_score))
 
@@ -92,12 +98,12 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
                     self.save_path = os.path.join(self.log_dir, new_name)
 
                     if new_best_mean and new_best_score:
-                        print("New best mean score: {:.3f} and new best score: {:.3f}. Saving to {}".format(
+                        print(">>> New best mean score: {:.3f} and new best score: {:.3f}. Saving to {}".format(
                             my_mean_score, env_best_score, self.save_path))
                     elif new_best_mean:
-                        print("New best mean score: {:.3f}. Saving to {}".format(my_mean_score, self.save_path))
+                        print(">>> New best mean score: {:.3f}. Saving to {}".format(my_mean_score, self.save_path))
                     else:
-                        print("New best score: {:.3f}. Saving to {}".format(env_best_score, self.save_path))
+                        print(">>> New best score: {:.3f}. Saving to {}".format(env_best_score, self.save_path))
 
                     if new_best_mean:
                         self.best_mean_score = my_mean_score
@@ -180,10 +186,11 @@ if __name__ == '__main__':
     parser.add_argument("--exploration_initial_eps", type=float, default=1.0, help="Initial exploration epsilon (default: 1.0)")
     parser.add_argument("--exploration_final_eps", type=float, default=0.05, help="Final exploration epsilon (default: 0.05)")
     parser.add_argument("--exploration_fraction", type=float, default=0.3, help="Exploration fraction (default: 0.3)")
-    parser.add_argument("--total_timesteps", type=int, default=100000, help="Total training timesteps (default: 200000)")
-    parser.add_argument("--target_update_interval", type=int, default=500, help="Target network update interval (default: 1000)")
+    parser.add_argument("--total_timesteps", type=int, default=200000, help="Total training timesteps (default: 200000)")
+    parser.add_argument("--target_update_interval", type=int, default=5000, help="Target network update interval (default: 5000)")
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
     parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
+    parser.add_argument("--lr_schedule", action="store_true", help="Use linear LR decay (default: constant LR)")
     args = parser.parse_args()
 
     if args.no_gnn:
@@ -231,10 +238,15 @@ if __name__ == '__main__':
         policy_kwargs = dict(net_arch=args.net_arch)
         policy_type = "MlpPolicy"
 
+    if args.lr_schedule:
+        lr = LinearSchedule(start=args.learning_rate, end=args.learning_rate * 0.1, end_fraction=0.7)
+    else:
+        lr = args.learning_rate
+
     model = DQN(policy_type, env, verbose=1,
                 batch_size=args.batch_size,
                 buffer_size=args.buffer_size,
-                learning_rate=args.learning_rate,
+                learning_rate=lr,
                 exploration_initial_eps=args.exploration_initial_eps,
                 exploration_final_eps=args.exploration_final_eps,
                 exploration_fraction=args.exploration_fraction,
