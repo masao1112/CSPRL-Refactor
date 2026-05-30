@@ -332,7 +332,6 @@ class GridLoader:
             max_capacity_mva = 10.0  # Default fallback if floating bus
 
         available_mw = max_capacity_mva * self.bus_limit - current_load_mw  # 80% loading limit
-
         return {
             "available_mw": max(0, available_mw),
             "current_load_mw": current_load_mw,

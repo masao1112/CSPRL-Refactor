@@ -336,21 +336,33 @@ class CSPRLGridAdapter:
                     bus_loads[bus_idx] = {'required': 0.0, 'available': result['available_mw']}
                 bus_loads[bus_idx]['required'] += result['required_mw']
 
-        # 3. Check Cumulative Capacity
+        # 3. Check Cumulative Capacity with CORRECTED AVAILABLE CAPACITY
+        # BUG FIX: After accumulating all required loads for each bus, calculate what remains
+        # The 'available' value from check_feasibility is: max_capacity * limit - existing_loads
+        # We need to subtract cumulative EV station loads from this to get truly available capacity
         for bus_idx, data in bus_loads.items():
             required = data['required']
-            available = data['available']
-            grid_utilization_list.append(required / (available + 1e-9))
-            if required > available and required > 0:
-                shortage = required - available
+            base_available = data['available']  # Available before any EV stations
+            # Calculate actual remaining capacity after placing all cumulative EV station loads
+            # If base_available = 10 MW and we place 12 MW of EV stations, actual remaining = -2 MW
+            corrected_available = base_available - required
+            
+            grid_utilization_list.append(required / (base_available + 1e-9))
+            
+            # Check if we're trying to place more load than the grid can handle
+            if corrected_available < 0 and required > 0:
+                shortage = -corrected_available  # Absolute magnitude of shortage
                 # Penalty proportional to overload ratio, but let it grow beyond 1.0 
                 # to provide gradient for the RL agent even when highly overloaded.
-                ratio = shortage / available if available > 0 else shortage / self.ev_station_power_mw
+                ratio = shortage / (base_available + 1e-9) if base_available > 0 else shortage / (self.ev_station_power_mw + 1e-9)
                 bus_penalty = PENALTY_CAPACITY_WEIGHT * ratio
                 cap_penalty_total -= bus_penalty
+                
+                # DEBUG: Print violation for transparency
+                # print(f"   Bus {bus_idx}: required={required:.3f} MW, base_available={base_available:.3f} MW → SHORTAGE={shortage:.3f} MW")
 
-        grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item()
-        grid_distance = np.mean(grid_distance_list, dtype=np.float32).item()
+        grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item() if grid_utilization_list else 0.0
+        grid_distance = np.mean(grid_distance_list, dtype=np.float32).item() if grid_distance_list else 0.0
         return dist_penalty_total, cap_penalty_total, grid_utilization, grid_distance
 
     def get_grid_summary_for_nodes(self, node_list: List) -> Any:

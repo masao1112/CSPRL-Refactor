@@ -38,10 +38,9 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         self.log_dir = my_log_dir
         self.modelname = my_modelname
         self.save_path = os.path.join(self.log_dir, self.modelname)
-        self.scores = deque(maxlen=5)
-        self.best_mean_score = -np.inf
+        self.rewards = deque(maxlen=5)
+        self.best_mean_reward = -np.inf
         self.n_episodes = 0
-        self.best_score = -np.inf
         # Episode history for plotting
         self.episode_rewards = []    # total reward per episode
         self.episode_best_scores = []  # best_score per episode
@@ -74,41 +73,31 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
             self.episode_rewards.append(episode_reward)
             self.episode_best_scores.append(env_best_score)
 
-            # Store score for mean calculation
-            self.scores.append(env_best_score)
+            # Store reward for mean calculation
+            self.rewards.append(episode_reward)
 
             if self.n_episodes % self.check_freq == 0:
-                # Mean training score over the last check_freq episodes
-                my_mean_score = np.mean(self.scores)
+                # Mean training reward over the last check_freq episodes
+                my_mean_reward = np.mean(self.rewards)
 
                 if self.verbose > 0:
                     print("-" * 20)
                     print("Num timesteps: {}, Episode: {}".format(self.num_timesteps, self.n_episodes))
                     print("Current LR: {:.2e}".format(lr))
-                    print("Current best_score: {:.3f} - Mean score: {:.3f} (Best Mean: {:.3f})".format(
-                        env_best_score, my_mean_score, self.best_mean_score))
+                    print("Current reward: {:.3f} - Mean reward: {:.3f} (Best Mean: {:.3f}) | Best Score: {:.6f}".format(
+                        episode_reward, my_mean_reward, self.best_mean_reward, env_best_score))
 
-                new_best_mean = my_mean_score > self.best_mean_score
-                new_best_score = env_best_score > self.best_score
+                new_best_mean = my_mean_reward > self.best_mean_reward
 
-                if new_best_mean or new_best_score:
+                if new_best_mean:
                     new_name = self.modelname + str(self.num_timesteps)
                     if self.log_dir is not None:
                         os.makedirs(self.log_dir, exist_ok=True)
                     self.save_path = os.path.join(self.log_dir, new_name)
 
-                    if new_best_mean and new_best_score:
-                        print(">>> New best mean score: {:.3f} and new best score: {:.3f}. Saving to {}".format(
-                            my_mean_score, env_best_score, self.save_path))
-                    elif new_best_mean:
-                        print(">>> New best mean score: {:.3f}. Saving to {}".format(my_mean_score, self.save_path))
-                    else:
-                        print(">>> New best score: {:.3f}. Saving to {}".format(env_best_score, self.save_path))
+                    print(">>> New best mean reward: {:.3f}. Saving to {}".format(my_mean_reward, self.save_path))
 
-                    if new_best_mean:
-                        self.best_mean_score = my_mean_score
-                    if new_best_score:
-                        self.best_score = env_best_score
+                    self.best_mean_reward = my_mean_reward
 
                     self.model.save(self.save_path)
 

@@ -360,6 +360,10 @@ class StationPlacement(gym.Env):
         """
         Perform a step in the episode
         """
+        # Backup plan and budget in case we need to revert due to capacity violation
+        old_plan = copy.deepcopy(self.plan_instance.plan)
+        old_budget = self.budget
+
         for station in self.plan_instance.plan:
             # if there is an empty station, delete it
             if np.sum(station[1]) <= 0:
@@ -398,8 +402,9 @@ class StationPlacement(gym.Env):
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
 
-        # Step: calculate reward
+        # Step: calculate reward normally (including soft penalty from grid)
         reward = self.evaluation()
+
         H.coverage(self.node_list, self.plan_instance.plan)
         obs = self.establish_observation()
         # episode end conditions
@@ -479,43 +484,74 @@ class StationPlacement(gym.Env):
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            total_grid_penalty = dist_penalty + cap_penalty
             new_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             dist_penalty)
-            if cap_penalty < 0:
-                new_score -= 100
-                self.game_over = True
+                                                             total_grid_penalty)
         else:
             new_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
-        # ── Reward Component 1: Score-relative improvement ──
-        # Reward proportional to improvement over the STARTING score of this episode.
-        # This ensures cumulative reward correlates with final score improvement.
-        improvement_over_start = new_score - self.starting_score
-        reward += improvement_over_start
-
-        # ── Reward Component 2: Step-level delta (smaller weight) ──
-        # Small bonus for positive step-wise progress, penalty for regression
+        # ── Reward Component 1: Step-level delta ──
+        # Reward based on step-wise progress ensures sum(rewards) = final_score - start_score
         step_delta = new_score - self.previous_score
-        reward += 0.1 * step_delta
+        reward += step_delta
 
-        # ── Reward Component 3: Step cost ──
+        # ── Reward Component 2: Step cost ──
         # Small penalty per step to discourage idle/wasted actions
         reward -= 0.01
 
         # Update previous score for the next step
         self.previous_score = new_score
 
-        if new_score - self.best_score > 0:
-            # ── Reward Component 4: New best bonus ──
-            reward += 1.0  # significant bonus for reaching a new all-time best
+        score_improvement = new_score - self.best_score
+        if score_improvement > 0:
+            # ── Reward Component 3: New best bonus ──
+            reward += score_improvement * 100  # significant bonus for reaching a new all-time best
             self.best_score = new_score
             self.best_plan = copy.deepcopy(self.plan_instance.plan)
             self.best_node_list = copy.deepcopy(self.node_list)
         return reward
+
+    def _print_grid_violations(self, station_nodes):
+        """
+        Print detailed grid violation information for debugging.
+        """
+        if not self.grid_adapter:
+            return
+            
+        bus_loads = {}
+        print("\n[GRID CONSTRAINT DETAILS]")
+        print("Bus-wise Load Analysis:")
+        print("-" * 80)
+        print(f"{'Bus ID':>8} {'Required (MW)':>15} {'Available (MW)':>15} {'Status':>15}")
+        print("-" * 80)
+        
+        # Reconstruct bus loads to display
+        for item in station_nodes:
+            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], (int, float)):
+                node, capacity_mw = item
+                result = self.grid_adapter.check_feasibility(node, actual_power_mw=capacity_mw)
+            else:
+                node = item
+                result = self.grid_adapter.check_feasibility(node)
+            
+            bus_idx = result.get('bus_idx', -1)
+            if bus_idx != -1:
+                if bus_idx not in bus_loads:
+                    bus_loads[bus_idx] = {'required': 0.0, 'available': result['available_mw']}
+                bus_loads[bus_idx]['required'] += result['required_mw']
+        
+        # Print violations
+        for bus_idx, data in sorted(bus_loads.items()):
+            required = data['required']
+            available = data['available']
+            remaining = available - required
+            status = "✓ OK" if remaining >= 0 else "✗ VIOLATED"
+            print(f"{bus_idx:>8} {required:>15.3f} {available:>15.3f} {status:>15}")
+        print("-" * 80)
 
     def render(self, mode='human', close=False):
         """

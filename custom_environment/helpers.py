@@ -123,7 +123,7 @@ def charging_capability(my_station):
 def weak_demand(my_node):
     return my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"])
 
-def dynamic_demand(my_node, my_plan, scaling_factor=0.47, distance_decay_factor=0.89):
+def dynamic_demand(my_node, my_plan, scaling_factor=0.4, distance_decay_factor=0.6):
     power_factor = 0
     base_demand = weak_demand(my_node)
     for station in my_plan:
@@ -390,8 +390,7 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
     if grid_penalty is not None:
         avg_penalty = abs(grid_penalty) / max(1, len(my_plan))
-        grid_score = max(0.0, 1.0 - avg_penalty)
-        my_score = 1/3 * benefit - 1/3 * cost + 1/3 * grid_score
+        my_score = (0.5 * benefit - 0.5 * cost) - avg_penalty
     else:
         my_score = 0.5 * benefit - 0.5 * cost
     return my_score, benefit, cost, charg_time, wait_time, cost_travel
