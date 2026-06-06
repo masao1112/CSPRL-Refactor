@@ -120,8 +120,8 @@ def run_episode(agent, env, agent_type="rl"):
     grid_penalty = None
     if env.grid_adapter:
         station_nodes = [(s[0], s[2]["capability"]) for s in best_plan]
-        grid_penalty, cap_penalty, _, _ = env.grid_adapter.calculate_grid_penalty(station_nodes)
-
+        dist_penalty, cap_penalty, _, _ = env.grid_adapter.calculate_grid_penalty(station_nodes)
+        grid_penalty = dist_penalty + cap_penalty
     score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(
         best_plan,
         best_node_list,
@@ -132,8 +132,8 @@ def run_episode(agent, env, agent_type="rl"):
         grid_penalty,
     )
 
-    if env.grid_adapter and cap_penalty < 0:
-        score -= 100
+    # if env.grid_adapter and cap_penalty < 0:
+    #     score -= 100
 
     travel_max = travel_metric(best_node_list)
     wait_max = waiting_metric(best_plan)
@@ -268,22 +268,22 @@ def compare(location="DongDa"):
         b_norm_travel,
         baseline_grid_penalty,
     )
-    if env.grid_adapter and baseline_cap_penalty < 0:
-        norm_score_baseline -= 100
+    # if env.grid_adapter and baseline_cap_penalty < 0:
+    #     norm_score_baseline -= 100
     print(f"Baseline (Existing Plan) Norm Score: {norm_score_baseline:.6f}")
 
     # Load graph for visualization
     G = ox.load_graphml(graph_file)
 
     # 1. Load RL (DQN) Model
-    step = 26364
+    step = 166012
     rl_log_dir = os.path.join("Results", "tmp", location, obs_type)
     best_rl_model = None
+    ns = "config_26"
     if os.path.exists(rl_log_dir):
         # Allow loading either the GNN or MLP model
         prefix = "best_model_gnn_" if use_gnn else "best_model_"
-        best_rl_model = os.path.join(rl_log_dir, f"{prefix}{location}_{step}.zip")
-
+        best_rl_model = os.path.join(rl_log_dir, ns, f"{prefix}{location}_{ns}_best_score_{step}.zip")
     if best_rl_model and os.path.exists(best_rl_model):
         print(f"Loading RL model from {best_rl_model}")
         if use_gnn:

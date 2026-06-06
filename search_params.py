@@ -1,6 +1,7 @@
 import os
 import sys
 import copy
+import osmnx as ox
 import numpy as np
 
 # Append the directory so we can import helpers
@@ -10,7 +11,7 @@ if current_dir not in sys.path:
 
 import custom_environment.helpers as H
 
-def test_parameters(scaling_factor, distance_decay_factor, node_list, iterations=30):
+def test_parameters(scaling_factor, distance_decay_factor, node_list, graph, iterations=30):
     def custom_dynamic_demand(my_node, my_plan):
         power_factor = 0
         base_demand = H.weak_demand(my_node)
@@ -67,7 +68,7 @@ def test_parameters(scaling_factor, distance_decay_factor, node_list, iterations
 
     for _ in range(2):
         my_node_list, my_node_dict, my_cost_dict = H.station_seeking(
-            my_plan, my_node_list, my_node_dict, my_cost_dict
+            my_plan, my_node_list, my_node_dict, my_cost_dict, graph
         )
         for i in range(len(my_plan)):
             my_plan[i] = H.total_number_EVs(my_plan[i], my_node_list)
@@ -81,10 +82,12 @@ def test_parameters(scaling_factor, distance_decay_factor, node_list, iterations
     return benefit, cost
 
 if __name__ == "__main__":
-    location = "CauGiay"
+    location = "NamTuLiem"
     base_dir = "custom_environment/data"
     node_file = os.path.join(base_dir, "Graph", location, "nodes_extended_" + location + ".txt")
-    
+    graph_file = os.path.join(base_dir, "Graph", location, location + ".graphml")
+    G = ox.load_graphml(graph_file)
+
     with open(node_file, "r") as file:
         node_list = eval(file.readline())
         
@@ -102,7 +105,7 @@ if __name__ == "__main__":
             old_stdout = sys.stdout
             sys.stdout = io.StringIO()
             
-            benefit, cost = test_parameters(sf, df, node_list, iterations=40)
+            benefit, cost = test_parameters(sf, df, node_list, G, iterations=40)
             
             sys.stdout = old_stdout
             results.append((sf, df, benefit, cost))
@@ -129,7 +132,7 @@ if __name__ == "__main__":
         scored_results.append((sf, df, b, c, combined_score))
             
     # Sort results
-    scored_results.sort(key=lambda x: x[5], reverse=True)
+    scored_results.sort(key=lambda x: x[4], reverse=True)
     
     print("\nTop 5 optimal parameters balancing benefit, and cost:")
     for i in range(5):

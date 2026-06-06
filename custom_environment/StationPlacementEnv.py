@@ -236,13 +236,11 @@ class StationPlacement(gym.Env):
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
-            
+            total_grid_penalty = dist_penalty + cap_penalty
             self.best_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             dist_penalty)
-            if cap_penalty < 0:
-                self.best_score -= 100
+                                                             total_grid_penalty)
         else:
             self.best_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
@@ -417,7 +415,7 @@ class StationPlacement(gym.Env):
         # ── Terminal reward: bonus/penalty for final score vs starting score ──
         if self.game_over:
             terminal_improvement = self.best_score - self.starting_score
-            reward += 5.0 * terminal_improvement  # strong signal at episode end
+            reward += 2.0 * terminal_improvement  # bounded terminal signal
 
         # Return gymnasium format: (obs, reward, terminated, truncated, info)
         return obs, reward, self.game_over, False, {}
@@ -494,10 +492,10 @@ class StationPlacement(gym.Env):
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
-        # ── Reward Component 1: Step-level delta ──
-        # Reward based on step-wise progress ensures sum(rewards) = final_score - start_score
+        # ── Reward Component 1: Step-level delta (scaled) ──
+        # Reward based on step-wise progress ensures sum(rewards) ∝ final_score - start_score
         step_delta = new_score - self.previous_score
-        reward += step_delta
+        reward += step_delta * 10  # Scale up for learning signal, but bounded
 
         # ── Reward Component 2: Step cost ──
         # Small penalty per step to discourage idle/wasted actions
@@ -508,8 +506,6 @@ class StationPlacement(gym.Env):
 
         score_improvement = new_score - self.best_score
         if score_improvement > 0:
-            # ── Reward Component 3: New best bonus ──
-            reward += score_improvement * 100  # significant bonus for reaching a new all-time best
             self.best_score = new_score
             self.best_plan = copy.deepcopy(self.plan_instance.plan)
             self.best_node_list = copy.deepcopy(self.node_list)

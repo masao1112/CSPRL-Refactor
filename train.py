@@ -40,6 +40,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         self.save_path = os.path.join(self.log_dir, self.modelname)
         self.rewards = deque(maxlen=5)
         self.best_mean_reward = -np.inf
+        self.best_env_score = -np.inf
         self.n_episodes = 0
         # Episode history for plotting
         self.episode_rewards = []    # total reward per episode
@@ -84,22 +85,28 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
                     print("-" * 20)
                     print("Num timesteps: {}, Episode: {}".format(self.num_timesteps, self.n_episodes))
                     print("Current LR: {:.2e}".format(lr))
-                    print("Current reward: {:.3f} - Mean reward: {:.3f} (Best Mean: {:.3f}) | Best Score: {:.6f}".format(
-                        episode_reward, my_mean_reward, self.best_mean_reward, env_best_score))
+                    print("Reward  -> Current: {:.3f} | Mean: {:.3f} | Best Mean: {:.3f}".format(
+                        episode_reward, my_mean_reward, self.best_mean_reward))
+                    print("Score   -> Current: {:.6f} | Best: {:.6f}".format(
+                        env_best_score, self.best_env_score))
 
+                # Save by best mean reward (original criterion)
                 new_best_mean = my_mean_reward > self.best_mean_reward
-
                 if new_best_mean:
                     new_name = self.modelname + str(self.num_timesteps)
                     if self.log_dir is not None:
                         os.makedirs(self.log_dir, exist_ok=True)
                     self.save_path = os.path.join(self.log_dir, new_name)
-
-                    print(">>> New best mean reward: {:.3f}. Saving to {}".format(my_mean_reward, self.save_path))
-
+                    print(">>> New best mean REWARD: {:.3f}. Saving to {}".format(my_mean_reward, self.save_path))
                     self.best_mean_reward = my_mean_reward
-
                     self.model.save(self.save_path)
+
+                # Save by best score (new criterion - preserves peak performance)
+                if env_best_score > self.best_env_score and not new_best_mean:
+                    self.best_env_score = env_best_score
+                    score_save_path = os.path.join(self.log_dir, self.modelname + str(self.num_timesteps))
+                    print(">>> New best SCORE: {:.6f}. Saving to {}".format(env_best_score, score_save_path))
+                    self.model.save(score_save_path)
 
         return True
 
@@ -169,14 +176,15 @@ if __name__ == '__main__':
     parser.add_argument("--no_gnn", action="store_true", help="Disable GNN, use MLP policy")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate (default: 1e-4)")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size (default: 128)")
-    parser.add_argument("--buffer_size", type=int, default=10000, help="Replay buffer size (default: 10000)")
+    parser.add_argument("--buffer_size", type=int, default=20000, help="Replay buffer size (default: 50000)")
     parser.add_argument("--features_dim", type=int, default=256, help="GNN features dimension (default: 256)")
     parser.add_argument("--net_arch", type=int, nargs="+", default=[256, 256], help="Network architecture layers (default: 256 256)")
     parser.add_argument("--exploration_initial_eps", type=float, default=1.0, help="Initial exploration epsilon (default: 1.0)")
     parser.add_argument("--exploration_final_eps", type=float, default=0.05, help="Final exploration epsilon (default: 0.05)")
     parser.add_argument("--exploration_fraction", type=float, default=0.3, help="Exploration fraction (default: 0.3)")
     parser.add_argument("--total_timesteps", type=int, default=200000, help="Total training timesteps (default: 200000)")
-    parser.add_argument("--target_update_interval", type=int, default=5000, help="Target network update interval (default: 5000)")
+    parser.add_argument("--target_update_interval", type=int, default=1000, help="Target network update interval (default: 1000)")
+    parser.add_argument("--max_grad_norm", type=float, default=1.0, help="Max gradient norm for clipping (default: 1.0)")
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
     parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
     parser.add_argument("--lr_schedule", action="store_true", help="Use linear LR decay (default: constant LR)")
@@ -240,6 +248,7 @@ if __name__ == '__main__':
                 exploration_final_eps=args.exploration_final_eps,
                 exploration_fraction=args.exploration_fraction,
                 target_update_interval=args.target_update_interval,
+                max_grad_norm=args.max_grad_norm,
                 policy_kwargs=policy_kwargs,
                 device='cuda' if torch.cuda.is_available() else 'cpu',
                 seed=args.seed)
