@@ -6,7 +6,7 @@ import numpy as np
 
 # Configuration
 LOCATION = "DongDa"
-STEP = 66400
+STEP = 71333
 RESULT_FILE = f"Results/optimal_plan/{LOCATION}/plan_RL_{STEP}.pkl"
 OUTPUT_CSV = f"Results/optimal_plan/{LOCATION}/station_config_{STEP}.csv"
 

@@ -234,8 +234,21 @@ def compare(location="DongDa"):
     use_gnn = True  # Set to True to evaluate the GNN model
     obs_type = "gnn" if use_gnn else "mlp"
     
+    # Read config to get action_type if available
+    ns = "config_26"
+    rl_log_dir = os.path.join("Results", "tmp", location, obs_type)
+    config_path = os.path.join(rl_log_dir, ns, "config.json")
+    action_type = "discrete"
+    if os.path.exists(config_path):
+        import json
+        with open(config_path, "r") as f:
+            config_data = json.load(f)
+            action_type = config_data.get("action_type", "discrete")
+            use_gnn = config_data.get("use_gnn", use_gnn)
+            obs_type = "gnn" if use_gnn else "mlp"
+    
     # Env for testing
-    env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
+    env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type, action_type=action_type)
 
     # 0. Baseline calculation (as in run_metrics.py)
     with open(node_file, "r") as file:
@@ -275,7 +288,7 @@ def compare(location="DongDa"):
     # Load graph for visualization
     G = ox.load_graphml(graph_file)
 
-    # 1. Load RL (DQN) Model
+    # 1. Load RL Model
     step = 166012
     rl_log_dir = os.path.join("Results", "tmp", location, obs_type)
     best_rl_model = None
@@ -286,12 +299,29 @@ def compare(location="DongDa"):
         best_rl_model = os.path.join(rl_log_dir, ns, f"{prefix}{location}_{ns}_best_score_{step}.zip")
     if best_rl_model and os.path.exists(best_rl_model):
         print(f"Loading RL model from {best_rl_model}")
+        
+        # Load correct algorithm class from stable_baselines3 based on config
+        algo = "dqn"
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                import json
+                algo = json.load(f).get("algo", "dqn")
+                
+        if algo.lower() == "dqn":
+            from stable_baselines3 import DQN as RLClass
+        elif algo.lower() == "ppo":
+            from stable_baselines3 import PPO as RLClass
+        elif algo.lower() == "a2c":
+            from stable_baselines3 import A2C as RLClass
+        else:
+            RLClass = DQN
+            
         if use_gnn:
             from custom_environment.gnn_extractor import GNNFeaturesExtractor
             custom_objects = {"GNNFeaturesExtractor": GNNFeaturesExtractor}
-            rl_agent = DQN.load(best_rl_model, custom_objects=custom_objects)
+            rl_agent = RLClass.load(best_rl_model, custom_objects=custom_objects)
         else:
-            rl_agent = DQN.load(best_rl_model)
+            rl_agent = RLClass.load(best_rl_model)
     else:
         print("Warning: RL model not found.")
         rl_agent = None
@@ -404,5 +434,5 @@ def compare(location="DongDa"):
 
 
 if __name__ == "__main__":
-    compare(location="DongDa")
+    compare(location="CauGiay")
 

@@ -53,12 +53,13 @@ class GNNFeaturesExtractor(BaseFeaturesExtractor):
         # Fusion Layer
         self.linear = nn.Linear(256 + 64, features_dim)
 
-    def _build_norm_adj(self, edge_index, device):
+    def _build_norm_adj(self, edge_index, edge_weight, device):
         """Compute and cache the normalized adjacency matrix (static graph)."""
         edges = edge_index[0].long()  # (2, E)
 
         adj = torch.zeros((self.n_nodes, self.n_nodes), device=device)
-        adj[edges[0], edges[1]] = 1.0
+        adj[edges[0], edges[1]] = edge_weight
+        print(adj.shape)
         adj += torch.eye(self.n_nodes, device=device)
 
         deg = adj.sum(dim=1)
@@ -72,6 +73,7 @@ class GNNFeaturesExtractor(BaseFeaturesExtractor):
     def forward(self, observations):
         x = observations["node_features"]      # (B, N, F)
         edge_index = observations["edge_index"] # (B, 2, E)
+        edge_attr = observations["edge_attr"]   # (B, E, 1)
         global_state = observations["global_state"]    # (B, G)
         
         B = x.shape[0]
@@ -79,7 +81,11 @@ class GNNFeaturesExtractor(BaseFeaturesExtractor):
 
         # Build norm_adj once (graph is static); rebuild only on device change
         if self._cached_norm_adj is None or self._cached_device != device:
-            self._build_norm_adj(edge_index, device)
+            edge_distance = edge_attr[0, :, 0] # [-1, 1]
+            # Convert scaled distance to positive affinity weight. 
+            # Closer nodes (lower distance) will have higher edge weights.
+            edge_weight = torch.exp(-edge_distance)
+            self._build_norm_adj(edge_index, edge_weight, device)
 
         # --- Node Features (MLP) ---
         embs = self.node_features_mlp(x) # (B, 32)

@@ -495,7 +495,7 @@ def coverage(my_node_list, my_plan):
         my_node[1]["benefit"] = cover
 
 
-def choose_node_new_benefit(free_list, all_node_list, R_search=0.1):
+def choose_node_new_benefit(free_list, all_node_list, R_search=1.0):
     """
     pick location with highest potential based on Potential/Coverage.
     """

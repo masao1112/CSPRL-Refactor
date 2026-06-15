@@ -1,4 +1,4 @@
-from stable_baselines3 import DQN
+from stable_baselines3 import DQN, PPO, A2C
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.callbacks import BaseCallback
@@ -92,6 +92,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
                 # Save by best mean reward (original criterion)
                 new_best_mean = my_mean_reward > self.best_mean_reward
+                new_best_score = env_best_score > self.best_env_score
                 if new_best_mean:
                     new_name = self.modelname + str(self.num_timesteps)
                     if self.log_dir is not None:
@@ -102,7 +103,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
                     self.model.save(self.save_path)
 
                 # Save by best score (new criterion - preserves peak performance)
-                if env_best_score > self.best_env_score and not new_best_mean:
+                if new_best_score and not new_best_mean:
                     self.best_env_score = env_best_score
                     score_save_path = os.path.join(self.log_dir, self.modelname + str(self.num_timesteps))
                     print(">>> New best SCORE: {:.6f}. Saving to {}".format(env_best_score, score_save_path))
@@ -188,6 +189,8 @@ if __name__ == '__main__':
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
     parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
     parser.add_argument("--lr_schedule", action="store_true", help="Use linear LR decay (default: constant LR)")
+    parser.add_argument("--action_type", type=str, default="discrete", choices=["discrete", "multidiscrete"], help="Action space type (default: discrete)")
+    parser.add_argument("--algo", type=str, default="dqn", choices=["dqn", "ppo", "a2c"], help="RL algorithm to use (default: dqn)")
     args = parser.parse_args()
 
     if args.no_gnn:
@@ -209,7 +212,7 @@ if __name__ == '__main__':
     plan_file = os.path.join(base_dir, "Graph", location, "existingplan_" + location + ".pkl")
 
     obs_type = "gnn" if args.use_gnn else "mlp"
-    env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
+    env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type, action_type=args.action_type)
     if args.ns:
         log_dir = f"Results/tmp/{location}/{obs_type}/{args.ns}"
         modelname = f"best_model_{obs_type}_{location}_{args.ns}_"
@@ -236,22 +239,40 @@ if __name__ == '__main__':
         policy_type = "MlpPolicy"
 
     if args.lr_schedule:
-        lr = LinearSchedule(start=args.learning_rate, end=args.learning_rate * 0.1, end_fraction=0.7)
+        lr = LinearSchedule(start=args.learning_rate, end=args.learning_rate * 0.1, end_fraction=0.8)
     else:
         lr = args.learning_rate
 
-    model = DQN(policy_type, env, verbose=1,
-                batch_size=args.batch_size,
-                buffer_size=args.buffer_size,
-                learning_rate=lr,
-                exploration_initial_eps=args.exploration_initial_eps,
-                exploration_final_eps=args.exploration_final_eps,
-                exploration_fraction=args.exploration_fraction,
-                target_update_interval=args.target_update_interval,
-                max_grad_norm=args.max_grad_norm,
-                policy_kwargs=policy_kwargs,
-                device='cuda' if torch.cuda.is_available() else 'cpu',
-                seed=args.seed)
+    if args.algo == "dqn":
+        if args.action_type == "multidiscrete":
+            raise ValueError("DQN does not support multidiscrete action space. Please use PPO or A2C, or set action_type to discrete.")
+        model = DQN(policy_type, env, verbose=1,
+                    batch_size=args.batch_size,
+                    buffer_size=args.buffer_size,
+                    learning_rate=lr,
+                    exploration_initial_eps=args.exploration_initial_eps,
+                    exploration_final_eps=args.exploration_final_eps,
+                    exploration_fraction=args.exploration_fraction,
+                    target_update_interval=args.target_update_interval,
+                    max_grad_norm=args.max_grad_norm,
+                    policy_kwargs=policy_kwargs,
+                    device='cuda' if torch.cuda.is_available() else 'cpu',
+                    seed=args.seed)
+    elif args.algo == "ppo":
+        model = PPO(policy_type, env, verbose=1,
+                    learning_rate=lr,
+                    batch_size=args.batch_size,
+                    max_grad_norm=args.max_grad_norm,
+                    policy_kwargs=policy_kwargs,
+                    device='cuda' if torch.cuda.is_available() else 'cpu',
+                    seed=args.seed)
+    elif args.algo == "a2c":
+        model = A2C(policy_type, env, verbose=1,
+                    learning_rate=lr,
+                    max_grad_norm=args.max_grad_norm,
+                    policy_kwargs=policy_kwargs,
+                    device='cuda' if torch.cuda.is_available() else 'cpu',
+                    seed=args.seed)
     callback = SaveOnBestTrainingRewardCallback(check_freq=1, my_log_dir=log_dir, my_modelname=modelname)
     model.learn(total_timesteps=args.total_timesteps, log_interval=10 ** 4, callback=callback)
 
