@@ -8,6 +8,7 @@ import custom_environment.helpers as H
 import sys
 import os
 import copy
+import json
 
 # Add parent directory to path to allow importing power_grid
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,26 +22,63 @@ from custom_environment.power_grid.csprl_adapter import create_adapter_for_locat
 Custom environment
 """
 
+
 class FeatureScaler:
     """
     Scale features separately based on realistic ranges.
     All outputs are in [-1, 1] to match Box observation space.
     """
-    def __init__(self):
-        # Estimated realistic ranges (adjust based on your actual dataset!)
-        self.lon_min, self.lon_max = 105.7, 106.0      # Hanoi/DongDa approximate
-        self.lat_min, self.lat_max = 20.95, 21.05
-        self.pop_min, self.pop_max = 2.646, 468.3
-        self.demand_max = 1.0                          # assuming already normalized [0,1]
-        self.land_price_max = 214.245                  # triệu VND/m²
-        self.private_cs_max = 1.0
+
+    def __init__(self, location="DongDa", base_dir=None):
+        if base_dir is None:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        json_path = os.path.join(base_dir, "data", "Graph", location, "scaling_constants.json")
+
+        # Load from file if exists, otherwise use reasonable defaults
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, "r") as f:
+                    data = json.load(f)
+                self.lon_min = data.get("x_min", 105.798)
+                self.lon_max = data.get("x_max", 105.843)
+                self.lat_min = data.get("y_min", 20.997)
+                self.lat_max = data.get("y_max", 21.032)
+                self.pop_min = data.get("pop_min", 2.646)
+                self.pop_max = data.get("pop_max", 425.7)
+                self.land_price_max = data.get("land_price_max", 186.2)
+                self.demand_max = data.get("demand_max", 0.91)
+                self.grid_dist_max = data.get("grid_dist_max", 1.02)
+                self.grid_mw_max = data.get("grid_mw_max", 12.8)
+                self.street_count_max = data.get("street_count_max", 5.0)
+                self.road_length_max = data.get("road_length_max", 363.0)
+                self.dist_to_station_max = data.get("dist_to_station_max", 2.0)
+                self.capability_max = data.get("capability_max", 1.5)
+                self.benefit_max = data.get("benefit_max", 2.0)
+                print(f"Loaded scaling constants for {location} successfully.")
+            except Exception as e:
+                print(f"Error loading scaling JSON: {e}. Using default values.")
+                self._set_defaults()
+        else:
+            print(f"Scaling JSON not found at {json_path}. Using default values.")
+            self._set_defaults()
+
         self.charger_max = float(H.K)
         self.budget_max = float(H.BUDGET)
-        self.grid_dist_max = 3.0
-        self.grid_mw_max = 10.0
-        self.benefit_max = 5.0
-        self.capability_max = 10.0
-        self.dist_to_station_max = 10.0
+
+    def _set_defaults(self):
+        self.lon_min, self.lon_max = 105.798, 105.843
+        self.lat_min, self.lat_max = 20.997, 21.032
+        self.pop_min, self.pop_max = 2.646, 425.7
+        self.land_price_max = 186.2
+        self.demand_max = 0.91
+        self.grid_dist_max = 1.02
+        self.grid_mw_max = 12.8
+        self.street_count_max = 5.0
+        self.road_length_max = 363.0
+        self.dist_to_station_max = 2.0
+        self.capability_max = 1.5
+        self.benefit_max = 2.0
 
     def scale_lon(self, v):
         return 2 * (np.clip(v, self.lon_min, self.lon_max) - self.lon_min) / (self.lon_max - self.lon_min + 1e-9) - 1
@@ -58,28 +96,34 @@ class FeatureScaler:
         return 2 * np.clip(v / (self.land_price_max + 1e-9), 0, 1) - 1
 
     def scale_private_cs(self, v):
-        return 2 * np.clip(v / (self.private_cs_max + 1e-9), 0, 1) - 1
+        return 2 * np.clip(v / (1.0 + 1e-9), 0, 1) - 1
 
     def scale_charger_count(self, v):
         return 2 * (np.clip(v, 0, self.charger_max) / (self.charger_max + 1e-9)) - 1
 
     def scale_budget(self, v):
         return 2 * (np.clip(v, 0, self.budget_max) / (self.budget_max + 1e-9)) - 1
-        
+
     def scale_grid_distance(self, v):
         return 2 * np.clip(v / (self.grid_dist_max + 1e-9), 0, 1) - 1
-        
+
     def scale_grid_mw(self, v):
         return 2 * np.clip(v / (self.grid_mw_max + 1e-9), 0, 1) - 1
-        
+
     def scale_benefit(self, v):
         return 2 * np.clip(v / (self.benefit_max + 1e-9), 0, 1) - 1
-        
+
     def scale_capability(self, v):
         return 2 * np.clip(v / (self.capability_max + 1e-9), 0, 1) - 1
-        
+
     def scale_nearest_station_dist(self, v):
         return 2 * np.clip(v / (self.dist_to_station_max + 1e-9), 0, 1) - 1
+
+    def scale_street_count(self, v):
+        return 2 * (np.clip(v, 1.0, self.street_count_max) - 1.0) / (self.street_count_max - 1.0 + 1e-9) - 1
+
+    def scale_road_length(self, v):
+        return 2 * np.clip(v / (self.road_length_max + 1e-9), 0, 1) - 1
 
 
 class Plan:
@@ -179,7 +223,7 @@ class StationPlacement(gym.Env):
         self.budget = None
         self.plan_instance = None
         self.plan_length = None
-        self.row_length = 6  # Removed grid_available_mw (moved to global_state)
+        self.row_length = 10  # Removed grid_available_mw (moved to global_state)
         self.best_score = None
         self.last_episode_best_score = 0
         self.best_plan = None
@@ -193,24 +237,40 @@ class StationPlacement(gym.Env):
         
         self.num_buses = len(self.grid_adapter.get_all_bus_capacities([])) if self.grid_adapter else 0
 
+        # Precompute node-to-bus mapping for local grid capacities
+        self.node_to_bus_idx = {}
+        if self.grid_adapter:
+            for node in self.node_list:
+                lat = node[1].get('y', 0.0)
+                lon = node[1].get('x', 0.0)
+                bus_info = self.grid_adapter._get_bus_info(lat, lon)
+                self.node_to_bus_idx[node[0]] = bus_info.get('bus_idx', -1)
+
         if self.obs_type == "mlp":
-            shape = self.row_length * len(self.node_list) + 1 + self.num_buses
+            shape = self.row_length * len(self.node_list) + 3
             self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
         elif self.obs_type == "gnn":
             edges = []
-            for u, v in _graph.edges():
+            edge_lengths = []
+            for u, v, data in _graph.edges(data=True):
                 if u in self.node_id_to_idx and v in self.node_id_to_idx:
                     edges.append([self.node_id_to_idx[u], self.node_id_to_idx[v]])
-            
+                    edge_lengths.append(data.get('length', 10.0))
+
             if edges:
                 self.edge_index_array = np.array(edges, dtype=np.int32).T
+                # Scale edge lengths once
+                scaled_lengths = [self.feature_scaler.scale_road_length(l) for l in edge_lengths]
+                self.edge_attr_array = np.array(scaled_lengths, dtype=np.float32).reshape(-1, 1)
             else:
                 self.edge_index_array = np.zeros((2, 1), dtype=np.int32)
+                self.edge_attr_array = np.zeros((1, 1), dtype=np.float32)
                 
             self.observation_space = spaces.Dict({
                 "node_features": spaces.Box(low=-1.0, high=1.0, shape=(len(self.node_list), self.row_length), dtype=np.float32),
                 "edge_index": spaces.Box(low=0, high=len(self.node_list), shape=(2, self.edge_index_array.shape[1]), dtype=np.int32),
-                "global_state": spaces.Box(low=-1.0, high=1.0, shape=(1 + self.num_buses,), dtype=np.float32)
+                "edge_attr": spaces.Box(low=-1.0, high=1.0, shape=(self.edge_attr_array.shape[0], 1), dtype=np.float32),
+                "global_state": spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
             })
         else:
             raise ValueError(f"Unknown obs_type: {self.obs_type}. Must be 'mlp' or 'gnn'")
@@ -276,7 +336,7 @@ class StationPlacement(gym.Env):
         """
         # Precompute capability dict to avoid nested lookups
         station_caps = {s[0][0]: s[2]["capability"] for s in self.plan_instance.plan}
-        
+
         # Precompute distances to nearest existing station
         station_nodes = [s[0][0] for s in self.plan_instance.plan]
         if station_nodes:
@@ -287,35 +347,58 @@ class StationPlacement(gym.Env):
         else:
             nearest_dists = [self.feature_scaler.dist_to_station_max] * len(self.node_list)
 
+        # Get local bus capacity
+        bus_caps = {}
+        if self.grid_adapter:
+            station_items = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
+            net = self.grid_adapter.loader.net
+            bus_loads = self.grid_adapter.get_accumulate_load(station_items)
+            for idx, row in net.bus.iterrows():
+                if abs(row['vn_kv'] - 22.0) < 0.5:
+                    cap_info = self.grid_adapter.loader.get_available_capacity(idx)
+                    available = cap_info.get('available_mw', 0.0)
+                    if idx in bus_loads:
+                        available -= bus_loads[idx]['required']
+                    bus_caps[idx] = max(0.0, available)
+
         node_features = np.zeros((len(self.node_list), self.row_length), dtype=np.float32)
 
         for j, node in enumerate(self.node_list):
+            # 0: longitude (scaled)
+            node_features[j, 0] = self.feature_scaler.scale_lon(node[1].get('x', 105.8))
+            # 1: latitude (scaled)
+            node_features[j, 1] = self.feature_scaler.scale_lat(node[1].get('y', 21.0))
+            # 2: static demand (representing baseline population)
+            node_features[j, 2] = self.feature_scaler.scale_demand(node[1].get('demand', 0.0))
+            # 3: dynamic demand (unsatisfied demand)
             dyn_demand = H.dynamic_demand(node, self.plan_instance.plan)
-            # 0: dynamic demand
-            node_features[j, 0] = self.feature_scaler.scale_demand(dyn_demand)
-            # 1: land price
-            node_features[j, 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
-            # 2: grid distance (PRESERVED)
-            node_features[j, 2] = self.feature_scaler.scale_grid_distance(node[1].get('grid_distance_km', 3.0))
-            # 3: benefit
-            node_features[j, 3] = self.feature_scaler.scale_benefit(node[1].get('benefit', 0.0))
-            # 4: current station capability at this node
+            node_features[j, 3] = self.feature_scaler.scale_demand(dyn_demand)
+            # 4: land price
+            node_features[j, 4] = self.feature_scaler.scale_land_price(node[1].get('land_price', 90.0))
+            # 5: street count
+            node_features[j, 5] = self.feature_scaler.scale_street_count(node[1].get('street_count', 3))
+            # 6: current station capability at this node
             capability = station_caps.get(node[0], 0.0)
-            node_features[j, 4] = self.feature_scaler.scale_capability(capability)
-            # 5: distance to nearest station
-            node_features[j, 5] = self.feature_scaler.scale_nearest_station_dist(nearest_dists[j])
+            node_features[j, 6] = self.feature_scaler.scale_capability(capability)
+            # 7: grid distance
+            grid_dist = node[1].get('grid_distance_km', -1.0)
+            if grid_dist == float('inf') or np.isinf(grid_dist) or grid_dist == -1.0:
+                node_features[j, 7] = -1.0
+            else:
+                node_features[j, 7] = self.feature_scaler.scale_grid_distance(grid_dist)
+            # 8: local bus capacity
+            bus_idx = self.node_to_bus_idx.get(node[0], -1)
+            bus_cap = bus_caps.get(bus_idx, 0.0) if bus_idx != -1 else 0.0
+            node_features[j, 8] = self.feature_scaler.scale_grid_mw(bus_cap)
+            # 9: distance to nearest station
+            nearest_dist = nearest_dists[j]
+            node_features[j, 9] = self.feature_scaler.scale_nearest_station_dist(nearest_dist) if nearest_dist != self.feature_scaler.dist_to_station_max else -1.0
 
-        # Global state: [budget, *all_bus_capacities]
+        # Global state
         budget_scaled = self.feature_scaler.scale_budget(self.budget)
-        
-        if self.grid_adapter:
-            station_items = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
-            capacities = self.grid_adapter.get_all_bus_capacities(station_items)
-            scaled_caps = [self.feature_scaler.scale_grid_mw(c) for c in capacities]
-            global_st = np.array([budget_scaled] + scaled_caps, dtype=np.float32)
-        else:
-            # Fallback if no grid adapter
-            global_st = np.array([budget_scaled] + [0.0] * self.num_buses, dtype=np.float32)
+        progress_scaled = 2.0 * (self.schritt / max(1.0, len(self.node_list) / 2)) - 1.0
+        score_delta = self.best_score - self.starting_score
+        global_st = np.array([budget_scaled, progress_scaled, score_delta], dtype=np.float32)
 
         if self.obs_type == "mlp":
             obs = np.concatenate([node_features.flatten(), global_st])
@@ -324,6 +407,7 @@ class StationPlacement(gym.Env):
             return {
                 "node_features": node_features,
                 "edge_index": self.edge_index_array,
+                "edge_attr": self.edge_attr_array,
                 "global_state": global_st
             }
 
@@ -495,17 +579,18 @@ class StationPlacement(gym.Env):
         # ── Reward Component 1: Step-level delta (scaled) ──
         # Reward based on step-wise progress ensures sum(rewards) ∝ final_score - start_score
         step_delta = new_score - self.previous_score
-        reward += step_delta * 10  # Scale up for learning signal, but bounded
+        reward += step_delta  # Scale up for learning signal, but bounded
 
         # ── Reward Component 2: Step cost ──
         # Small penalty per step to discourage idle/wasted actions
-        reward -= 0.01
+        # reward -= 0.01
 
         # Update previous score for the next step
         self.previous_score = new_score
 
         score_improvement = new_score - self.best_score
         if score_improvement > 0:
+            reward += score_improvement
             self.best_score = new_score
             self.best_plan = copy.deepcopy(self.plan_instance.plan)
             self.best_node_list = copy.deepcopy(self.node_list)
