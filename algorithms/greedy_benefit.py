@@ -50,7 +50,17 @@ def run_greedy_benefit(location="DongDa"):
         station_list = [s[0][0] for s in env.plan_instance.plan]
         free_list = [node for node in env.node_list if node[0] not in station_list]
 
-        if free_list:
+        # Check if any station is severely overloaded
+        overloaded = False
+        if env.plan_instance.plan:
+            max_wait = max([s[2].get("W_s", 0) for s in env.plan_instance.plan])
+            # If maximum wait time exceeds 0.5 hours (30 mins), upgrade it
+            if max_wait > 0.5:
+                overloaded = True
+
+        if overloaded:
+            action = 3  # Add charger to the most overloaded station
+        elif free_list:
             action = 0  # New station by benefit
         else:
             action = 2  # Expand existing station by benefit
@@ -71,4 +81,4 @@ def run_greedy_benefit(location="DongDa"):
 
 
 if __name__ == '__main__':
-    run_greedy_benefit()
+    run_greedy_benefit(location="CauGiay")

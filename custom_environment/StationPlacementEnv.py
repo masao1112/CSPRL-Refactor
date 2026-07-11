@@ -5,6 +5,7 @@ from stable_baselines3.common.env_checker import check_env
 import pickle
 from random import choice
 import custom_environment.helpers as H
+from custom_environment.graph_features import GraphFeatureAugmentor
 import sys
 import os
 import copy
@@ -134,7 +135,7 @@ class Plan:
         my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict, graph)
         # update the dictionnary
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
-        self.norm_benefit, self.norm_cost, self.norm_charg, self.norm_wait, self.norm_travel = \
+        self.norm_benefit, self.norm_cost, self.norm_charg, self.norm_wait, self.norm_travel, _ = \
             H.existing_score(self.plan, my_node_list)
         self.extend_existing_plan = self.plan.copy()
         self.existing_plan = [s[0] for s in self.extend_existing_plan]
@@ -231,7 +232,7 @@ class StationPlacement(gym.Env):
         self.schritt = None
         self.config_dict = None
         self.previous_score = None
-        self.feature_scaler = FeatureScaler()
+        self.feature_scaler = FeatureScaler(location=location)
         # new action space including all charger types
         self.action_space = spaces.Discrete(5)
         
@@ -248,6 +249,16 @@ class StationPlacement(gym.Env):
 
         if self.obs_type == "mlp":
             shape = self.row_length * len(self.node_list) + 3
+            self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
+        elif self.obs_type == "mlp_graph":
+            # MLP augmented with graph-derived features
+            self.graph_augmentor = GraphFeatureAugmentor(
+                self.node_list, _graph, self.node_id_to_idx
+            )
+            n_graph_summaries = GraphFeatureAugmentor.N_GRAPH_SUMMARIES
+            # Per-node: original features + 1-hop aggregated features
+            # Global: 3 global state + graph-level summaries
+            shape = self.row_length * 2 * len(self.node_list) + 3 + n_graph_summaries
             self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
         elif self.obs_type == "gnn":
             edges = []
@@ -273,7 +284,7 @@ class StationPlacement(gym.Env):
                 "global_state": spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
             })
         else:
-            raise ValueError(f"Unknown obs_type: {self.obs_type}. Must be 'mlp' or 'gnn'")
+            raise ValueError(f"Unknown obs_type: {self.obs_type}. Must be 'mlp', 'mlp_graph', or 'gnn'")
 
     def reset(self, seed=None, options=None):
         """
@@ -297,12 +308,12 @@ class StationPlacement(gym.Env):
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
             total_grid_penalty = dist_penalty + cap_penalty
-            self.best_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+            self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel,
                                                              total_grid_penalty)
         else:
-            self.best_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+            self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
@@ -402,6 +413,14 @@ class StationPlacement(gym.Env):
 
         if self.obs_type == "mlp":
             obs = np.concatenate([node_features.flatten(), global_st])
+            return obs
+        elif self.obs_type == "mlp_graph":
+            # Augment with 1-hop neighborhood features
+            hop1_features = self.graph_augmentor.compute_hop1_features(node_features)
+            augmented = np.concatenate([node_features, hop1_features], axis=1)  # (N, 2F)
+            # Graph-level summary statistics
+            graph_summaries = self.graph_augmentor.compute_graph_summaries(node_features)
+            obs = np.concatenate([augmented.flatten(), global_st, graph_summaries])
             return obs
         else:
             return {
@@ -567,14 +586,14 @@ class StationPlacement(gym.Env):
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
             total_grid_penalty = dist_penalty + cap_penalty
-            new_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
-                                                             self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             total_grid_penalty)
+            new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+                                                       self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
+                                                       self.plan_instance.norm_wait, self.plan_instance.norm_travel,
+                                                       total_grid_penalty)
         else:
-            new_score, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
-                                                             self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel)
+            new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
+                                                       self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
+                                                       self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
         # ── Reward Component 1: Step-level delta (scaled) ──
         # Reward based on step-wise progress ensures sum(rewards) ∝ final_score - start_score

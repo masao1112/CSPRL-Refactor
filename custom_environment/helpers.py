@@ -149,10 +149,19 @@ def influence_radius(my_station):
     return my_station
 
 
+_haversine_cache = {}
+
 def haversine(s_pos, my_node):
     """
     yields the approximate distance of two GPS points, middle computational cost
     """
+    try:
+        key = (s_pos[0], my_node[0])
+        if key in _haversine_cache:
+            return _haversine_cache[key]
+    except Exception:
+        pass
+
     lon1, lat1 = s_pos[1]['x'], s_pos[1]['y']
     R_earth = 6372800  # approximate radius of earth. [R_earth] = m
     lon2, lat2 = my_node[1]['x'], my_node[1]['y']
@@ -163,7 +172,15 @@ def haversine(s_pos, my_node):
     distance = R_earth * c  # [distance] = m
     if distance < 0.1:  # to avoid ZeroDivisionError
         distance = 0.1
-    return distance / 1000.0
+    distance = distance / 1000.0
+    
+    try:
+        _haversine_cache[key] = distance
+        _haversine_cache[(my_node[0], s_pos[0])] = distance
+    except Exception:
+        pass
+        
+    return distance
 
 
 def station_coverage(my_station, my_node_list):
@@ -373,7 +390,22 @@ def existing_score(my_existing_plan, my_node_list):
     wait_time = waiting_time(my_existing_plan)
     cost_boring = charg_time + wait_time  # dimensionless
     my_cost = alpha * travel_time + (1 - alpha) * cost_boring
-    return my_benefit, my_cost, charg_time, wait_time, travel_time
+    fairness = social_fairness(my_node_list)
+    return my_benefit, my_cost, charg_time, wait_time, travel_time, fairness
+
+
+def social_fairness(my_node_list):
+    """
+    Return a scalar fairness score for the node coverage distribution.
+    Higher values indicate more fair (more even) coverage across nodes.
+    We use the inverse of the standard deviation of station counts so that
+    perfectly even coverage -> higher fairness, and skewed coverage -> lower fairness.
+    """
+    counts = np.array([node[1].get('n_stations', 0) for node in my_node_list], dtype=float)
+    if counts.size == 0:
+        return 0.0
+    std = float(np.std(counts))
+    return 1.0 / (1.0 + std)
 
 
 def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_travel, grid_penalty=None):
@@ -388,12 +420,13 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     charg_time = charging_time(my_plan) / norm_charg # dimensionless
     wait_time = waiting_time(my_plan) / norm_wait # dimensionless
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
+    fairness = social_fairness(my_node_list)
     if grid_penalty is not None:
         avg_penalty = abs(grid_penalty) / max(1, len(my_plan))
-        my_score = (0.5 * benefit - 0.5 * cost) - avg_penalty
+        my_score = (benefit - cost + fairness) / 3 - avg_penalty
     else:
-        my_score = 0.5 * benefit - 0.5 * cost
-    return my_score, benefit, cost, charg_time, wait_time, cost_travel
+        my_score = (benefit - cost + fairness) / 3
+    return my_score, benefit, cost, charg_time, wait_time, cost_travel, fairness
 
 
 def score(my_plan, my_node_list):
@@ -495,30 +528,65 @@ def coverage(my_node_list, my_plan):
         my_node[1]["benefit"] = cover
 
 
-def choose_node_new_benefit(free_list, all_node_list, R_search=0.1):
+def choose_node_new_benefit(free_list, all_node_list, R_search=0.7):
     """
-    pick location with highest potential based on Potential/Coverage.
+    Pick location with highest potential based on coverage and local benefit.
+    Calculates potential coverage (how many nodes a station here would cover)
+    and local social benefit (how many existing stations serve nearby nodes).
+
+    Args:
+        free_list: list of candidate node tuples (node_id, node_attrs)
+        all_node_list: list of all nodes in the network
+        R_search: search radius in km for identifying beneficiary nodes
+
+    Returns:
+        best candidate node tuple
     """
+    if not free_list:
+        return None
+
     potential_scores = []
+    n_nodes = len(all_node_list)
+
+    # Default search radius (in km) for station coverage if not specified
+    # default_radius = RADIUS_MAX * 0.5 if 'RADIUS_MAX' in globals() else 2.0
+
     for candidate_node in free_list:
-        local_demand = 0
+        # 1. Calculate potential coverage: how many nodes would be covered by a station here
+        # This is the "station scope" - count nodes within R_search of this candidate
+        covered_nodes_count = 0
+        local_benefit_list = []
         for node in all_node_list:
-            dist = haversine(candidate_node, node)
-            if dist <= R_search:
-                local_demand += weak_demand(node)
+            if haversine(candidate_node, node) <= R_search:
+                covered_nodes_count += 1
+                # Diminishing returns: each additional station provides less marginal benefit
+                n_stations = node[1].get("n_stations", 0)
+                priv_CS = node[1].get("private_cs", 0)
 
-        current_coverage = candidate_node[1].get("n_stations", 0)
-        _score = local_demand / (current_coverage +eps)
+                # Áp dụng trọng số nhu cầu (demand weight) của từng node
+                # Đảm bảo đặt trạm ở nơi có demand thực tế để giảm waiting và travel time
+                # node_demand = weak_demand(node)
+                marginal_benefit = (1.0 / (n_stations + 1)) * (1 - 0.1 * priv_CS) #* (1 + 2.0 * node_demand)
+                local_benefit_list.append(marginal_benefit)
 
+        station_scope = covered_nodes_count / n_nodes if n_nodes > 0 else 0
+
+        # 2. Calculate local social benefit: sum of marginal benefits over covered nodes
+        # This captures the actual increase in social benefit for the nodes
+        social_node_benefit = sum(local_benefit_list) / n_nodes if n_nodes > 0 else 0.0
+
+        # 3. Combine metrics: weight station coverage and local benefit
+        _score = social_node_benefit + station_scope
         potential_scores.append(_score)
-    best_index = np.argmax(potential_scores)
 
+    # Return node with highest score
+    best_index = np.argmax(potential_scores)
     return free_list[best_index]
 
 
 def choose_node_bydemand(free_list, my_plan, add=False):
     """
-    pick location with highest weakened demand
+    pick location with highest dynamic demand
     """
     chosen_node = None
     if add:

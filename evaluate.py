@@ -19,10 +19,10 @@ graph_file = os.path.join(base_dir, "Graph", location, location + ".graphml")
 node_file = os.path.join(base_dir, "Graph", location, "nodes_extended_" + location + ".txt")
 plan_file = os.path.join(base_dir, "Graph", location, "existingplan_" + location + ".pkl")
 
-use_gnn = True  # Set to True if evaluating a GNN model
+use_gnn = False  # Set to True if evaluating a GNN model
 obs_type = "gnn" if use_gnn else "mlp"
 env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
-ns = "target_10000"
+ns = "config_3"
 # Updated to match the log directory used in train.py (Results/tmp/gnn/)
 if ns is not None:
     log_dir = f"Results/tmp/{location}/{obs_type}/{ns}/"
@@ -37,7 +37,7 @@ os.makedirs(log_dir, exist_ok=True)
 env = Monitor(env, log_dir)  # new environment for evaluation
 G = ox.load_graphml(graph_file)
 
-step = 22534
+step = 107827
 if use_gnn:
     from custom_environment.gnn_extractor import GNNFeaturesExtractor
 
@@ -49,7 +49,7 @@ if use_gnn:
         model = DQN.load(log_dir + "best_model_gnn_" + location + f"_{step}.zip", env=env,
                          custom_objects=custom_objects)
 else:
-    model = DQN.load(log_dir + "best_model_" + location + f"_{step}.zip", env=env)
+    model = DQN.load(log_dir + "best_model_mlp_" + location + f"_{ns}_{step}.zip", env=env)
 
 obs, _ = env.reset()
 done = False

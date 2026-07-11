@@ -1,0 +1,16 @@
+{
+  "location": "CauGiay",
+  "x_min": 105.7677803,
+  "x_max": 105.8116969,
+  "y_min": 21.0015087,
+  "y_max": 21.0568396,
+  "land_price_max": 117.594706,
+  "demand_max": 0.8091438278979923,
+  "grid_dist_max": 1.7413499999999997,
+  "grid_mw_max": 12.80294418334961,
+  "street_count_max": 5.0,
+  "road_length_max": 259.7985518874892,
+  "dist_to_station_max": 2.0,
+  "capability_max": 1.5,
+  "benefit_max": 2.0
+}

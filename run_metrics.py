@@ -34,7 +34,7 @@ def waiting_metric(my_plan):
 
 def eci_test(my_plan, my_node_list, my_norm_benefit, my_norm_charging, my_norm_waiting,
              my_norm_travel):
-    score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(my_plan, my_node_list, my_norm_benefit,
+    score, benefit, cost, charg_time, wait_time, cost_travel, _ = H.norm_score(my_plan, my_node_list, my_norm_benefit,
                                                                              my_norm_charging, my_norm_waiting,
                                                                              my_norm_travel)
     return score
@@ -47,7 +47,7 @@ def test(my_plan, my_node_list, my_basic_cost, my_norm_benefit, my_norm_charging
     """
     travel_max = travel_metric(my_node_list)
     wait_max = waiting_metric(my_plan)
-    score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(my_plan, my_node_list, my_norm_benefit,
+    score, benefit, cost, charg_time, wait_time, cost_travel, _ = H.norm_score(my_plan, my_node_list, my_norm_benefit,
                                                                              my_norm_charging, my_norm_waiting,
                                                                              my_norm_travel)
     # test if solution satisfies all constraints
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     node_list, plan = prepare_existing_plan(plan, node_list, env.graph)
     basic_cost = sum([station[2]["fee"] for station in plan])
-    norm_benefit, norm_cost, norm_charging, norm_waiting, norm_travel = H.existing_score(plan, node_list)
+    norm_benefit, norm_cost, norm_charging, norm_waiting, norm_travel, _ = H.existing_score(plan, node_list)
     norm_score = eci_test(plan, node_list, norm_benefit, norm_charging, norm_waiting, norm_travel)
     test(plan, node_list, basic_cost, norm_benefit, norm_charging, norm_waiting, norm_travel, norm_score)
     # pickle.dump(plan, open("Results/" + "debug/" + location + f"/existing_plan.pkl", "wb"))

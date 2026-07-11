@@ -188,10 +188,18 @@ if __name__ == '__main__':
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
     parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
     parser.add_argument("--lr_schedule", action="store_true", help="Use linear LR decay (default: constant LR)")
+    parser.add_argument("--obs_type", type=str, choices=["mlp", "gnn", "mlp_graph"], default=None,
+                        help="Observation type. Overrides --use_gnn/--no_gnn if set.")
     args = parser.parse_args()
 
     if args.no_gnn:
         args.use_gnn = False
+
+    # Determine obs_type: explicit --obs_type takes priority
+    if args.obs_type:
+        obs_type = args.obs_type
+    else:
+        obs_type = "gnn" if args.use_gnn else "mlp"
 
     # Set seed for reproducibility
     os.environ['PYTHONASHSEED'] = '0'
@@ -208,7 +216,6 @@ if __name__ == '__main__':
     node_file = os.path.join(base_dir, "Graph", location, "nodes_extended_" + location + ".txt")
     plan_file = os.path.join(base_dir, "Graph", location, "existingplan_" + location + ".pkl")
 
-    obs_type = "gnn" if args.use_gnn else "mlp"
     env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
     if args.ns:
         log_dir = f"Results/tmp/{location}/{obs_type}/{args.ns}"
@@ -223,7 +230,7 @@ if __name__ == '__main__':
     os.makedirs(log_dir, exist_ok=True)
     env = Monitor(env, os.path.join(log_dir, "monitor.csv"))
 
-    if args.use_gnn:
+    if obs_type == "gnn":
         from custom_environment.gnn_extractor import GNNFeaturesExtractor
         policy_kwargs = dict(
             features_extractor_class=GNNFeaturesExtractor,
@@ -232,6 +239,7 @@ if __name__ == '__main__':
         )
         policy_type = "MultiInputPolicy"
     else:
+        # Both "mlp" and "mlp_graph" use MlpPolicy (flat observation)
         policy_kwargs = dict(net_arch=args.net_arch)
         policy_type = "MlpPolicy"
 
@@ -259,6 +267,7 @@ if __name__ == '__main__':
     config_path = os.path.join(log_dir, "config.json")
     config_data = vars(args).copy()
     config_data.pop("no_gnn", None)  # redundant with use_gnn
+    config_data["obs_type"] = obs_type  # save the resolved obs_type
     with open(config_path, "w") as f:
         json.dump(config_data, f, indent=2)
     print(f"Config saved to {config_path}")

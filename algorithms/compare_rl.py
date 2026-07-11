@@ -74,7 +74,7 @@ def eci_test(
     my_norm_travel,
     grid_penalty=None,
 ):
-    score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(
+    score, benefit, cost, charg_time, wait_time, cost_travel, _ = H.norm_score(
         my_plan,
         my_node_list,
         my_norm_benefit,
@@ -91,6 +91,7 @@ def run_episode(agent, env, agent_type="rl"):
     total_reward = 0
     terminated = False
     truncated = False
+    overloaded = False
 
     while not (terminated or truncated):
         if agent_type == "rl":
@@ -100,10 +101,43 @@ def run_episode(agent, env, agent_type="rl"):
         elif agent_type in ["greedy_benefit", "greedy_demand"]:
             station_list = [s[0][0] for s in env.plan_instance.plan]
             free_list = [node for node in env.node_list if node[0] not in station_list]
+            
+            # Reset overloaded at each step
+            overloaded = False
+            current_wait_metric = 0.0
+
+            if env.plan_instance.plan:
+                score, benefit, cost, charg_time, wait_time, cost_travel, _ = H.norm_score(
+                    env.plan_instance.plan,
+                    env.node_list,
+                    env.plan_instance.norm_benefit,
+                    env.plan_instance.norm_charg,
+                    env.plan_instance.norm_wait,
+                    env.plan_instance.norm_travel,
+                    None
+                )
+                current_wait_metric = wait_time
+                # If any relevant metric exceeds 100%, we start using 'add' action (overloaded = True)
+                if wait_time > 1.0 or charg_time > 1.0:
+                    overloaded = True
+
+            # Tracking the waiting time dynamically
+            print(f"[{agent_type}] Current Wait (%): {current_wait_metric*100:.2f}% | Stations: {len(env.plan_instance.plan)}")
+
             if agent_type == "greedy_benefit":
-                action = 0 if free_list else 2
+                if overloaded:
+                    action = 2  # Add charger
+                elif free_list:
+                    action = 0  # New station
+                else:
+                    action = 2
             else:
-                action = 1 if free_list else 3
+                if overloaded:
+                    action = 3  # Add charger
+                elif free_list:
+                    action = 1  # New station
+                else:
+                    action = 3
 
         obs, reward, terminated, truncated, _ = env.step(action)
         total_reward += reward
@@ -122,7 +156,7 @@ def run_episode(agent, env, agent_type="rl"):
         station_nodes = [(s[0], s[2]["capability"]) for s in best_plan]
         dist_penalty, cap_penalty, _, _ = env.grid_adapter.calculate_grid_penalty(station_nodes)
         grid_penalty = dist_penalty + cap_penalty
-    score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(
+    score, benefit, cost, charg_time, wait_time, cost_travel, fairness = H.norm_score(
         best_plan,
         best_node_list,
         norm_benefit,
@@ -147,6 +181,7 @@ def run_episode(agent, env, agent_type="rl"):
         "score": score * 100,
         "benefit": benefit * 100,
         "cost": cost * 100,
+        "fairness": fairness * 100,
 
         "charg_time": charg_time * 100,
         "wait_time": wait_time * 100,
@@ -224,15 +259,12 @@ def visualise_stations(my_graph, my_plan, my_filepath, title=None):
 # ── Main comparison ────────────────────────────────────────────────────
 
 
-def compare(location="DongDa"):
+def compare(location="DongDa", obs_type="mlp_graph"):
     # Base directory and paths
     base_dir = os.path.join(project_root, "custom_environment", "data")
     graph_file = os.path.join(base_dir, "Graph", location, f"{location}.graphml")
     node_file = os.path.join(base_dir, "Graph", location, f"nodes_extended_{location}.txt")
     plan_file = os.path.join(base_dir, "Graph", location, f"existingplan_{location}.pkl")
-
-    use_gnn = True  # Set to True to evaluate the GNN model
-    obs_type = "gnn" if use_gnn else "mlp"
     
     # Env for testing
     env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
@@ -252,6 +284,7 @@ def compare(location="DongDa"):
         b_norm_charging,
         b_norm_waiting,
         b_norm_travel,
+        b_norm_fairness
     ) = H.existing_score(baseline_plan, baseline_node_list)
     
     baseline_grid_penalty = None
@@ -276,17 +309,23 @@ def compare(location="DongDa"):
     G = ox.load_graphml(graph_file)
 
     # 1. Load RL (DQN) Model
-    step = 166012
+    step = 616622
     rl_log_dir = os.path.join("Results", "tmp", location, obs_type)
     best_rl_model = None
-    ns = "config_26"
+    ns = "config_5"
     if os.path.exists(rl_log_dir):
-        # Allow loading either the GNN or MLP model
-        prefix = "best_model_gnn_" if use_gnn else "best_model_"
-        best_rl_model = os.path.join(rl_log_dir, ns, f"{prefix}{location}_{ns}_best_score_{step}.zip")
+        # Allow loading the appropriate model
+        if obs_type == "gnn":
+            prefix = "best_model_gnn_"
+        elif obs_type == "mlp_graph":
+            prefix = "best_model_mlp_graph_"
+        else:
+            prefix = "best_model_mlp_"
+        best_rl_model = os.path.join(rl_log_dir, ns, f"{prefix}{location}_{ns}_{step}.zip")
+        
     if best_rl_model and os.path.exists(best_rl_model):
         print(f"Loading RL model from {best_rl_model}")
-        if use_gnn:
+        if obs_type == "gnn":
             from custom_environment.gnn_extractor import GNNFeaturesExtractor
             custom_objects = {"GNNFeaturesExtractor": GNNFeaturesExtractor}
             rl_agent = DQN.load(best_rl_model, custom_objects=custom_objects)
@@ -296,21 +335,21 @@ def compare(location="DongDa"):
         print("Warning: RL model not found.")
         rl_agent = None
 
-    # 2. Load GA Model (Skipped if using GNN)
+    # 2. Load GA Model (Only compatible with 'mlp')
     ga_agent = None
-    if not use_gnn:
+    if obs_type == "mlp":
         ga_model_path = os.path.join("Results", "ga", location, f"best_ga_model_{location}.pt")
         if os.path.exists(ga_model_path):
             print(f"Loading GA model from {ga_model_path}")
             chromosome = torch.load(ga_model_path, weights_only=False)
-            input_dim = env.observation_space.shape[0]
+            input_dim = 10 * len(env.node_list) + 3
             output_dim = env.action_space.n
             ga_agent = GAPolicy(input_dim, output_dim, hidden_dim=256)
             unflatten_weights(ga_agent, chromosome)
         else:
             print("Warning: GA model not found.")
     else:
-        print("Note: GA comparison skipped (Incompatible with GNN observation format).")
+        print(f"Note: GA comparison skipped (Incompatible with {obs_type} observation format).")
 
     # Run comparisons
     results = {}
@@ -350,6 +389,7 @@ def compare(location="DongDa"):
         print(f"  Score (raw): {m['score']:.2f}")
         print(f"  Score (relative to baseline): {rel_score:.2f}%")
         print(f"  Benefit: {m['benefit']:.2f}%")
+        print(f"  Fairness: {m['fairness']:.2f}%")
 
         print(
             f"  Waiting time: {m['wait_time']:.2f}%, "
@@ -404,5 +444,5 @@ def compare(location="DongDa"):
 
 
 if __name__ == "__main__":
-    compare(location="DongDa")
+    compare(location="DongDa", obs_type="mlp_graph")
 
