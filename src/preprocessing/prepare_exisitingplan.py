@@ -5,7 +5,7 @@ import pandas as pd
 
 
 # Path to file
-location = "ThanhXuan"
+location = "DongDa"
 base_dir = os.path.join("custom_environment", "data")
 existing_plan_file = os.path.join(base_dir, "QGIS", "existing_plan", "existing_plan_filtered.csv")
 node_file = os.path.join(base_dir, "Graph", f"{location}", f"nodes_extended_{location}.txt")
@@ -44,7 +44,7 @@ for row in detail_stations_df.iterrows():
 
     if s_pos is not None:
         existing_plan.append([s_pos, s_x, {}])
-
+print("Total existing stations:", existing_plan)
 # save to file
 pickle.dump(existing_plan, open(f"custom_environment/data/Graph/{location}/existingplan_" + location + ".pkl", "wb"))
 print(f"Successfully saved {len(existing_plan)} existing plans.")

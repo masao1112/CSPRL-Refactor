@@ -381,8 +381,8 @@ class StationPlacement(gym.Env):
             node_features[j, 1] = self.feature_scaler.scale_lat(node[1].get('y', 21.0))
             # 2: static demand (representing baseline population)
             node_features[j, 2] = self.feature_scaler.scale_demand(node[1].get('demand', 0.0))
-            # 3: dynamic demand (unsatisfied demand)
-            dyn_demand = H.dynamic_demand(node, self.plan_instance.plan)
+            # 3: demand (same as static demand, replaced dynamic demand)
+            dyn_demand = H.weak_demand(node)
             node_features[j, 3] = self.feature_scaler.scale_demand(dyn_demand)
             # 4: land price
             node_features[j, 4] = self.feature_scaler.scale_land_price(node[1].get('land_price', 90.0))

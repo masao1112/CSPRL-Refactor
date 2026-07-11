@@ -74,7 +74,7 @@ class GraphFeatureAugmentor:
         Returns:
             (5,) array of summary features, clipped to [-1, 1]
         """
-        dynamic_demand = node_features[:, 3]
+        static_demand = node_features[:, 3]
         capability = node_features[:, 6]
         nearest_dist = node_features[:, 9]
 
@@ -82,9 +82,9 @@ class GraphFeatureAugmentor:
         #    High value → poor coverage → build new stations
         coverage_gap = float(np.mean(nearest_dist))
 
-        # 2. Demand spread: std of dynamic demand, scaled to ~[-1, 1]
-        #    High value → demand is heterogeneous → demand-based actions help
-        demand_std = float(np.std(dynamic_demand))
+        # 2. Demand spread: std of static demand, scaled to ~[-1, 1]
+        #    High value -> demand is heterogeneous -> demand-based actions help
+        demand_std = float(np.std(static_demand))
         demand_spread = np.clip(2.0 * demand_std - 1.0, -1.0, 1.0)
 
         # 3. Utilization imbalance: std of capability among stations
@@ -99,7 +99,7 @@ class GraphFeatureAugmentor:
 
         # 4. Spatial mismatch: correlation between neighborhood demand and supply
         #    Negative → demand and supply are spatially misaligned → relocate
-        hop1_demand = self.norm_adj @ dynamic_demand
+        hop1_demand = self.norm_adj @ static_demand
         hop1_capability = self.norm_adj @ np.clip(capability, -1.0, 1.0)
         d_std = float(np.std(hop1_demand))
         c_std = float(np.std(hop1_capability))

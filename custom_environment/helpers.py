@@ -123,20 +123,7 @@ def charging_capability(my_station):
 def weak_demand(my_node):
     return my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"])
 
-def dynamic_demand(my_node, my_plan, scaling_factor=0.4, distance_decay_factor=0.6):
-    power_factor = 0
-    base_demand = weak_demand(my_node)
-    for station in my_plan:
-        s_pos, s_x, s_dict = station[0], station[1], station[2]
-        s_r = s_dict["radius"]
-        s_cap = s_dict["capability"]
-        distance = haversine(s_pos, my_node)
-        if distance < s_r:
-            power_factor += s_cap * np.exp(-distance_decay_factor * distance)
-    power_factor *= -scaling_factor
-    new_demand = base_demand * np.exp(power_factor)
 
-    return new_demand
 
 def influence_radius(my_station):
     """
@@ -586,7 +573,7 @@ def choose_node_new_benefit(free_list, all_node_list, R_search=0.7):
 
 def choose_node_bydemand(free_list, my_plan, add=False):
     """
-    pick location with highest dynamic demand
+    pick location with highest demand
     """
     chosen_node = None
     if add:
@@ -598,7 +585,7 @@ def choose_node_bydemand(free_list, my_plan, add=False):
         chosen_node = max_station[0]
 
     else:
-        demand_list = [dynamic_demand(my_node, my_plan) for my_node in free_list]
+        demand_list = [weak_demand(my_node) for my_node in free_list]
         chosen_index = demand_list.index(max(demand_list))
         chosen_node = free_list[chosen_index]
     return chosen_node

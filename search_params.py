@@ -12,24 +12,6 @@ if current_dir not in sys.path:
 import custom_environment.helpers as H
 
 def test_parameters(scaling_factor, distance_decay_factor, node_list, graph, iterations=30):
-    def custom_dynamic_demand(my_node, my_plan):
-        power_factor = 0
-        base_demand = H.weak_demand(my_node)
-        for station in my_plan:
-            s_pos, s_x, s_dict = station[0], station[1], station[2]
-            s_r = s_dict["radius"]
-            s_cap = s_dict["capability"]
-            distance = H.haversine(s_pos, my_node)
-            if distance < s_r:
-                power_factor += s_cap * np.exp(-distance_decay_factor * distance)
-        power_factor *= -scaling_factor
-        new_demand = base_demand * np.exp(power_factor)
-        return new_demand
-    
-    # Store old function
-    old_dynamic_demand = H.dynamic_demand
-    H.dynamic_demand = custom_dynamic_demand
-    
     my_plan = []
     my_node_list = copy.deepcopy(node_list)
     free_nodes = [node for node in my_node_list]
@@ -77,8 +59,7 @@ def test_parameters(scaling_factor, distance_decay_factor, node_list, graph, ite
     benefit = H.social_benefit(my_plan, my_node_list)
     cost = H.social_cost(my_plan, my_node_list)
     
-    # Restore old function
-    H.dynamic_demand = old_dynamic_demand
+
     return benefit, cost
 
 if __name__ == "__main__":
