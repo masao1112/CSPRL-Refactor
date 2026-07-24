@@ -265,28 +265,32 @@ def service_rate(my_station):
 def avg_waiting(my_station, N=100, eps=1e-9):
     """
     Returns the expected time in the system (waiting + service) using an M/M/1/N queuing model.
-    N is the system capacity (queue + service).
+    N is the system capacity (queue + service). Sized dynamically based on demand if demand exceeds default N.
     """
     # Unpack directly
     s_pos, s_x, s_dict = my_station
 
     sr = max(s_dict.get("service rate", 0.0), eps)  # mu
     ar = s_dict.get("D_s", 0.0)  # lambda
+
+    # Dynamically adjust N to match incoming demand if demand exceeds default capacity
+    effective_N = max(N, int(math.ceil(ar)))
+
     p = ar / sr  # rho (traffic intensity)
 
     # Calculate Probability of full system (PN) and Expected number in system (Ls)
     if math.isclose(p, 1.0, rel_tol=1e-7):
-        PN = 1.0 / (N + 1)
-        Ls = N / 2.0
+        PN = 1.0 / (effective_N + 1)
+        Ls = effective_N / 2.0
     elif p > 1.0:
         # Use reciprocal (u = 1/p) to prevent exponential overflow when p > 1
         u = 1.0 / p
-        PN = (1.0 - u) / (1.0 - u ** (N + 1))
-        Ls = (N - (N + 1) * u + u ** (N + 1)) / ((1.0 - u) * (1.0 - u ** (N + 1)))
+        PN = (1.0 - u) / (1.0 - u ** (effective_N + 1))
+        Ls = (effective_N - (effective_N + 1) * u + u ** (effective_N + 1)) / ((1.0 - u) * (1.0 - u ** (effective_N + 1)))
     else:
         # Standard stable formula when p < 1
-        PN = (p ** N * (1.0 - p)) / (1.0 - p ** (N + 1))
-        Ls = p / (1.0 - p) - ((N + 1) * p ** (N + 1)) / (1.0 - p ** (N + 1))
+        PN = (p ** effective_N * (1.0 - p)) / (1.0 - p ** (effective_N + 1))
+        Ls = p / (1.0 - p) - ((effective_N + 1) * p ** (effective_N + 1)) / (1.0 - p ** (effective_N + 1))
 
     # Little's Law: W = L / lambda_eff
     lambda_eff = ar * (1.0 - PN)
