@@ -47,6 +47,15 @@ DISTANCE_THRESHOLD_MAX_KM = 3  # Penalty tối đa
 PENALTY_DISTANCE_WEIGHT = 1.0  # Weight cho distance penalty
 PENALTY_CAPACITY_WEIGHT = 1.0  # Weight cho capacity penalty
 
+# Floor on the denominator used for the capacity-shortage ratio. Without this,
+# a bus with near-zero (but > 0) available headroom causes shortage / base_available
+# to blow up toward infinity, injecting reward-destabilizing outliers.
+CAPACITY_RATIO_FLOOR_MW = 0.05
+# Cap on the per-bus overload ratio. We still let the penalty grow past a ratio
+# of 1.0 (fully violated) so the agent keeps a gradient toward "less overloaded",
+# but bound it so a single degenerate bus can't dominate the whole score.
+CAPACITY_RATIO_MAX = 10.0
+
 # Capacity margin - dự phòng 20% cho growth
 CAPACITY_SAFETY_MARGIN = 0.2
 
@@ -84,14 +93,27 @@ class CSPRLGridAdapter:
         self.ev_station_power_mw = ev_station_power_mw
         self._bus_cache: Dict[Tuple[float, float], Dict] = {}
         self._cache_dirty = False
+        # Number of 22 kV buses the district's road graph actually maps onto. Set
+        # once via set_district_scope(); see calculate_grid_penalty for why the
+        # capacity penalty must be divided by a district constant.
+        self._n_district_buses: Optional[int] = None
+        self._warned_missing_scope = False
         self.cache_path = os.path.join(self.grid_data_folder, "bus_cache.pkl")
+        self._grid_signature = self._compute_grid_signature()
 
-        # Load cache if exists
+        # Load cache if exists and still matches the current grid CSVs. Without
+        # this check, regenerating the grid (new bus indices/positions/topology)
+        # would silently keep serving stale nearest-bus/distance/capacity lookups
+        # from the old topology, with no error to signal the mismatch.
         if os.path.exists(self.cache_path):
             try:
                 with open(self.cache_path, "rb") as f:
-                    self._bus_cache = pickle.load(f)
-                # print(f"Loaded {len(self._bus_cache)} entries from bus cache.")
+                    cached = pickle.load(f)
+                if isinstance(cached, dict) and cached.get("signature") == self._grid_signature:
+                    self._bus_cache = cached.get("data", {})
+                    # print(f"Loaded {len(self._bus_cache)} entries from bus cache.")
+                else:
+                    print("Bus cache is stale (grid data changed since it was written) - recomputing.")
             except Exception as e:
                 print(f"Warning: Could not load bus cache: {e}")
 
@@ -101,6 +123,37 @@ class CSPRLGridAdapter:
 
         if auto_run_power_flow:
             self.loader.run_power_flow()
+
+    def _compute_grid_signature(self) -> Tuple:
+        """
+        Cheap fingerprint of the grid CSVs (mtime + size per file) used to
+        detect when bus_cache.pkl was written for a different grid and must
+        be invalidated rather than trusted as-is.
+        """
+        files = ["bus.csv", "line.csv", "trafo.csv", "load.csv", "ext_grid.csv"]
+        sig = []
+        for fname in files:
+            fpath = os.path.join(self.grid_data_folder, fname)
+            if os.path.exists(fpath):
+                st = os.stat(fpath)
+                sig.append((fname, st.st_mtime_ns, st.st_size))
+        return tuple(sig)
+
+    def set_district_scope(self, bus_indices) -> None:
+        """
+        Record how many 22 kV buses the district's road graph maps onto.
+
+        This is the denominator of the capacity penalty, so it MUST be a constant
+        of the district: pass the buses reachable from every graph node (computed
+        once, before any station exists), not the buses a given plan happens to
+        load. A plan-dependent denominator lets the agent shrink the penalty of an
+        overloaded bus simply by building elsewhere.
+
+        Args:
+            bus_indices: iterable of bus indices; duplicates and -1 are ignored.
+        """
+        valid = {int(b) for b in bus_indices if b is not None and int(b) != -1}
+        self._n_district_buses = len(valid) if valid else None
 
     def _get_bus_info(self, lat: float, lon: float) -> Dict:
         """
@@ -154,7 +207,7 @@ class CSPRLGridAdapter:
         if self._cache_dirty:
             try:
                 with open(self.cache_path, "wb") as f:
-                    pickle.dump(self._bus_cache, f)
+                    pickle.dump({"signature": self._grid_signature, "data": self._bus_cache}, f)
                 self._cache_dirty = False
                 # print(f"Saved {len(self._bus_cache)} entries to bus cache.")
             except Exception as e:
@@ -352,18 +405,70 @@ class CSPRLGridAdapter:
             # Check if we're trying to place more load than the grid can handle
             if corrected_available < 0 and required > 0:
                 shortage = -corrected_available  # Absolute magnitude of shortage
-                # Penalty proportional to overload ratio, but let it grow beyond 1.0 
+                # Penalty proportional to overload ratio, but let it grow beyond 1.0
                 # to provide gradient for the RL agent even when highly overloaded.
-                ratio = shortage / (base_available + 1e-9) if base_available > 0 else shortage / (self.ev_station_power_mw + 1e-9)
+                denom = base_available if base_available > CAPACITY_RATIO_FLOOR_MW else CAPACITY_RATIO_FLOOR_MW
+                ratio = min(shortage / denom, CAPACITY_RATIO_MAX)
                 bus_penalty = PENALTY_CAPACITY_WEIGHT * ratio
+                # Accumulate raw per-bus severity here; the district-constant
+                # normalization happens once, after the loop.
                 cap_penalty_total -= bus_penalty
-                
                 # DEBUG: Print violation for transparency
                 # print(f"   Bus {bus_idx}: required={required:.3f} MW, base_available={base_available:.3f} MW → SHORTAGE={shortage:.3f} MW")
+
+        # 4. Normalize the capacity penalty by the district's bus count.
+        # cap_penalty_total is a SUM of per-bus overload ratios, each up to
+        # CAPACITY_RATIO_MAX, so on a grid-tight district it reaches 4-6 while the
+        # welfare term of norm_score only spans ~[0, 1] -- the reward then reduces
+        # to "build nothing". Dividing by a district CONSTANT fixes the scale while
+        # keeping the two properties that matter: per-bus severity is preserved
+        # (a small bus overloaded 3x still dominates a large one overloaded 10%),
+        # and adding stations at buses with headroom cannot dilute an existing
+        # violation. Neither len(my_plan) nor the number of loaded/overloaded buses
+        # has that second property -- they grow with the plan, so the agent could
+        # cheapen a violation by building elsewhere, or even by creating a second,
+        # milder violation.
+        if self._n_district_buses:
+            cap_penalty_total /= self._n_district_buses
+        elif not self._warned_missing_scope:
+            self._warned_missing_scope = True
+            print("Warning: set_district_scope() was never called; the capacity penalty "
+                  "is left unnormalized and will overwhelm the welfare term.")
 
         grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item() if grid_utilization_list else 0.0
         grid_distance = np.mean(grid_distance_list, dtype=np.float32).item() if grid_distance_list else 0.0
         return dist_penalty_total, cap_penalty_total, grid_utilization, grid_distance
+
+    def get_grid_violations(self, station_nodes: List[Any]) -> List[Dict]:
+        """
+        Identify violating buses and return their details.
+        """
+        violations = []
+        if not self.loader or self.loader.net is None:
+            return violations
+
+        bus_loads = self.get_accumulate_load(station_nodes)
+        
+        for bus_idx, data in bus_loads.items():
+            required = data['required']
+            base_available = data['available']
+            corrected_available = base_available - required
+            
+            if corrected_available < 0 and required > 0:
+                shortage = -corrected_available
+                bus_row = self.loader.net.bus.loc[bus_idx]
+                vn_kv = bus_row.get('vn_kv', 0.0)
+                bus_name = bus_row.get('name', f'Bus_{bus_idx}')
+                
+                violations.append({
+                    'bus_idx': bus_idx,
+                    'bus_name': bus_name,
+                    'voltage_kv': vn_kv,
+                    'required_mw': required,
+                    'available_mw': base_available,
+                    'shortage_mw': shortage,
+                })
+        return violations
 
     def get_grid_summary_for_nodes(self, node_list: List) -> Any:
         """
@@ -419,6 +524,7 @@ class CSPRLGridAdapter:
 
         buses_22kv = []
         net = self.loader.net
+        bus_df = self.loader.dataframes.get("bus") if hasattr(self.loader, "dataframes") else None
 
         # Lọc các bus 22kV
         for idx, row in net.bus.iterrows():
@@ -426,10 +532,23 @@ class CSPRLGridAdapter:
                 # Lấy available capacity
                 capacity_info = self.loader.get_available_capacity(idx)
 
+                # geodata is stored as (x=lon, y=lat) in a separate net.bus_geodata
+                # table, not as a 'geodata' column on net.bus - the previous version
+                # looked up a column that never exists, always falling back to (0, 0)
+                # for every bus, and also swapped lat/lon. Prefer net.bus_geodata,
+                # then fall back to the raw x/y columns like find_nearest_bus does.
+                lat, lon = 0.0, 0.0
+                if hasattr(net, "bus_geodata") and idx in net.bus_geodata.index:
+                    lon = net.bus_geodata.at[idx, "x"]
+                    lat = net.bus_geodata.at[idx, "y"]
+                elif bus_df is not None and idx in bus_df.index and "x" in bus_df.columns:
+                    lon = bus_df.at[idx, "x"]
+                    lat = bus_df.at[idx, "y"]
+
                 buses_22kv.append({
                     'bus_idx': idx,
-                    'lat': row.get('geodata', (0, 0))[0] if row.get('geodata') else 0,
-                    'lon': row.get('geodata', (0, 0))[1] if row.get('geodata') else 0,
+                    'lat': lat,
+                    'lon': lon,
                     'name': row.get('name', f'Bus_{idx}'),
                     'available_mw': capacity_info.get('available_mw', 0)
                 })

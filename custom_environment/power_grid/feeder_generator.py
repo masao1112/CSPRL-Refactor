@@ -32,6 +32,12 @@ FEEDER_CONFIG = {
     "points_per_feeder": 4,
     "node_spacing_km": 0.6,
     "max_i_ka": 0.20,
+    # Matches the 22kV distribution cable type used elsewhere (citywide_generator.py,
+    # grid_loader.py's own default). Was missing, which made every call into this
+    # function raise a KeyError, silently swallowed by the caller's broad
+    # except-Exception fallback -- this road/population-driven feeder path never
+    # actually ran.
+    "std_type": "NAYY 4x240 SE",
 }
 
 POPULATION_FILE_REL_PATH = "population\hanoi_pop_density_100m.gpkg"

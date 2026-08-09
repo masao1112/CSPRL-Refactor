@@ -12,9 +12,17 @@ class GNNFeaturesExtractor(BaseFeaturesExtractor):
     """
 
     def __init__(self, observation_space, features_dim=256):
+        # NOTE: `features_dim` (and --features_dim in train.py) is accepted for
+        # CLI/API compatibility but has no effect here: the actual output size is
+        # always n_nodes * k_features + 32 (below), not this argument. Also note
+        # k_features=1 means the rich 256-dim per-node GCN representation gets
+        # projected down to a single scalar per node before being flattened and
+        # handed to the policy head -- a severe bottleneck right at the interface
+        # that matters most. See chat discussion for a proposed pooled-readout
+        # redesign that would make this both fixed-size and less lossy.
         n_nodes = observation_space.spaces["node_features"].shape[0]
         n_global_features = observation_space.spaces["global_state"].shape[0]
-        self.k_features = 8
+        self.k_features = 1
         # The actual output dim is n_nodes * k_features + global_mlp_output (32)
         actual_features_dim = n_nodes * self.k_features + 32
         super(GNNFeaturesExtractor, self).__init__(observation_space, actual_features_dim)
@@ -65,7 +73,14 @@ class GNNFeaturesExtractor(BaseFeaturesExtractor):
         edges = edge_index[0].long()  # (2, E)
 
         adj = torch.zeros((self.n_nodes, self.n_nodes), device=device)
+        # Symmetrize: the road graph is a directed MultiDiGraph (one-way streets
+        # etc.), but the spatial-adjacency relationship this GCN should reason
+        # over (which nodes are near which) is inherently undirected -- the same
+        # convention graph_features.py already uses for its 1-hop aggregation.
+        # Leaving this directed made message passing depend on arbitrary OSM edge
+        # direction, and broke the symmetric-normalization assumption below.
         adj[edges[0], edges[1]] = edge_weight
+        adj[edges[1], edges[0]] = edge_weight
         adj += torch.eye(self.n_nodes, device=device)
 
         deg = adj.sum(dim=1)

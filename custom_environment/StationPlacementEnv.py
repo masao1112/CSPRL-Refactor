@@ -137,8 +137,17 @@ class Plan:
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
         self.norm_benefit, self.norm_cost, self.norm_charg, self.norm_wait, self.norm_travel, _ = \
             H.existing_score(self.plan, my_node_list)
+        # NOTE: shallow copy on purpose -- existing_plan below must hold the *same*
+        # node objects as self.plan so the `s[0] not in existing_plan` identity test
+        # in _control_action() keeps working while node attrs get mutated in place.
         self.extend_existing_plan = self.plan.copy()
         self.existing_plan = [s[0] for s in self.extend_existing_plan]
+        # Because of that aliasing, s[2]["fee"] of these stations keeps changing as
+        # the agent adds chargers to them (installment_fee writes in place). Snapshot
+        # the baseline installation cost NOW; reading it back after an episode would
+        # return the inflated post-episode fees and make "budget used" too small --
+        # or negative, if the best plan was captured before those upgrades happened.
+        self.basic_cost = sum(s[2]["fee"] for s in self.plan)
 
     def __repr__(self):
         return "The charging plan is {}".format(self.plan)
@@ -198,11 +207,15 @@ class Station:
 
 class StationPlacement(gym.Env):
     """Custom Environment that follows gym interface"""
-    node_dict = {}
-    cost_dict = {}
 
     def __init__(self, my_graph_file, my_node_file, my_plan_file, location="DongDa", obs_type="mlp"):
         super(StationPlacement, self).__init__()
+
+        # Per-instance distance/cost caches (must NOT be class attributes: multiple
+        # env instances - e.g. different locations, or VecEnv workers - would
+        # otherwise share and corrupt each other's cached node<->station distances).
+        self.node_dict = {}
+        self.cost_dict = {}
 
         self.obs_type = obs_type
         # Initialize Grid Adapter with Fallback
@@ -220,6 +233,9 @@ class StationPlacement(gym.Env):
         self.node_list = [self._init(my_node) for my_node in self.node_list]
 
         self.plan_file = my_plan_file
+        with open(my_plan_file, "rb") as f:
+            print(f"Existing plan: {len(pickle.load(f))} stations "
+                  f"(from {os.path.basename(my_plan_file)})")
         self.game_over = None
         self.budget = None
         self.plan_instance = None
@@ -246,6 +262,13 @@ class StationPlacement(gym.Env):
                 lon = node[1].get('x', 0.0)
                 bus_info = self.grid_adapter._get_bus_info(lat, lon)
                 self.node_to_bus_idx[node[0]] = bus_info.get('bus_idx', -1)
+            # Tell the adapter how many buses this district spans, so it can put the
+            # capacity penalty on the same scale as the welfare term. Derived from
+            # every node and fixed for the env's lifetime -- deliberately NOT the
+            # buses some plan happens to load, which would drift during an episode.
+            self.grid_adapter.set_district_scope(self.node_to_bus_idx.values())
+            print(f"District grid scope: {self.grid_adapter._n_district_buses} buses "
+                  f"across {len(self.node_list)} nodes.")
 
         if self.obs_type == "mlp":
             shape = self.row_length * len(self.node_list) + 3
@@ -260,7 +283,12 @@ class StationPlacement(gym.Env):
             # Global: 3 global state + graph-level summaries
             shape = self.row_length * 2 * len(self.node_list) + 3 + n_graph_summaries
             self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
-        elif self.obs_type == "gnn":
+        elif self.obs_type in ("gnn", "attention"):
+            # "attention" (AttentionFeaturesExtractor) reuses this exact Dict space --
+            # it ignores edge_index/edge_attr (treats nodes as a set, not a graph) but
+            # keeping the space identical avoids duplicating the edge-array setup below
+            # and keeps establish_observation()'s generic dict-return branch working
+            # unchanged for both obs_types.
             edges = []
             edge_lengths = []
             for u, v, data in _graph.edges(data=True):
@@ -276,7 +304,7 @@ class StationPlacement(gym.Env):
             else:
                 self.edge_index_array = np.zeros((2, 1), dtype=np.int32)
                 self.edge_attr_array = np.zeros((1, 1), dtype=np.float32)
-                
+
             self.observation_space = spaces.Dict({
                 "node_features": spaces.Box(low=-1.0, high=1.0, shape=(len(self.node_list), self.row_length), dtype=np.float32),
                 "edge_index": spaces.Box(low=0, high=len(self.node_list), shape=(2, self.edge_index_array.shape[1]), dtype=np.int32),
@@ -284,7 +312,7 @@ class StationPlacement(gym.Env):
                 "global_state": spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
             })
         else:
-            raise ValueError(f"Unknown obs_type: {self.obs_type}. Must be 'mlp', 'mlp_graph', or 'gnn'")
+            raise ValueError(f"Unknown obs_type: {self.obs_type}. Must be 'mlp', 'mlp_graph', 'gnn', or 'attention'")
 
     def reset(self, seed=None, options=None):
         """
@@ -299,15 +327,14 @@ class StationPlacement(gym.Env):
 
         self.budget = H.BUDGET
         self.game_over = False
-        self.plan_instance = Plan(self.node_list, StationPlacement.node_dict, StationPlacement.cost_dict,
+        self.plan_instance = Plan(self.node_list, self.node_dict, self.cost_dict,
                                   self.plan_file, self.graph)
-
         # Extend node features with grid data (if available)
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
-            total_grid_penalty = dist_penalty + cap_penalty
+            total_grid_penalty = {'dist_penalty': dist_penalty, 'cap_penalty': cap_penalty}
             self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait, self.plan_instance.norm_travel,
@@ -335,8 +362,8 @@ class StationPlacement(gym.Env):
         return obs, {}
 
     def _init(self, my_node):
-        StationPlacement.node_dict[my_node[0]] = {}  # prepare node_dict
-        StationPlacement.cost_dict[my_node[0]] = {}
+        self.node_dict[my_node[0]] = {}  # prepare node_dict
+        self.cost_dict[my_node[0]] = {}
         my_node[1]["charging station"] = None
         my_node[1]["distance"] = None
         return my_node
@@ -432,7 +459,7 @@ class StationPlacement(gym.Env):
 
     def budget_adjustment(self, my_station):
         inst_cost = my_station[2]["fee"]
-        if self.budget - inst_cost > 0:
+        if self.budget - inst_cost >= 0:
             # if we have enough money, we build the station
             self.budget -= inst_cost
         else:
@@ -440,7 +467,7 @@ class StationPlacement(gym.Env):
 
     def budget_adjustment_small(self, chosen_node, config_index):
         single_charger_budget = H.evs_parking_area * chosen_node[1]['land_price'] + H.INSTALL_FEE[config_index]
-        if self.budget - single_charger_budget > 0:
+        if self.budget - single_charger_budget >= 0:
             # if we have enough money, we build the charger
             self.budget -= single_charger_budget
         else:
@@ -452,19 +479,15 @@ class StationPlacement(gym.Env):
         """
         for j in range(2):
             self.node_list, _, _ = H.station_seeking(self.plan_instance.plan, self.node_list,
-                                                      StationPlacement.node_dict,
-                                                      StationPlacement.cost_dict,
+                                                      self.node_dict,
+                                                      self.cost_dict,
                                                       self.graph)
 
-
+        
     def step(self, my_action):
         """
         Perform a step in the episode
         """
-        # Backup plan and budget in case we need to revert due to capacity violation
-        old_plan = copy.deepcopy(self.plan_instance.plan)
-        old_budget = self.budget
-
         for station in self.plan_instance.plan:
             # if there is an empty station, delete it
             if np.sum(station[1]) <= 0:
@@ -515,10 +538,10 @@ class StationPlacement(gym.Env):
         if self.schritt >= len(self.node_list) / 2:
             self.game_over = True
 
-        # ── Terminal reward: bonus/penalty for final score vs starting score ──
-        if self.game_over:
-            terminal_improvement = self.best_score - self.starting_score
-            reward += 2.0 * terminal_improvement  # bounded terminal signal
+        # NOTE: no terminal bonus here. best_bonus in evaluation() already telescopes
+        # to exactly (best_score_final - starting_score) over the episode, so a
+        # terminal bonus of the same quantity would just re-add that signal a
+        # second (or third) time rather than convey new information.
 
         # Return gymnasium format: (obs, reward, terminated, truncated, info)
         return obs, reward, self.game_over, False, {}
@@ -574,18 +597,17 @@ class StationPlacement(gym.Env):
                 chosen_node = H.support_stations(self.plan_instance.plan, free_list)
         return chosen_node, free_list, config_index, my_action
 
-    def evaluation(self):
+    def evaluation(self, bonus_w=3.0):
         """
         Calculate the reward.
         Reward is aligned with the score objective to prevent reward-score divergence.
         """
-        reward = 0
         self.prepare_score()
 
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
-            total_grid_penalty = dist_penalty + cap_penalty
+            total_grid_penalty = {'dist_penalty': dist_penalty, 'cap_penalty': cap_penalty}
             new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                        self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                        self.plan_instance.norm_wait, self.plan_instance.norm_travel,
@@ -595,24 +617,15 @@ class StationPlacement(gym.Env):
                                                        self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
                                                        self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
-        # ── Reward Component 1: Step-level delta (scaled) ──
-        # Reward based on step-wise progress ensures sum(rewards) ∝ final_score - start_score
-        step_delta = new_score - self.previous_score
-        reward += step_delta  # Scale up for learning signal, but bounded
-
-        # ── Reward Component 2: Step cost ──
-        # Small penalty per step to discourage idle/wasted actions
-        # reward -= 0.01
-
-        # Update previous score for the next step
+        shaping = new_score - self.previous_score
         self.previous_score = new_score
-
-        score_improvement = new_score - self.best_score
-        if score_improvement > 0:
-            reward += score_improvement
+        best_gain = max(0.0, new_score - self.best_score)
+        if best_gain > 0.0:
             self.best_score = new_score
             self.best_plan = copy.deepcopy(self.plan_instance.plan)
             self.best_node_list = copy.deepcopy(self.node_list)
+
+        reward = shaping + bonus_w * best_gain
         return reward
 
     def _print_grid_violations(self, station_nodes):

@@ -38,6 +38,12 @@ class GridLoader:
         self.dataframes: Dict[str, pd.DataFrame] = {}
         self.net = None
         self.bus_limit = bus_limit
+        # get_available_capacity() is deterministic between power-flow runs (nothing
+        # currently mutates net.load/net.line/net.trafo in between), but it re-scans
+        # those tables from scratch on every call. It is called once per 22kV bus on
+        # every environment step (StationPlacementEnv.establish_observation), so
+        # caching it here is a real per-step win. Invalidated in run_power_flow().
+        self._capacity_cache: Dict[int, Dict[str, float]] = {}
         self._load_csv_files()
 
     def _load_csv_files(self) -> None:
@@ -191,6 +197,7 @@ class GridLoader:
         try:
             pp.runpp(self.net, algorithm=algorithm, max_iteration=50)
             print("\n[OK] Power flow analysis completed!")
+            self._capacity_cache.clear()
 
             return {
                 "res_bus": self.net.res_bus.copy(),
@@ -290,6 +297,9 @@ class GridLoader:
         if not hasattr(self.net, 'res_bus') or self.net.res_bus.empty:
             self.run_power_flow()
 
+        if bus_idx in self._capacity_cache:
+            return self._capacity_cache[bus_idx]
+
         # Tổng phụ tải hiện tại tại bus
         current_loads = self.net.load[self.net.load["bus"] == bus_idx]
         current_load_mw = current_loads["p_mw"].sum()
@@ -329,15 +339,19 @@ class GridLoader:
 
         # Correction for "10.0" default if both limitless?
         if max_capacity_mva > 9000:
+            print(f"Warning: bus {bus_idx} has no connected line/trafo capacity info; "
+                  f"defaulting max_capacity_mva to 10.0 (check for a floating/misconfigured bus).")
             max_capacity_mva = 10.0  # Default fallback if floating bus
 
         available_mw = max_capacity_mva * self.bus_limit - current_load_mw  # 80% loading limit
-        return {
+        result = {
             "available_mw": max(0, available_mw),
             "current_load_mw": current_load_mw,
             "max_capacity_mva": max_capacity_mva,
             "bus_voltage_kv": self.net.bus.at[bus_idx, "vn_kv"],
         }
+        self._capacity_cache[bus_idx] = result
+        return result
 
     def get_summary(self) -> Dict[str, Any]:
         """Lấy thông tin tổng quan về network."""

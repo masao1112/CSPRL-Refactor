@@ -60,6 +60,7 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict, graph):
     output station assignment: Each node gets assigned the charging station with minimal social cost
     """
     for node in my_node_list:
+        old_station_id = node[1].get("charging station")
         cost_list = []
         for station in my_plan:
             node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict, graph)
@@ -69,9 +70,16 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict, graph):
         s_pos = chosen_station[0]
         node[1]["charging station"] = s_pos[0]
         node[1]["distance"] = my_node_dict[node[0]][s_pos[0]]
-        # update cost
+        # Update D_s and W_s for the newly chosen station
         total_number_EVs(chosen_station, my_node_list)
         avg_waiting(chosen_station)
+        # If the node moved from a different station, update the old station too
+        if old_station_id is not None and old_station_id != s_pos[0]:
+            for station in my_plan:
+                if station[0][0] == old_station_id:
+                    total_number_EVs(station, my_node_list)
+                    avg_waiting(station)
+                    break
     return my_node_list, my_node_dict, my_cost_dict
 
 
@@ -123,7 +131,15 @@ def charging_capability(my_station):
 def weak_demand(my_node):
     return my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"])
 
-def dynamic_demand(my_node, my_plan, scaling_factor=0.4, distance_decay_factor=0.6):
+def dynamic_demand(my_node, my_plan, scaling_factor=None, distance_decay_factor=None):
+    """Demand at a node after nearby installed capacity has absorbed part of it.
+
+    scaling_factor (eta) and distance_decay_factor (beta) fall back to the
+    module-level DEMAND_ETA / DEMAND_BETA, so an ablation can rebind them once
+    before the env is built instead of threading them through every call site.
+    """
+    scaling_factor = DEMAND_ETA if scaling_factor is None else scaling_factor
+    distance_decay_factor = DEMAND_BETA if distance_decay_factor is None else distance_decay_factor
     power_factor = 0
     base_demand = weak_demand(my_node)
     for station in my_plan:
@@ -274,7 +290,7 @@ def avg_waiting(my_station, N=100, eps=1e-9):
     ar = s_dict.get("D_s", 0.0)  # lambda
 
     # Dynamically adjust N to match incoming demand if demand exceeds default capacity
-    effective_N = max(N, int(math.ceil(ar)))
+    effective_N = max(1, min(N, ceil(ar)))
 
     p = ar / sr  # rho (traffic intensity)
 
@@ -426,8 +442,22 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
     fairness = social_fairness(my_node_list)
     if grid_penalty is not None:
-        avg_penalty = abs(grid_penalty) / max(1, len(my_plan))
-        my_score = (benefit - cost + fairness) / 3 - avg_penalty
+        if isinstance(grid_penalty, dict):
+            dist_p = abs(grid_penalty.get('dist_penalty', 0.0))
+            cap_p = abs(grid_penalty.get('cap_penalty', 0.0))
+        elif isinstance(grid_penalty, tuple) and len(grid_penalty) == 2:
+            dist_p = abs(grid_penalty[0])
+            cap_p = abs(grid_penalty[1])
+        else:
+            dist_p = abs(grid_penalty)
+            cap_p = 0.0
+        # dist_p is an extensive sum over stations -> average it per station.
+        # cap_p arrives already normalized: calculate_grid_penalty divides the sum
+        # of per-bus overload ratios by the district's bus count, a constant. Do
+        # not divide it by len(my_plan) here -- a plan-dependent divisor would let
+        # the agent dilute an overloaded bus by building at buses with headroom.
+        avg_penalty = (dist_p / max(1, len(my_plan))) + cap_p
+        my_score = (benefit - cost + fairness) / 3 - GRID_PENALTY_WEIGHT * avg_penalty
     else:
         my_score = (benefit - cost + fairness) / 3
     return my_score, benefit, cost, charg_time, wait_time, cost_travel, fairness
@@ -652,6 +682,11 @@ def support_stations(my_plan, free_list):
 # Parameters ########################################################
 alpha = 0.8
 my_lambda = 0.5
+GRID_PENALTY_WEIGHT = 1.0  # tunable weight on the grid (distance + capacity) penalty in norm_score
+# Dynamic-demand model (see dynamic_demand). These shape the observation and the
+# demand-targeting heuristic behind actions 1 and 3 -- they do NOT enter norm_score.
+DEMAND_ETA = 0.4    # scaling_factor: how strongly installed capacity absorbs demand
+DEMAND_BETA = 0.6   # distance_decay_factor: how fast that absorption falls off with distance
 eps = 1e-6
 ev_per_capita = 0.022
 evs_parking_area = 15  # meter square
