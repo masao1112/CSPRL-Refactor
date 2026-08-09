@@ -347,7 +347,8 @@ def resolve_rl_model(rl_log_dir, location, obs_type, ns, step=None):
 # ── Main comparison ────────────────────────────────────────────────────
 
 
-def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, max_steps=None):
+def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, max_steps=None,
+            ga_ns=""):
     # Base directory and paths
     base_dir = os.path.join(project_root, "custom_environment", "data")
     graph_file = os.path.join(base_dir, "Graph", location, f"{location}.graphml")
@@ -431,7 +432,12 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
     # 2. Load GA Model (Only compatible with 'mlp')
     ga_agent = None
     if obs_type == "mlp":
-        ga_model_path = os.path.join("Results", "ga", location, f"best_ga_model_{location}.pt")
+        # train_ga.py --ns puts results under Results/ga/<location>/<ns>/; with no
+        # --ga_ns fall back to the flat layout that runs before --ns existed used.
+        ga_dir = os.path.join("Results", "ga", location)
+        if ga_ns:
+            ga_dir = os.path.join(ga_dir, ga_ns)
+        ga_model_path = os.path.join(ga_dir, f"best_ga_model_{location}.pt")
         if os.path.exists(ga_model_path):
             print(f"Loading GA model from {ga_model_path}")
             chromosome = torch.load(ga_model_path, weights_only=False)
@@ -588,7 +594,10 @@ if __name__ == "__main__":
     parser.add_argument("--max_steps", type=int, default=None,
                         help="Cap episode length for a quick behaviour probe on the large districts. "
                              "Scores from a capped run are NOT comparable to a full one")
+    parser.add_argument("--ga_ns", type=str, default="",
+                        help="Namespace of the GA run to load, matching train_ga.py --ns. "
+                             "Omit for the flat Results/ga/<location>/ layout")
     args = parser.parse_args()
     compare(location=args.location, obs_type=args.obs_type, ns=args.ns,
-            step=args.step, max_steps=args.max_steps)
+            step=args.step, max_steps=args.max_steps, ga_ns=args.ga_ns)
 

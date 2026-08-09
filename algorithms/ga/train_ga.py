@@ -58,9 +58,14 @@ def train_ga(args):
     best_overall_score = -np.inf
     best_overall_chromosome = None
 
-    # Use absolute path for results directory
+    # Use absolute path for results directory. --ns namespaces the run the same way
+    # train.py does, so several seeds on one district no longer overwrite each
+    # other's config.json, training_history.csv and best_ga_model_*.pt.
     log_dir = os.path.join(project_root, "Results", "ga", location)
+    if args.ns:
+        log_dir = os.path.join(log_dir, args.ns)
     os.makedirs(log_dir, exist_ok=True)
+    print(f"GA results -> {log_dir}")
 
     # Save training config
     config_data = vars(args).copy()
@@ -153,6 +158,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train a GA agent for station placement.")
     parser.add_argument("--location", type=str, default="DongDa")
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--ns", type=str, default="",
+                        help="Namespace for this run, e.g. ga_s1. Results go to "
+                             "Results/ga/<location>/<ns>/; omit for the legacy flat layout")
     parser.add_argument("--pop_size", type=int, default=50)
     parser.add_argument("--generations", type=int, default=100)
     parser.add_argument("--elitism", type=int, default=5)
