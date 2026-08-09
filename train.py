@@ -14,6 +14,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from collections import deque
 from custom_environment.StationPlacementEnv import StationPlacement
+import custom_environment.helpers as H
 
 """
 Trai the model by reinforcement learning.
@@ -188,8 +189,22 @@ if __name__ == '__main__':
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
     parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
     parser.add_argument("--lr_schedule", action="store_true", help="Use linear LR decay (default: constant LR)")
-    parser.add_argument("--obs_type", type=str, choices=["mlp", "gnn", "mlp_graph"], default=None,
+    parser.add_argument("--obs_type", type=str, choices=["mlp", "gnn", "mlp_graph", "attention"], default=None,
                         help="Observation type. Overrides --use_gnn/--no_gnn if set.")
+    # AttentionFeaturesExtractor-only args (custom_environment/attention_extractor.py)
+    parser.add_argument("--embed_dim", type=int, default=128, help="[attention] per-node embedding width (default: 128)")
+    parser.add_argument("--n_heads", type=int, default=4, help="[attention] attention heads, must divide embed_dim (default: 4)")
+    parser.add_argument("--n_layers", type=int, default=2, help="[attention] number of self-attention blocks (default: 2)")
+    parser.add_argument("--pma_seeds", type=int, default=1, help="[attention] number of PMA seed/query vectors (default: 1)")
+    parser.add_argument("--no_pma", action="store_true", help="[attention] disable PMA pooling, use mean-pool ablation baseline instead")
+    # Ablation knobs. Main runs pass none of these: the defaults below are the frozen
+    # configuration, and every run records the resolved values in its config.json.
+    parser.add_argument("--grid_penalty_weight", type=float, default=H.GRID_PENALTY_WEIGHT,
+                        help="[ablation] weight on the grid penalty in norm_score; 0 disables it")
+    parser.add_argument("--eta", type=float, default=H.DEMAND_ETA,
+                        help="[ablation] dynamic-demand scaling factor; 0 gives static demand")
+    parser.add_argument("--beta", type=float, default=H.DEMAND_BETA,
+                        help="[ablation] dynamic-demand distance decay; 0 removes distance decay")
     args = parser.parse_args()
 
     if args.no_gnn:
@@ -202,7 +217,7 @@ if __name__ == '__main__':
         obs_type = "gnn" if args.use_gnn else "mlp"
 
     # Set seed for reproducibility
-    os.environ['PYTHONASHSEED'] = '0'
+    os.environ['PYTHONHASHSEED'] = '0'
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     torch.manual_seed(args.seed)
     torch.use_deterministic_algorithms(True)
@@ -214,7 +229,15 @@ if __name__ == '__main__':
     base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "custom_environment", "data")
     graph_file = os.path.join(base_dir, "Graph", location, location + ".graphml")
     node_file = os.path.join(base_dir, "Graph", location, "nodes_extended_" + location + ".txt")
-    plan_file = os.path.join(base_dir, "Graph", location, "existingplan_" + location + ".pkl")
+    plan_file = os.path.join(base_dir, "Graph", location, "new_existingplan_" + location + ".pkl")
+
+    # Must precede env construction: reset() already scores the plan and builds the
+    # first observation, both of which read these globals.
+    H.GRID_PENALTY_WEIGHT = args.grid_penalty_weight
+    H.DEMAND_ETA = args.eta
+    H.DEMAND_BETA = args.beta
+    print(f"[ABLATION] grid_penalty_weight={H.GRID_PENALTY_WEIGHT}, "
+          f"eta={H.DEMAND_ETA}, beta={H.DEMAND_BETA}")
 
     env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
     if args.ns:
@@ -235,6 +258,20 @@ if __name__ == '__main__':
         policy_kwargs = dict(
             features_extractor_class=GNNFeaturesExtractor,
             features_extractor_kwargs=dict(features_dim=args.features_dim),
+            net_arch=args.net_arch
+        )
+        policy_type = "MultiInputPolicy"
+    elif obs_type == "attention":
+        from custom_environment.attention_extractor import AttentionFeaturesExtractor
+        policy_kwargs = dict(
+            features_extractor_class=AttentionFeaturesExtractor,
+            features_extractor_kwargs=dict(
+                embed_dim=args.embed_dim,
+                n_heads=args.n_heads,
+                n_layers=args.n_layers,
+                pma_seeds=args.pma_seeds,
+                use_pma=not args.no_pma,
+            ),
             net_arch=args.net_arch
         )
         policy_type = "MultiInputPolicy"

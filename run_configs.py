@@ -21,102 +21,82 @@ import os
 # Omit any key to use the default from train.py.
 # ──────────────────────────────────────────────────────────────────────
 CONFIGS = [
-    # Config 0: DongDa batch_size=64, lr=1e-4, net_arch=[256, 256]
+    # ── Wave 1: one seed per district (Table III breadth) ─────────────
+    # Ordered longest-first so the slowest run starts first.
+    # Config 0
     {
-        "location": "DongDa",
-        "learning_rate": 1e-4,
-        "features_dim": 256,
-        "batch_size": 64,
-        "net_arch": [256, 256],
+        "location": "NamTuLiem", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
-    # Config 1: DongDa batch_size=64, lr=1e-4, net_arch=[512, 512]
+    # Config 1
     {
-        "location": "DongDa",
-        "learning_rate": 1e-4,
-        "features_dim": 256,
-        "batch_size": 64,
-        "net_arch": [512, 512],
+        "location": "TayHo", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
-    # Config 2: DongDa batch_size=64, lr=4e-5, net_arch=[256, 256]
+    # Config 2
     {
-        "location": "DongDa",
-        "learning_rate": 4e-5,
-        "features_dim": 256,
-        "batch_size": 64,
-        "net_arch": [256, 256],
+        "location": "CauGiay", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
-    # Config 3: DongDa batch_size=64, lr=4e-5, net_arch=[512, 512]
+    # Config 3  -- also serves as the "Full Model" row of the ablation table
     {
-        "location": "DongDa",
-        "learning_rate": 4e-5,
-        "features_dim": 256,
-        "batch_size": 64,
-        "net_arch": [512, 512],
+        "location": "DongDa", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
     },
-    # Config 4: DongDa batch_size=128, lr=1e-4, net_arch=[256, 256]
+
+    # ── Wave 2: extra seeds on the two headline districts (mean +/- std) ──
+    # Config 4
     {
-        "location": "DongDa",
-        "learning_rate": 1e-4,
-        "features_dim": 256,
-        "batch_size": 128,
-        "net_arch": [256, 256],
+        "location": "CauGiay", "obs_type": "mlp", "ns": "mlp_s2", "seed": 2,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
-    # Config 5: DongDa batch_size=128, lr=1e-4, net_arch=[512, 512]
+    # Config 5
     {
-        "location": "DongDa",
-        "learning_rate": 1e-4,
-        "features_dim": 256,
-        "batch_size": 128,
-        "net_arch": [512, 512],
+        "location": "CauGiay", "obs_type": "mlp", "ns": "mlp_s3", "seed": 3,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
-    # Config 6: DongDa batch_size=128, lr=4e-5, net_arch=[256, 256]
+    # Config 6
     {
-        "location": "DongDa",
-        "learning_rate": 4e-5,
-        "features_dim": 256,
-        "batch_size": 128,
-        "net_arch": [256, 256],
+        "location": "DongDa", "obs_type": "mlp", "ns": "mlp_s2", "seed": 2,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
     },
-    # Config 7: DongDa batch_size=128, lr=4e-5, net_arch=[512, 512]
+    # Config 7
     {
-        "location": "DongDa",
-        "learning_rate": 4e-5,
-        "features_dim": 256,
-        "batch_size": 128,
-        "net_arch": [512, 512],
+        "location": "DongDa", "obs_type": "mlp", "ns": "mlp_s3", "seed": 3,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
     },
-    # Config 8: DongDa batch_size=256, lr=1e-4, net_arch=[256, 256]
+
+    # ── Wave 3: ablation on DongDa (seed 1, everything else identical to Config 3) ──
+    # Each varies exactly one term; "Full Model" is Config 3, not repeated here.
+    # Config 8 -- no grid penalty: does a grid-blind policy overload buses?
     {
-        "location": "DongDa",
-        "learning_rate": 1e-4,
-        "features_dim": 256,
-        "batch_size": 256,
-        "net_arch": [256, 256],
+        "location": "DongDa", "obs_type": "mlp", "ns": "abl_nogrid", "seed": 1,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
+        "grid_penalty_weight": 0.0,
     },
-    # Config 9: DongDa batch_size=256, lr=1e-4, net_arch=[512, 512]
+    # Config 9 -- no distance decay in the dynamic-demand model
     {
-        "location": "DongDa",
-        "learning_rate": 1e-4,
-        "features_dim": 256,
-        "batch_size": 256,
-        "net_arch": [512, 512],
+        "location": "DongDa", "obs_type": "mlp", "ns": "abl_beta0", "seed": 1,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
+        "beta": 0.0,
     },
-    # Config 10: DongDa batch_size=256, lr=4e-5, net_arch=[256, 256]
+    # Config 10 -- static demand (eta = 0 makes dynamic_demand == weak_demand)
     {
-        "location": "DongDa",
-        "learning_rate": 4e-5,
-        "features_dim": 256,
-        "batch_size": 256,
-        "net_arch": [256, 256],
+        "location": "DongDa", "obs_type": "mlp", "ns": "abl_eta0", "seed": 1,
+        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
+        "eta": 0.0,
     },
-    # Config 11: DongDa batch_size=256, lr=4e-5, net_arch=[512, 512]
-    {
-        "location": "DongDa",
-        "learning_rate": 4e-5,
-        "features_dim": 256,
-        "batch_size": 256,
-        "net_arch": [512, 512],
-    }
 ]
 
 

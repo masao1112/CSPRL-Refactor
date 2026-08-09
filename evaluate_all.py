@@ -62,7 +62,10 @@ def detect_settings(path_dir: str, args) -> tuple:
                 elif part.lower() == "mlp_graph":
                     obs_type = "mlp_graph"
                     use_gnn = False
-                
+                elif part.lower() == "attention":
+                    obs_type = "attention"
+                    use_gnn = False
+
     # 3. Check filenames
     if not location or (use_gnn is None and obs_type is None):
         zip_files = glob.glob(os.path.join(path_dir, "*.zip"))
@@ -77,6 +80,9 @@ def detect_settings(path_dir: str, args) -> tuple:
                             use_gnn = True
                         elif model_type == "mlp":
                             use_gnn = False
+                        elif model_type == "attention":
+                            use_gnn = False
+                            obs_type = "attention"
                         # Handle mlp_graph: filename would be best_model_mlp_graph_...
                         # but split on _ gives ["best", "model", "mlp", "graph", ...]
                         if len(parts) >= 5 and parts[2] == "mlp" and parts[3] == "graph":
@@ -112,7 +118,7 @@ def parse_step(filename: str) -> int:
         return int(match.group(1))
     return 0
 
-def evaluate_single_model(model_path: str, env: StationPlacement, use_gnn: bool, episodes: int = 1, seed: int = 1) -> Dict[str, float]:
+def evaluate_single_model(model_path: str, env: StationPlacement, obs_type: str, episodes: int = 1, seed: int = 1) -> Dict[str, float]:
     """
     Load a model and evaluate it over the specified number of episodes.
     """
@@ -123,10 +129,15 @@ def evaluate_single_model(model_path: str, env: StationPlacement, use_gnn: bool,
     else:
         algo_class = DQN
 
-    # Load model
-    if use_gnn:
+    # Load model -- obs_types backed by a MultiInputPolicy + custom features extractor
+    # need that class passed as custom_objects, or SB3 can't unpickle the policy.
+    if obs_type == "gnn":
         from custom_environment.gnn_extractor import GNNFeaturesExtractor
         custom_objects = {"GNNFeaturesExtractor": GNNFeaturesExtractor}
+        model = algo_class.load(model_path, env=env, custom_objects=custom_objects)
+    elif obs_type == "attention":
+        from custom_environment.attention_extractor import AttentionFeaturesExtractor
+        custom_objects = {"AttentionFeaturesExtractor": AttentionFeaturesExtractor}
         model = algo_class.load(model_path, env=env, custom_objects=custom_objects)
     else:
         model = algo_class.load(model_path, env=env)
@@ -154,8 +165,9 @@ def evaluate_single_model(model_path: str, env: StationPlacement, use_gnn: bool,
             best_node_list, best_plan = env.render()
             score = env.best_score
             
-            # Budget calculation
-            basic_cost = sum(s[2]["fee"] for s in env.plan_instance.extend_existing_plan)
+            # Budget calculation -- basic_cost is the snapshot taken at reset(), not a
+            # live sum over extend_existing_plan (those fees grow during the episode).
+            basic_cost = env.plan_instance.basic_cost
             total_inst_cost = (sum(station[2]["fee"] for station in best_plan) - basic_cost) / H.BUDGET
             
             all_scores.append(score)
@@ -246,8 +258,11 @@ def main():
     parser.add_argument("--episodes", type=int, default=1, help="Number of episodes per model evaluation (default: 1)")
     parser.add_argument("--seed", type=int, default=1, help="Random seed for environment reset (default: 1)")
     parser.add_argument("--location", type=str, default=None, help="Override detected location")
-    parser.add_argument("--use_gnn", type=bool, default=None, help="Override detected GNN settings")
-    
+    parser.add_argument("--use_gnn", action=argparse.BooleanOptionalAction, default=None,
+                         help="Override detected GNN settings (--use_gnn / --no-use_gnn)")
+    parser.add_argument("--min_step", type=int, default=60000,
+                         help="Skip model checkpoints saved before this training step (default: 60000)")
+
     args = parser.parse_args()
     
     path_dir = args.path_dir
@@ -262,7 +277,7 @@ def main():
     base_data_dir = os.path.join(current_dir, "custom_environment", "data")
     graph_file = os.path.join(base_data_dir, "Graph", location, f"{location}.graphml")
     node_file = os.path.join(base_data_dir, "Graph", location, f"nodes_extended_{location}.txt")
-    plan_file = os.path.join(base_data_dir, "Graph", location, f"existingplan_{location}.pkl")
+    plan_file = os.path.join(base_data_dir, "Graph", location, f"new_existingplan_{location}.pkl")
     
     print(f"[ENV] Initializing StationPlacement environment:")
     print(f"  Location: {location}")
@@ -270,7 +285,7 @@ def main():
     print(f"  Graph file: {graph_file}")
     print(f"  Node file: {node_file}")
     print(f"  Plan file: {plan_file}")
-    
+
     env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
     
     # Find all zip files
@@ -285,17 +300,19 @@ def main():
     for idx, z in enumerate(zip_files):
         filename = os.path.basename(z)
         step = parse_step(filename)
-        if step >= 60000:
+        if step >= args.min_step:
             print(f"[{idx+1}/{len(zip_files)}] Evaluating {filename} (Step: {step})...")
 
             try:
-                metrics = evaluate_single_model(z, env, use_gnn, episodes=args.episodes, seed=args.seed)
+                metrics = evaluate_single_model(z, env, obs_type, episodes=args.episodes, seed=args.seed)
                 metrics["file"] = z
                 metrics["step"] = step
                 results.append(metrics)
             except Exception as e:
                 print(f"  [ERROR] Failed to evaluate {filename}: {e}")
-            
+        else:
+            print(f"[{idx+1}/{len(zip_files)}] Skipping {filename} (Step: {step} < min_step {args.min_step})")
+
     if not results:
         print("No models were successfully evaluated.")
         sys.exit(1)
