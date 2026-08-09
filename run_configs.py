@@ -26,25 +26,25 @@ CONFIGS = [
     # Config 0
     {
         "location": "NamTuLiem", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
     # Config 1
     {
         "location": "TayHo", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
     # Config 2
     {
         "location": "CauGiay", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
     # Config 3  -- also serves as the "Full Model" row of the ablation table
     {
         "location": "DongDa", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
     },
 
@@ -52,25 +52,25 @@ CONFIGS = [
     # Config 4
     {
         "location": "CauGiay", "obs_type": "mlp", "ns": "mlp_s2", "seed": 2,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
     # Config 5
     {
         "location": "CauGiay", "obs_type": "mlp", "ns": "mlp_s3", "seed": 3,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
     },
     # Config 6
     {
         "location": "DongDa", "obs_type": "mlp", "ns": "mlp_s2", "seed": 2,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
     },
     # Config 7
     {
         "location": "DongDa", "obs_type": "mlp", "ns": "mlp_s3", "seed": 3,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
     },
 
@@ -79,21 +79,21 @@ CONFIGS = [
     # Config 8 -- no grid penalty: does a grid-blind policy overload buses?
     {
         "location": "DongDa", "obs_type": "mlp", "ns": "abl_nogrid", "seed": 1,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
         "grid_penalty_weight": 0.0,
     },
     # Config 9 -- no distance decay in the dynamic-demand model
     {
         "location": "DongDa", "obs_type": "mlp", "ns": "abl_beta0", "seed": 1,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
         "beta": 0.0,
     },
     # Config 10 -- static demand (eta = 0 makes dynamic_demand == weak_demand)
     {
         "location": "DongDa", "obs_type": "mlp", "ns": "abl_eta0", "seed": 1,
-        "learning_rate": 8e-5, "total_timesteps": 120000,
+        "learning_rate": 8e-5, "total_timesteps": 200000,
         "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
         "eta": 0.0,
     },
