@@ -2,10 +2,11 @@ import os
 import ast
 import pickle
 import pandas as pd
+import numpy as np
 
 
 # Path to file
-location = "ThanhXuan"
+location = "TayHo"
 base_dir = os.path.join("custom_environment", "data")
 existing_plan_file = os.path.join(base_dir, "QGIS", "existing_plan", "existing_plan_filtered.csv")
 node_file = os.path.join(base_dir, "Graph", f"{location}", f"nodes_extended_{location}.txt")
@@ -44,7 +45,10 @@ for row in detail_stations_df.iterrows():
 
     if s_pos is not None:
         existing_plan.append([s_pos, s_x, {}])
+    else:
+        print(f"Warning: no matching node found for station at ({s_lat}, {s_lon}); row dropped.")
 
 # save to file
-pickle.dump(existing_plan, open(f"custom_environment/data/Graph/{location}/existingplan_" + location + ".pkl", "wb"))
-print(f"Successfully saved {len(existing_plan)} existing plans.")
+truncated_plan = existing_plan[:10]
+pickle.dump(truncated_plan, open(f"custom_environment/data/Graph/{location}/existingplan_" + location + ".pkl", "wb"))
+print(f"Successfully saved {len(truncated_plan)} existing plans (truncated from {len(existing_plan)} matched stations).")

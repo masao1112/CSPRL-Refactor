@@ -104,10 +104,10 @@ if __name__ == "__main__":
             import sys, io
             old_stdout = sys.stdout
             sys.stdout = io.StringIO()
-            
-            benefit, cost = test_parameters(sf, df, node_list, G, iterations=40)
-            
-            sys.stdout = old_stdout
+            try:
+                benefit, cost = test_parameters(sf, df, node_list, G, iterations=40)
+            finally:
+                sys.stdout = old_stdout
             results.append((sf, df, benefit, cost))
             
     # Calculate min and max for normalization

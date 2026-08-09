@@ -6,8 +6,8 @@ import numpy as np
 
 # Configuration
 LOCATION = "DongDa"
-STEP = 66400
-RESULT_FILE = f"Results/optimal_plan/{LOCATION}/plan_RL_{STEP}.pkl"
+STEP = 106525
+RESULT_FILE = f"Results/optimal_plan/{LOCATION}/plan_G_Demand.pkl"
 OUTPUT_CSV = f"Results/optimal_plan/{LOCATION}/station_config_{STEP}.csv"
 
 
@@ -72,7 +72,7 @@ def export_station_config():
     df = pd.DataFrame(station_data)
 
     # Reorder columns to put main info first
-    cols = ["Station_ID", "Node_ID", "Latitude", "Longitude", "Total_Capacity_kW",
+    cols = ["Station_ID", "Node_ID", "Latitude", "Longitude", "Total_Capacity_MW",
             "Total_Chargers", "Charger_Config", "Install_Fee", "Charging Time",
             "Service_Rate_per_h", "Expected_Wait_Time_h", "Number of EVs"]
     # Append dynamic columns
@@ -87,7 +87,7 @@ def export_station_config():
     print("-" * 50)
     print(f"Successfully exported configuration to:\n{os.path.abspath(OUTPUT_CSV)}")
     print("-" * 50)
-    print(df[["Node_ID", "Total_Capacity_kW", "Charger_Config", "Number of EVs", "Expected_Wait_Time_h",
+    print(df[["Node_ID", "Total_Capacity_MW", "Charger_Config", "Number of EVs", "Expected_Wait_Time_h",
               "Charging Time", "Service_Rate_per_h"]].to_string())
     print("Total charg time:", df["Charging Time"].sum())
 
