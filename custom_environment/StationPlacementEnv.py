@@ -232,6 +232,14 @@ class StationPlacement(gym.Env):
 
         self.node_list = [self._init(my_node) for my_node in self.node_list]
 
+        # Episode horizon. Capped so a district's node count does not decide how many
+        # decisions the agent gets: without the cap, 120k training steps buy ~811
+        # episodes on DongDa but only ~123 on NamTuLiem, far short of the ~500 needed
+        # to converge. Defined once here because establish_observation() normalizes
+        # progress by it -- a second literal there would silently drift out of sync
+        # and leave the agent blind to how much of the episode is left.
+        self.max_steps = min(len(self.node_list) / 2, 350)
+
         self.plan_file = my_plan_file
         with open(my_plan_file, "rb") as f:
             print(f"Existing plan: {len(pickle.load(f))} stations "
@@ -434,7 +442,7 @@ class StationPlacement(gym.Env):
 
         # Global state
         budget_scaled = self.feature_scaler.scale_budget(self.budget)
-        progress_scaled = 2.0 * (self.schritt / max(1.0, len(self.node_list) / 2)) - 1.0
+        progress_scaled = 2.0 * (self.schritt / max(1.0, self.max_steps)) - 1.0
         score_delta = self.best_score - self.starting_score
         global_st = np.array([budget_scaled, progress_scaled, score_delta], dtype=np.float32)
 
@@ -535,7 +543,7 @@ class StationPlacement(gym.Env):
         if len(self.plan_instance.plan) == len(self.node_list):
             self.game_over = True
         self.schritt += 1
-        if self.schritt >= len(self.node_list) / 2:
+        if self.schritt >= self.max_steps:
             self.game_over = True
 
         # NOTE: no terminal bonus here. best_bonus in evaluation() already telescopes
