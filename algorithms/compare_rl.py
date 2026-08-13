@@ -1,6 +1,7 @@
 import os
 import sys
 import csv
+import json
 import pickle
 import argparse
 from math import ceil
@@ -42,31 +43,6 @@ def prepare_existing_plan(my_plan, my_node_list, graph):
     return my_node_list, my_plan
 
 
-def travel_metric(my_node_list):
-    """Calculates the max (worst-case) travel time in minutes across all nodes."""
-    big_travel_list = []
-    for my_node in my_node_list:
-        travel = my_node[1]["distance"] / H.VELOCITY * 60
-        times = ceil(10 * H.weak_demand(my_node))
-        for _ in range(times):
-            big_travel_list.append(travel)
-
-    travel_max = max(big_travel_list) if big_travel_list else 0
-    return travel_max
-
-
-def waiting_metric(my_plan):
-    """Calculates the max (worst-case) waiting time in minutes across all stations."""
-    big_waiting_list = []
-    for my_station in my_plan:
-        times = ceil(my_station[2]["D_s"])
-        for _ in range(times):
-            big_waiting_list.append(my_station[2]["W_s"] * 60)
-
-    wait_max = max(big_waiting_list) if big_waiting_list else 0
-    return wait_max
-
-
 def eci_test(
     my_plan,
     my_node_list,
@@ -88,9 +64,18 @@ def eci_test(
     return score
 
 
-def run_episode(agent, env, agent_type="rl", max_steps=None):
+def run_episode(agent, env, agent_type="rl", max_steps=None, eval_grid_penalty_weight=None):
     """Run one episode. max_steps cuts it short for quick behaviour probes on the
-    large districts -- the resulting scores are NOT comparable to a full run."""
+    large districts -- the resulting scores are NOT comparable to a full run.
+
+    eval_grid_penalty_weight rescores the resulting plan under a different grid
+    penalty weight than the episode ran with. This is what an ablation needs: a
+    policy trained at w_g=0 must ACT under w_g=0 (the weight reaches its
+    observation through global_state[2] = best_score - starting_score, so running
+    it at w_g=1 feeds it a signal it never saw), but must be REPORTED under the
+    full metric, otherwise the overloading it causes stays hidden. Leave it None
+    to score with whatever weight the episode used.
+    """
     obs, _ = env.reset(seed=1)
     total_reward = 0
     terminated = False
@@ -170,21 +155,30 @@ def run_episode(agent, env, agent_type="rl", max_steps=None):
         dist_penalty, cap_penalty, _, _ = env.grid_adapter.calculate_grid_penalty(station_nodes)
         grid_penalty = {'dist_penalty': dist_penalty, 'cap_penalty': cap_penalty}
         grid_violations = env.grid_adapter.get_grid_violations(station_nodes)
-    score, benefit, cost, charg_time, wait_time, cost_travel, fairness = H.norm_score(
-        best_plan,
-        best_node_list,
-        norm_benefit,
-        norm_charg,
-        norm_wait,
-        norm_travel,
-        grid_penalty,
-    )
+
+    # Rescore only; best_plan itself was already chosen under the episode's own
+    # weight, which is the plan this agent would actually deploy.
+    episode_wg = H.GRID_PENALTY_WEIGHT
+    if eval_grid_penalty_weight is not None:
+        H.GRID_PENALTY_WEIGHT = eval_grid_penalty_weight
+    try:
+        score, benefit, cost, charg_time, wait_time, cost_travel, fairness = H.norm_score(
+            best_plan,
+            best_node_list,
+            norm_benefit,
+            norm_charg,
+            norm_wait,
+            norm_travel,
+            grid_penalty,
+        )
+    finally:
+        H.GRID_PENALTY_WEIGHT = episode_wg
 
     # if env.grid_adapter and cap_penalty < 0:
     #     score -= 100
 
-    travel_max = travel_metric(best_node_list)
-    wait_max = waiting_metric(best_plan)
+    travel_max = H.travel_metric(best_node_list)
+    wait_max = H.waiting_metric(best_plan)
 
     # Budget calculation (consistent with run_metrics.py) -- basic_cost is the
     # snapshot taken at reset(); the fees on extend_existing_plan grow in place as
@@ -296,10 +290,7 @@ def resolve_rl_model(rl_log_dir, location, obs_type, ns, step=None):
     is what silently made 'attention' look for 'best_model_mlp_*' files.
 
     With no explicit step, prefer the ranking evaluate_all.py already wrote into
-    evaluation_results.csv (it sorts best-first). Only fall back to the newest
-    checkpoint on disk if that file is missing -- newest is NOT best: on
-    DongDa/attention/config_2 the top-scoring checkpoint is step 68213 while the
-    last one written is 179355.
+    evaluation_results.csv (it sorts best-first).
     """
     run_dir = os.path.join(rl_log_dir, ns)
     prefix = f"best_model_{obs_type}_{location}_{ns}_"
@@ -348,12 +339,34 @@ def resolve_rl_model(rl_log_dir, location, obs_type, ns, step=None):
 
 
 def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, max_steps=None,
+            eval_grid_penalty_weight=None,
             ga_ns=""):
     # Base directory and paths
     base_dir = os.path.join(project_root, "custom_environment", "data")
     graph_file = os.path.join(base_dir, "Graph", location, f"{location}.graphml")
     node_file = os.path.join(base_dir, "Graph", location, f"nodes_extended_{location}.txt")
-    plan_file = os.path.join(base_dir, "Graph", location, f"existingplan_{location}.pkl")
+    plan_file = os.path.join(base_dir, "Graph", location, f"new_existingplan_{location}.pkl")
+
+    # Adopt the reward parameters the RL run was trained with, before the env is
+    # built: reset() already scores the plan and builds the first observation.
+    # eta and beta reach the policy through node feature 3 and the demand-targeting
+    # heuristic, and grid_penalty_weight through global_state[2] -- evaluating an
+    # ablation under the defaults would feed the policy inputs it never saw.
+    run_cfg = {}
+    run_cfg_path = os.path.join("Results", "tmp", location, obs_type, ns, "config.json")
+    if os.path.exists(run_cfg_path):
+        with open(run_cfg_path, "r") as f:
+            run_cfg = json.load(f)
+    else:
+        print(f"Warning: {run_cfg_path} not found; running with module defaults.")
+    for key, attr in (("grid_penalty_weight", "GRID_PENALTY_WEIGHT"),
+                      ("eta", "DEMAND_ETA"), ("beta", "DEMAND_BETA")):
+        if run_cfg.get(key) is not None:
+            setattr(H, attr, float(run_cfg[key]))
+    print(f"[EPISODE] grid_penalty_weight={H.GRID_PENALTY_WEIGHT}, "
+          f"eta={H.DEMAND_ETA}, beta={H.DEMAND_BETA}")
+    if eval_grid_penalty_weight is not None:
+        print(f"[SCORING] plans rescored at grid_penalty_weight={eval_grid_penalty_weight}")
 
     # Env for testing
     env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
@@ -457,26 +470,26 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
 
     if rl_agent:
         print("Running RL evaluation...")
-        metrics, plan, node_list = run_episode(rl_agent, env, "rl", max_steps=max_steps)
+        metrics, plan, node_list = run_episode(rl_agent, env, "rl", max_steps=max_steps, eval_grid_penalty_weight=eval_grid_penalty_weight)
         results["RL"] = metrics
         plans["RL"] = plan
         node_lists["RL"] = node_list
 
     if ga_agent:
         print("Running GA evaluation...")
-        metrics, plan, node_list = run_episode(ga_agent, env, "ga", max_steps=max_steps)
+        metrics, plan, node_list = run_episode(ga_agent, env, "ga", max_steps=max_steps, eval_grid_penalty_weight=eval_grid_penalty_weight)
         results["GA"] = metrics
         plans["GA"] = plan
         node_lists["GA"] = node_list
 
     print("Running Greedy Benefit evaluation...")
-    metrics, plan, node_list = run_episode(None, env, "greedy_benefit", max_steps=max_steps)
+    metrics, plan, node_list = run_episode(None, env, "greedy_benefit", max_steps=max_steps, eval_grid_penalty_weight=eval_grid_penalty_weight)
     results["G-Benefit"] = metrics
     plans["G-Benefit"] = plan
     node_lists["G-Benefit"] = node_list
 
     print("Running Greedy Demand evaluation...")
-    metrics, plan, node_list = run_episode(None, env, "greedy_demand", max_steps=max_steps)
+    metrics, plan, node_list = run_episode(None, env, "greedy_demand", max_steps=max_steps, eval_grid_penalty_weight=eval_grid_penalty_weight)
     results["G-Demand"] = metrics
     plans["G-Demand"] = plan
     node_lists["G-Demand"] = node_list
@@ -597,7 +610,13 @@ if __name__ == "__main__":
     parser.add_argument("--ga_ns", type=str, default="",
                         help="Namespace of the GA run to load, matching train_ga.py --ns. "
                              "Omit for the flat Results/ga/<location>/ layout")
+    parser.add_argument("--eval_grid_penalty_weight", type=float, default=None,
+                        help="Rescore the resulting plans at this grid penalty weight. "
+                             "Pass 1.0 for an ablation trained with --grid_penalty_weight 0, "
+                             "so it acts as trained but is reported on the full metric. "
+                             "Omit to score with the weight the run was trained at")
     args = parser.parse_args()
     compare(location=args.location, obs_type=args.obs_type, ns=args.ns,
-            step=args.step, max_steps=args.max_steps, ga_ns=args.ga_ns)
+            step=args.step, max_steps=args.max_steps, ga_ns=args.ga_ns,
+            eval_grid_penalty_weight=args.eval_grid_penalty_weight)
 

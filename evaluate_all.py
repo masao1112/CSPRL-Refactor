@@ -142,45 +142,67 @@ def evaluate_single_model(model_path: str, env: StationPlacement, obs_type: str,
     else:
         model = algo_class.load(model_path, env=env)
         
-    all_scores = []
-    all_rewards = []
-    all_stations = []
-    all_budgets = []
-    
+    # Every metric reported in the paper's results table, so that picking a
+    # checkpoint and filling the table read the same numbers from one run.
+    per_episode: Dict[str, List[float]] = {k: [] for k in (
+        "score", "total_reward", "num_stations", "used_budget_ratio",
+        "benefit", "cost", "fairness", "charg_time", "wait_time", "cost_travel",
+        "travel_max", "wait_max", "dist_penalty", "cap_penalty", "overloaded_buses",
+    )}
+
     # Suppress internal prints of env steps/render to keep output clean
     with contextlib.redirect_stdout(io.StringIO()):
         for ep in range(episodes):
             obs, _ = env.reset(seed=seed + ep)
             done = False
             total_reward = 0
-            
+
             while not done:
                 action, _states = model.predict(obs, deterministic=True)
                 obs, reward, done, truncated, info = env.step(action)
                 total_reward += reward
                 if done or truncated:
                     break
-            
+
             # Retrieve performance metrics
             best_node_list, best_plan = env.render()
-            score = env.best_score
-            
+
+            # Recompute the score from best_plan rather than reading env.best_score,
+            # so every column below comes from the same call and the same plan.
+            dist_penalty = cap_penalty = 0.0
+            n_overloaded = 0
+            grid_penalty = None
+            if env.grid_adapter:
+                station_nodes = [(s[0], s[2]["capability"]) for s in best_plan]
+                dist_penalty, cap_penalty, _, _ = env.grid_adapter.calculate_grid_penalty(station_nodes)
+                grid_penalty = {"dist_penalty": dist_penalty, "cap_penalty": cap_penalty}
+                n_overloaded = len(env.grid_adapter.get_grid_violations(station_nodes))
+            score, benefit, cost, charg_time, wait_time, cost_travel, fairness = H.norm_score(
+                best_plan, best_node_list,
+                env.plan_instance.norm_benefit, env.plan_instance.norm_charg,
+                env.plan_instance.norm_wait, env.plan_instance.norm_travel,
+                grid_penalty,
+            )
+
             # Budget calculation -- basic_cost is the snapshot taken at reset(), not a
             # live sum over extend_existing_plan (those fees grow during the episode).
             basic_cost = env.plan_instance.basic_cost
             total_inst_cost = (sum(station[2]["fee"] for station in best_plan) - basic_cost) / H.BUDGET
-            
-            all_scores.append(score)
-            all_rewards.append(total_reward)
-            all_stations.append(len(best_plan))
-            all_budgets.append(total_inst_cost)
-            
-    return {
-        "score": float(np.mean(all_scores)),
-        "total_reward": float(np.mean(all_rewards)),
-        "num_stations": float(np.mean(all_stations)),
-        "used_budget_ratio": float(np.mean(all_budgets))
-    }
+
+            for key, value in (
+                ("score", score), ("total_reward", total_reward),
+                ("num_stations", len(best_plan)), ("used_budget_ratio", total_inst_cost),
+                ("benefit", benefit), ("cost", cost), ("fairness", fairness),
+                ("charg_time", charg_time), ("wait_time", wait_time),
+                ("cost_travel", cost_travel),
+                ("travel_max", H.travel_metric(best_node_list)),
+                ("wait_max", H.waiting_metric(best_plan)),
+                ("dist_penalty", dist_penalty), ("cap_penalty", cap_penalty),
+                ("overloaded_buses", n_overloaded),
+            ):
+                per_episode[key].append(float(value))
+
+    return {k: float(np.mean(v)) for k, v in per_episode.items()}
 
 def print_table(results: List[Dict[str, Any]]):
     """
@@ -272,7 +294,32 @@ def main():
         
     print(f"\nEvaluating models in directory: {path_dir}")
     location, use_gnn, obs_type = detect_settings(path_dir, args)
-    
+
+    # Adopt the reward parameters this run was trained with, before the env is built.
+    # Ranking matters here, not just reporting: compare_rl.py picks its checkpoint from
+    # the CSV this script writes, so evaluating an ablation under the default eta/beta
+    # would rank every checkpoint under an observation distribution the policy never
+    # saw, and compare_rl would then faithfully load the wrong one.
+    run_cfg = {}
+    run_cfg_path = os.path.join(path_dir, "config.json")
+    if os.path.exists(run_cfg_path):
+        try:
+            with open(run_cfg_path, "r") as f:
+                run_cfg = json.load(f)
+        except Exception as e:
+            print(f"[GRID PARAMS] Warning reading {run_cfg_path}: {e}")
+    missing = [k for k in ("grid_penalty_weight", "eta", "beta") if k not in run_cfg]
+    if missing:
+        print(f"[GRID PARAMS] Not recorded in this run's config.json: {', '.join(missing)}; "
+              f"using module defaults for those. Runs trained before these became "
+              f"configurable are only comparable if the defaults still match.")
+    for key, attr in (("grid_penalty_weight", "GRID_PENALTY_WEIGHT"),
+                      ("eta", "DEMAND_ETA"), ("beta", "DEMAND_BETA")):
+        if run_cfg.get(key) is not None:
+            setattr(H, attr, float(run_cfg[key]))
+    print(f"[GRID PARAMS] grid_penalty_weight={H.GRID_PENALTY_WEIGHT}, "
+          f"eta={H.DEMAND_ETA}, beta={H.DEMAND_BETA}")
+
     # Setup files
     base_data_dir = os.path.join(current_dir, "custom_environment", "data")
     graph_file = os.path.join(base_data_dir, "Graph", location, f"{location}.graphml")
@@ -329,7 +376,9 @@ def main():
     
     # Identify the best model
     best_model = results[0]
-    print(f"\n🏆 BEST PERFORMING MODEL ({args.metric.upper()}):")
+    # Plain ASCII: on Windows a redirected stdout defaults to cp1252, where an
+    # emoji raises UnicodeEncodeError and kills the run at the very last step.
+    print(f"\n=== BEST PERFORMING MODEL ({args.metric.upper()}) ===")
     print(f"  File: {best_model['file']}")
     print(f"  Step: {best_model['step']}")
     print(f"  Score: {best_model['score']:.6f}")
@@ -339,18 +388,19 @@ def main():
     
     # Save CSV report
     csv_path = os.path.join(path_dir, "evaluation_results.csv")
+    # model_file and step first (they identify the row); the rest in the order the
+    # paper's results table reports them. resolve_rl_model in compare_rl.py reads
+    # model_file/step/score, so those three names must not be renamed.
+    metric_cols = ["score", "total_reward", "benefit", "cost", "fairness",
+                   "charg_time", "wait_time", "cost_travel", "travel_max", "wait_max",
+                   "dist_penalty", "cap_penalty", "overloaded_buses",
+                   "num_stations", "used_budget_ratio"]
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["model_file", "step", "score", "total_reward", "num_stations", "used_budget_ratio"])
+        writer.writerow(["model_file", "step"] + metric_cols)
         for r in results:
-            writer.writerow([
-                os.path.basename(r["file"]),
-                r["step"],
-                r["score"],
-                r["total_reward"],
-                r["num_stations"],
-                r["used_budget_ratio"]
-            ])
+            writer.writerow([os.path.basename(r["file"]), r["step"]]
+                            + [r.get(c, "") for c in metric_cols])
     print(f"\n[REPORT] Saved evaluation results to {csv_path}")
     
     # Plot results
