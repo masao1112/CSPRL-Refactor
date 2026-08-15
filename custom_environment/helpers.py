@@ -369,6 +369,31 @@ def travel_cost(my_node_list):
     return my_cost_travel
 
 
+def travel_metric(my_node_list):
+    """Max (worst-case) travel time in minutes across all nodes, demand-weighted.
+
+    Reported alongside the normalized travel cost because the aggregate hides
+    which node is worst off; both compare_rl.py and evaluate_all.py report it.
+    """
+    big_travel_list = []
+    for my_node in my_node_list:
+        travel = my_node[1]["distance"] / VELOCITY * 60
+        times = ceil(10 * weak_demand(my_node))
+        for _ in range(times):
+            big_travel_list.append(travel)
+    return max(big_travel_list) if big_travel_list else 0
+
+
+def waiting_metric(my_plan):
+    """Max (worst-case) waiting time in minutes across all stations."""
+    big_waiting_list = []
+    for my_station in my_plan:
+        times = ceil(my_station[2]["D_s"])
+        for _ in range(times):
+            big_waiting_list.append(my_station[2]["W_s"] * 60)
+    return max(big_waiting_list) if big_waiting_list else 0
+
+
 def charging_time(my_plan):
     """
     yields the total charging time given the capability of the CS of the charging plan

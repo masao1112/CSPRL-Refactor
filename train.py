@@ -248,9 +248,23 @@ if __name__ == '__main__':
         modelname = f"best_model_{obs_type}_{location}_"
 
     """
-    Define and train the agent 
+    Define and train the agent
     """
     os.makedirs(log_dir, exist_ok=True)
+
+    # Write the config BEFORE training, not after: evaluate_all.py and compare_rl.py
+    # read grid_penalty_weight/eta/beta back from it to reproduce this run's reward.
+    # Saving it only on completion means an interrupted run leaves checkpoints that
+    # cannot be scored correctly, and both scripts would silently fall back to the
+    # module defaults.
+    config_path = os.path.join(log_dir, "config.json")
+    config_data = vars(args).copy()
+    config_data.pop("no_gnn", None)  # redundant with use_gnn
+    config_data["obs_type"] = obs_type  # save the resolved obs_type
+    with open(config_path, "w") as f:
+        json.dump(config_data, f, indent=2)
+    print(f"Config saved to {config_path}")
+
     env = Monitor(env, os.path.join(log_dir, "monitor.csv"))
 
     if obs_type == "gnn":
@@ -300,14 +314,6 @@ if __name__ == '__main__':
     callback = SaveOnBestTrainingRewardCallback(check_freq=1, my_log_dir=log_dir, my_modelname=modelname)
     model.learn(total_timesteps=args.total_timesteps, log_interval=10 ** 4, callback=callback)
 
-    # Save config, episode history, and plot
-    config_path = os.path.join(log_dir, "config.json")
-    config_data = vars(args).copy()
-    config_data.pop("no_gnn", None)  # redundant with use_gnn
-    config_data["obs_type"] = obs_type  # save the resolved obs_type
-    with open(config_path, "w") as f:
-        json.dump(config_data, f, indent=2)
-    print(f"Config saved to {config_path}")
-
+    # Save episode history and plot (config.json was written before training)
     callback.save_history(log_dir)
     callback.plot_history(log_dir)

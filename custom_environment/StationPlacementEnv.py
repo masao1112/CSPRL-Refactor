@@ -3,6 +3,7 @@ from gymnasium import spaces
 import numpy as np
 from stable_baselines3.common.env_checker import check_env
 import pickle
+import random
 from random import choice
 import custom_environment.helpers as H
 from custom_environment.graph_features import GraphFeatureAugmentor
@@ -329,6 +330,19 @@ class StationPlacement(gym.Env):
         # Handle the seed for Gymnasium compatibility
         if seed is not None:
             np.random.seed(seed)
+            random.seed(seed)
+
+        # Clear the node->station assignment left by the previous episode.
+        # station_seeking is an iterative fixed point run only twice per step, so it
+        # starts from whatever assignment it finds; without this, episode n+1 inherits
+        # episode n and the same seed no longer reproduces the same episode. That made
+        # evaluate_all.py's ranking depend on the order checkpoints were evaluated in,
+        # and made its score disagree with compare_rl.py running the same checkpoint
+        # on a fresh env. The distance caches are deliberately NOT cleared: they hold
+        # deterministic shortest-path lookups and rebuilding them doubles episode time.
+        for my_node in self.node_list:
+            my_node[1]["charging station"] = None
+            my_node[1]["distance"] = None
 
         if self.best_score is not None:
             self.last_episode_best_score = self.best_score
