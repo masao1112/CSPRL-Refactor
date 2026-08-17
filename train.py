@@ -1,4 +1,4 @@
-from stable_baselines3 import DQN
+from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.callbacks import BaseCallback
@@ -171,7 +171,9 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description="Train a DQN agent for station placement.")
+    parser = argparse.ArgumentParser(description="Train a DQN or PPO agent for station placement.")
+    parser.add_argument("--algo", type=str, choices=["dqn", "ppo"], default="dqn",
+                        help="RL algorithm to train with (default: dqn)")
     parser.add_argument("--location", type=str, default="DongDa", help="District name (default: DongDa)")
     parser.add_argument("--use_gnn", action="store_true", default=True, help="Use GNN policy (default: True)")
     parser.add_argument("--no_gnn", action="store_true", help="Disable GNN, use MLP policy")
@@ -184,8 +186,15 @@ if __name__ == '__main__':
     parser.add_argument("--exploration_final_eps", type=float, default=0.05, help="Final exploration epsilon (default: 0.05)")
     parser.add_argument("--exploration_fraction", type=float, default=0.3, help="Exploration fraction (default: 0.3)")
     parser.add_argument("--total_timesteps", type=int, default=200000, help="Total training timesteps (default: 200000)")
-    parser.add_argument("--target_update_interval", type=int, default=1000, help="Target network update interval (default: 1000)")
+    parser.add_argument("--target_update_interval", type=int, default=1000, help="[dqn] Target network update interval (default: 1000)")
     parser.add_argument("--max_grad_norm", type=float, default=1.0, help="Max gradient norm for clipping (default: 1.0)")
+    # PPO-only args (ignored when --algo dqn)
+    parser.add_argument("--n_steps", type=int, default=2048, help="[ppo] Rollout buffer size per env before each update (default: 2048)")
+    parser.add_argument("--n_epochs", type=int, default=10, help="[ppo] Number of epochs per update (default: 10)")
+    parser.add_argument("--gae_lambda", type=float, default=0.95, help="[ppo] GAE lambda (default: 0.95)")
+    parser.add_argument("--clip_range", type=float, default=0.2, help="[ppo] PPO clip range (default: 0.2)")
+    parser.add_argument("--ent_coef", type=float, default=0.0, help="[ppo] Entropy coefficient (default: 0.0)")
+    parser.add_argument("--vf_coef", type=float, default=0.5, help="[ppo] Value function coefficient (default: 0.5)")
     parser.add_argument("--seed", type=int, default=1, help="Random seed (default: 1)")
     parser.add_argument("--ns", type=str, default="", help="Namespace of your training run")
     parser.add_argument("--lr_schedule", action="store_true", help="Use linear LR decay (default: constant LR)")
@@ -240,12 +249,18 @@ if __name__ == '__main__':
           f"eta={H.DEMAND_ETA}, beta={H.DEMAND_BETA}")
 
     env = StationPlacement(graph_file, node_file, plan_file, location=location, obs_type=obs_type)
+    # PPO runs get their own log_dir (a "/ppo" segment) and modelname prefix so their
+    # monitor.csv/config.json/checkpoints never collide with (or get mistaken for) DQN's;
+    # DQN keeps its original layout for backward compatibility with evaluate.py /
+    # evaluate_all.py / compare_rl.py, which still assume DQN.load().
+    algo_dir = "" if args.algo == "dqn" else f"/{args.algo}"
+    algo_prefix = "" if args.algo == "dqn" else f"{args.algo}_"
     if args.ns:
-        log_dir = f"Results/tmp/{location}/{obs_type}/{args.ns}"
-        modelname = f"best_model_{obs_type}_{location}_{args.ns}_"
+        log_dir = f"Results/tmp/{location}/{obs_type}{algo_dir}/{args.ns}"
+        modelname = f"best_model_{algo_prefix}{obs_type}_{location}_{args.ns}_"
     else:
-        log_dir = f"Results/tmp/{location}/{obs_type}"
-        modelname = f"best_model_{obs_type}_{location}_"
+        log_dir = f"Results/tmp/{location}/{obs_type}{algo_dir}"
+        modelname = f"best_model_{algo_prefix}{obs_type}_{location}_"
 
     """
     Define and train the agent
@@ -299,18 +314,34 @@ if __name__ == '__main__':
     else:
         lr = args.learning_rate
 
-    model = DQN(policy_type, env, verbose=1,
-                batch_size=args.batch_size,
-                buffer_size=args.buffer_size,
-                learning_rate=lr,
-                exploration_initial_eps=args.exploration_initial_eps,
-                exploration_final_eps=args.exploration_final_eps,
-                exploration_fraction=args.exploration_fraction,
-                target_update_interval=args.target_update_interval,
-                max_grad_norm=args.max_grad_norm,
-                policy_kwargs=policy_kwargs,
-                device='cuda' if torch.cuda.is_available() else 'cpu',
-                seed=args.seed)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if args.algo == "dqn":
+        model = DQN(policy_type, env, verbose=1,
+                    batch_size=args.batch_size,
+                    buffer_size=args.buffer_size,
+                    learning_rate=lr,
+                    exploration_initial_eps=args.exploration_initial_eps,
+                    exploration_final_eps=args.exploration_final_eps,
+                    exploration_fraction=args.exploration_fraction,
+                    target_update_interval=args.target_update_interval,
+                    max_grad_norm=args.max_grad_norm,
+                    policy_kwargs=policy_kwargs,
+                    device=device,
+                    seed=args.seed)
+    else:  # ppo
+        model = PPO(policy_type, env, verbose=1,
+                    batch_size=args.batch_size,
+                    n_steps=args.n_steps,
+                    n_epochs=args.n_epochs,
+                    learning_rate=lr,
+                    gae_lambda=args.gae_lambda,
+                    clip_range=args.clip_range,
+                    ent_coef=args.ent_coef,
+                    vf_coef=args.vf_coef,
+                    max_grad_norm=args.max_grad_norm,
+                    policy_kwargs=policy_kwargs,
+                    device=device,
+                    seed=args.seed)
     callback = SaveOnBestTrainingRewardCallback(check_freq=1, my_log_dir=log_dir, my_modelname=modelname)
     model.learn(total_timesteps=args.total_timesteps, log_interval=10 ** 4, callback=callback)
 
