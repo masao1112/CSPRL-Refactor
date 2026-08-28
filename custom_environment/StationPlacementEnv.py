@@ -372,8 +372,13 @@ class StationPlacement(gym.Env):
         # self.best_score = max(self.best_score, -25)
         self.plan_length = len(self.plan_instance.existing_plan)
         self.schritt = 0
-        self.best_plan = []
-        self.best_node_list = []
+        # Seed the best-so-far with the starting plan, not with nothing. best_score
+        # is already the starting plan's score, so an episode in which no step
+        # improves on it must report that plan -- it is the one the agent would
+        # deploy. Seeding with [] made render() hand back an empty plan in exactly
+        # that case, while still printing the starting score next to it.
+        self.best_plan = copy.deepcopy(self.plan_instance.plan)
+        self.best_node_list = copy.deepcopy(self.node_list)
         # Use absolute path for config lookup
         config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "processed", "config_lookup.json")
         self.config_dict = H.get_lookup(config_path)
@@ -548,7 +553,32 @@ class StationPlacement(gym.Env):
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
 
-        # Step: calculate reward normally (including soft penalty from grid)
+        # Check Grid Capacity Hard Constraint (Early Termination / Safe RL)
+        is_grid_overloaded = False
+        violations = []
+        if self.grid_adapter:
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
+            is_grid_overloaded, violations = self.grid_adapter.has_grid_violation(station_nodes)
+
+        if is_grid_overloaded:
+            # Hard Constraint Violation Triggered:
+            # Immediate episode termination with a severe failure/crash penalty.
+            # The violating plan is rejected and NOT recorded into best_plan.
+            self.game_over = True
+            GRID_CRASH_PENALTY = -3.0
+            reward = GRID_CRASH_PENALTY
+            
+            H.coverage(self.node_list, self.plan_instance.plan)
+            obs = self.establish_observation()
+            
+            info = {
+                "terminated_reason": "grid_overload",
+                "grid_violation": True,
+                "violation_details": violations,
+            }
+            return obs, reward, self.game_over, False, info
+
+        # Step: calculate reward normally (including soft penalty from distance/welfare)
         reward = self.evaluation()
 
         H.coverage(self.node_list, self.plan_instance.plan)
@@ -560,13 +590,22 @@ class StationPlacement(gym.Env):
         if self.schritt >= self.max_steps:
             self.game_over = True
 
-        # NOTE: no terminal bonus here. best_bonus in evaluation() already telescopes
-        # to exactly (best_score_final - starting_score) over the episode, so a
-        # terminal bonus of the same quantity would just re-add that signal a
-        # second (or third) time rather than convey new information.
+        info = {
+            "terminated_reason": "budget_or_steps" if self.game_over else "in_progress",
+            "grid_violation": False,
+        }
+        if self.grid_adapter:
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
+            dist_p, cap_p, grid_util, grid_dist = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            info.update({
+                "dist_penalty": dist_p,
+                "cap_penalty": cap_p,
+                "grid_utilization": grid_util,
+                "grid_distance": grid_dist,
+            })
 
         # Return gymnasium format: (obs, reward, terminated, truncated, info)
-        return obs, reward, self.game_over, False, {}
+        return obs, reward, self.game_over, False, info
 
     def station_config_check(self, my_station):
         """

@@ -1,0 +1,496 @@
+\documentclass[10pt, conference, a4paper, compsocconf]{IEEEtran}
+\usepackage{amsmath,amsxtra,amssymb,amsthm,latexsym,amscd,amsfonts}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+
+\usepackage[top=2.7cm, bottom = 5.4cm, left=2.72cm, right = 3.0cm]{geometry}
+\headsep = 0.7cm
+\headheight = 1.0cm
+\footskip = 1.0cm
+\voffset = -0.74 cm
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\sectionmark}[1]{\markright{\MakeUppercase{#1}}{}}
+\renewcommand{\headrulewidth}{0pt}
+
+\ifCLASSINFOpdf
+  \usepackage[pdftex]{graphicx}
+  \DeclareGraphicsExtensions{.pdf,.jpeg,.png,.jpg}
+\else
+  \usepackage[dvips]{graphicx}
+  \DeclareGraphicsExtensions{.eps}
+\fi
+
+\usepackage{array}
+\usepackage[font=footnotesize]{subfig}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+
+\graphicspath{{../}{./}{../Results/}}
+
+% Nới hạn mức float hai cột: mặc định \dbltopfraction=0.7 khiến bảng/hình rộng
+% bị hoãn liên tục và trôi xuống cuối bài (đè lên phần tài liệu tham khảo).
+\renewcommand{\dbltopfraction}{0.9}
+\renewcommand{\dblfloatpagefraction}{0.7}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\textfraction}{0.07}
+\setcounter{dbltopnumber}{2}
+
+\makeatletter
+\def\ps@IEEEtitlepagestyle{%
+\def\@oddhead{\centering{\mbox{\footnotesize{\textit{\;\;\;\; Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}%
+\def\@evenhead{\centering{\mbox{\footnotesize{\textit{\;\;\;\; Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}}%
+\def\@oddfoot{\scriptsize \thepage \hfil }%
+\def\@evenfoot{\scriptsize \hfil \thepage}
+}
+}
+\makeatother
+
+\begin{document}
+\pagenumbering{gobble}
+\fontsize{10}{12}
+\selectfont
+
+\fancyhead[RE,LO]{\centering{\footnotesize{\textit{Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}
+
+\title{Học tăng cường sâu cho bài toán quy hoạch trạm sạc xe điện có ràng buộc lưới điện}
+
+\author{\IEEEauthorblockN{Nguyễn Văn A\IEEEauthorrefmark{1}, Nguyễn Văn B\IEEEauthorrefmark{2}}
+	\IEEEauthorblockA{\IEEEauthorrefmark{1}Đơn vị 1, \IEEEauthorrefmark{2}Đơn vị 2}
+	\IEEEauthorblockA{Email: a@abc.xyz, b@abc.xyz}
+}
+
+\maketitle
+
+%======================================================================
+\begin{abstract}
+Sự gia tăng nhanh của xe điện đặt ra yêu cầu quy hoạch hạ tầng sạc vừa đáp ứng nhu cầu sử dụng, vừa phù hợp với khả năng cung cấp của lưới điện đô thị. Bài báo đề xuất một mô hình học tăng cường sâu cho bài toán mở rộng mạng trạm sạc theo chuỗi quyết định, với trạng thái phản ánh nhu cầu thay đổi theo hạ tầng đã triển khai, mức ùn tắc tại trạm và dư địa công suất của lưới phân phối, còn hàm mục tiêu hợp nhất chất lượng phục vụ, chi phí người dùng, công bằng không gian và tác động lên lưới. Chính sách được học bằng Deep Q-Network với bộ mã hoá kết hợp cơ chế tự chú ý và lớp gộp Set Transformer, cho biểu diễn toàn cục có kích thước cố định. Trên mạng đường bộ và dữ liệu lưới điện quận Đống Đa, phương pháp đề xuất đạt điểm phúc lợi cao nhất trong bốn phương án đối sánh, đồng thời dùng ít trạm và ít ngân sách hơn mà không gây quá tải thanh cái nào.
+\end{abstract}
+
+\begin{IEEEkeywords}
+trạm sạc xe điện; học tăng cường sâu; cơ chế tự chú ý; Set Transformer;
+lưới điện phân phối; quy hoạch hạ tầng đô thị
+\end{IEEEkeywords}
+
+\IEEEpeerreviewmaketitle
+
+%======================================================================
+\section{Giới thiệu}
+
+Quá trình điện hóa giao thông đang diễn ra nhanh chóng tại các đô thị Việt Nam, kéo theo nhu cầu mở rộng mạng lưới trạm sạc công cộng \cite{veisi2025optimal, truc2024electric}. Tuy nhiên, tại các khu vực đô thị có mật độ cao, việc lựa chọn vị trí trạm sạc không chỉ phụ thuộc vào nhu cầu sử dụng mà còn bị chi phối bởi chi phí mặt bằng và khả năng đáp ứng của lưới điện phân phối. Do đó, quy hoạch trạm sạc cần đồng thời bảo đảm hiệu quả phục vụ và hạn chế tác động lên hạ tầng điện hiện hữu \cite{kumar2024hybrid}.
+
+Bài toán có tính tuần tự vì mỗi quyết định triển khai đều làm thay đổi trạng thái của hệ thống. Khi một trạm mới được bổ sung, nhu cầu chưa được phục vụ tại khu vực lân cận giảm xuống, đồng thời công suất khả dụng của lưới điện cũng bị thu hẹp. Do đó, một vị trí phù hợp khi xét riêng lẻ chưa chắc còn tối ưu sau một chuỗi quyết định. Các phương pháp tham lam hoặc tối ưu tĩnh khó phản ánh đầy đủ sự phụ thuộc này, đặc biệt khi nhiều trạm được tập trung trong cùng một khu vực và cùng khai thác nguồn lực lưới điện có giới hạn.
+
+Học tăng cường sâu (Deep Reinforcement Learning -- DRL) là hướng tiếp cận tự nhiên cho bài toán tuần tự này: chúng tôi mô hình hoá nó dưới dạng quá trình quyết định Markov (Markov Decision Process -- MDP) và học chính sách bằng mạng Q sâu (Deep Q-Network -- DQN). Tác tử không chọn trực tiếp một nút trong hàng trăm ứng viên mà chọn một trong năm hành động mức cao (macro-action), rồi một heuristic xác định vị trí cụ thể. Bộ mã hoá vì vậy chỉ cần sinh \emph{một} biểu diễn tóm tắt toàn mạng có kích thước cố định -- điều mà việc làm phẳng đặc trưng nút bằng perceptron nhiều lớp (Multilayer Perceptron -- MLP) không đáp ứng được vì phụ thuộc số nút, còn mạng nơ-ron đồ thị truyền thông điệp chỉ tổng hợp trong phạm vi lân cận giới hạn.
+
+Gần nhất với nghiên cứu này là PPO-Attention \cite{liu2023optimal}, dùng cơ chế tự chú ý (self-attention) để mã hoá quan hệ giữa các nút. Kế thừa hướng đó, chúng tôi bổ sung lớp gộp bằng chú ý đa đầu (Pooling by Multi-head Attention -- PMA) của Set Transformer \cite{lee2019set}: self-attention cho mỗi nút tầm nhìn toàn cục, còn PMA nén tập embedding có số lượng thay đổi thành véc-tơ kích thước cố định, khớp với không gian năm macro-action.
+
+Các đóng góp chính của bài báo gồm: (i) mô hình hoá bài toán mở rộng mạng trạm sạc dưới dạng MDP, đồng thời xét đến nhu cầu động và tác động tích luỹ lên lưới điện; (ii) đề xuất bộ mã hoá trạng thái kết hợp cơ chế tự chú ý và PMA để tạo ra biểu diễn toàn cục có kích thước cố định; và (iii) đánh giá phương pháp trên mạng đường bộ đô thị thông qua đối sánh với các phương pháp tham lam và giải thuật di truyền.
+
+
+%======================================================================
+\section{Các nghiên cứu liên quan}
+\label{sec:related}
+
+\textbf{Quy hoạch vị trí trạm sạc.} Các nghiên cứu ban đầu về bài toán quy hoạch vị trí trạm sạc chủ yếu dựa trên các mô hình tối ưu cổ điển \cite{hakimi1964optimum}. Trong quy hoạch trạm sạc xe điện, các mô hình quy hoạch nguyên hỗn hợp cũng được sử dụng để đồng thời xác định vị trí và cấu hình trạm \cite{veisi2025optimal, truc2024electric}. Mặc dù các phương pháp này có thể tìm được nghiệm tối ưu hoặc gần tối ưu ở quy mô vừa phải, chúng thường giả định nhu cầu và trạng thái lưới điện cố định trong quá trình tối ưu. Các phương pháp tiến hoá, chẳng hạn như giải thuật di truyền và các phương pháp lai \cite{zhou2022location, kumar2024hybrid}, có khả năng xử lý không gian tìm kiếm lớn hơn, nhưng vẫn chủ yếu xem bài toán dưới góc độ tĩnh và chưa trực tiếp khai thác sự phụ thuộc giữa các quyết định triển khai liên tiếp.
+
+\textbf{Học tăng cường cho quy hoạch trạm sạc.} Học tăng cường sâu (Deep Reinforcement Learning -- DRL) đã được áp dụng cho nhiều bài toán tối ưu tổ hợp trên đồ thị \cite{dai2017learning}, cũng như các bài toán định vị và điều phối trạm sạc \cite{ioannou2025deep, padmanabhan2021optimal, von2022reinforcement}. Khác với tối ưu tĩnh, DRL cho phép mô hình hoá quá trình triển khai dưới dạng các quyết định tuần tự và cập nhật chính sách dựa trên trạng thái hiện tại của hệ thống. Tuy nhiên, nhiều phương pháp vẫn giả định nhu cầu cố định hoặc sử dụng bộ mã hoá dựa trên mạng perceptron nhiều lớp (Multilayer Perceptron -- MLP) và mạng nơ-ron đồ thị, trong đó thông tin chủ yếu được truyền qua các nút lân cận.
+
+\textbf{Cơ chế chú ý.} Một hướng tiếp cận gần với nghiên cứu này là Proximal Policy Optimization kết hợp cơ chế chú ý (PPO-Attention) \cite{liu2023optimal}, trong đó cơ chế tự chú ý được sử dụng để trao đổi thông tin giữa các nút của mạng đường bộ khi lựa chọn vị trí trạm sạc. Kết quả cho thấy cơ chế chú ý có khả năng khai thác các mối quan hệ không gian trên phạm vi toàn mạng. Dựa trên hướng tiếp cận này, chúng tôi bổ sung cơ chế gộp bằng chú ý đa đầu (Pooling by Multi-head Attention -- PMA) của Set Transformer \cite{lee2019set} để tổng hợp tập biểu diễn nút có kích thước thay đổi thành một véc-tơ kích thước cố định. Cách biểu diễn này phù hợp với không gian hành động mức cao được sử dụng trong bài toán.
+
+Khoảng trống chung là chưa kết hợp đồng thời ba yếu tố: triển khai tuần tự dưới giới hạn ngân sách, nhu cầu và dư địa lưới thay đổi theo các quyết định trước, và một bộ mã hoá toàn cục không phụ thuộc số nút. Bài báo giải quyết cả ba trong một khung thống nhất.
+
+
+%======================================================================
+\section{Phát biểu bài toán}
+\label{sec:problem}
+
+\subsection{Môi trường và hàm mục tiêu}
+
+Mạng đường bộ của khu vực nghiên cứu là đồ thị có thuộc tính $G=(V,E)$ trích
+xuất từ OpenStreetMap \cite{boeing2017osmnx}: mỗi nút $v\in V$ mang toạ độ, nhu
+cầu cơ sở $\text{dem}(v)$, giá đất và mật độ dân số; mỗi cạnh mang chiều dài
+đoạn đường. Một trạm $s=(v,\mathbf{t})$ đặt tại nút $v$ lắp
+$\mathbf{t}=(t_1,\ldots,t_m)$ bộ sạc thuộc $m$ mức công suất, tổng
+$n(s)=\sum_i t_i\le K$, cho công suất phục vụ $C(s)=\sum_i t_i c_i$ với $c_i$
+là công suất của bộ sạc loại $i$. Bán kính phục vụ tăng theo $C(s)$ rồi bão hoà
+tại $R_{\max}$, còn chi phí triển khai gồm tiền mặt bằng và giá thiết bị:
+\begin{equation}\small
+\label{eq:station}
+r(s)=\frac{R_{\max}}{1+e^{-C(s)/C_0}},\qquad
+\mathrm{fee}(s)=\mathrm{land}(v,s)+\sum_i t_i\kappa_i .
+\end{equation}
+Một kế hoạch $p$ là tập các trạm đã triển khai.
+
+Chất lượng của $p$ được đo bằng hàm phúc lợi $R(p)$ gồm bốn thành phần: lợi ích
+phục vụ, chi phí bất tiện, công bằng không gian và tác động lên lưới điện. Ba
+thành phần đầu được chuẩn hoá theo giá trị của chúng dưới hạ tầng hiện hữu
+$p_0$ để so sánh được giữa các khu vực.
+
+\emph{Lợi ích phục vụ} cân bằng hai góc nhìn: một nút được nhiều trạm phủ thì
+lợi ích biên giảm theo chuỗi điều hoà, qua đó phạt việc phủ trùng lặp; ngược
+lại một trạm càng vươn tới nhiều nút thì càng hữu ích:
+\begin{equation}\small
+\label{eq:benefit}
+\mathrm{benefit}(p)=\frac{1}{2}\left(
+\frac{1}{|V|}\sum_{v\in V}\sum_{k=1}^{\mathrm{cov}(v)}\frac{1}{k}
++\frac{1}{|p|}\sum_{s\in p}\frac{\lambda_{\mathrm{sc}}|V_s|}{|V|}
+\right),
+\end{equation}
+với $\mathrm{cov}(v)$ là số trạm phủ nút $v$ và $V_s$ là tập nút trạm $s$ vươn
+tới. \emph{Chi phí bất tiện} gộp thời gian đi lại, chờ và sạc dưới hệ số đánh
+đổi $\alpha$, còn \emph{công bằng không gian} là nghịch đảo độ lệch chuẩn
+$\sigma_{\mathrm{cov}}$ của độ phủ giữa các nút:
+\begin{equation}\small
+\label{eq:costfair}
+\begin{aligned}
+\mathrm{cost}(p) &= \tfrac{1}{3}\big[\alpha\hat T_{\mathrm{tr}}+(1-\alpha)(\hat T_{\mathrm{w}}+\hat T_{\mathrm{ch}})\big],\\
+\mathrm{fairness}(p) &= \big(1+\sigma_{\mathrm{cov}}\big)^{-1},\\
+T_{\mathrm{tr}} &= \sum_{v\in V}\big(1+\text{dem}(v)\big)d_v,\quad
+T_{\mathrm{w}} = \sum_{s\in p}D_s W_s,\\
+T_{\mathrm{ch}} &= \sum_{s\in p}D_s/\mu_s .
+\end{aligned}
+\end{equation}
+Ở đây $d_v$ là khoảng cách từ $v$ tới trạm được gán, $D_s$ và $\mu_s$ là cường
+độ tới và tốc độ phục vụ của trạm $s$, $W_s$ là thời gian chờ trung bình, và
+$\hat T = T(p)/T(p_0)$ là dạng đã chuẩn hoá. Mỗi nút được gán cho trạm tối
+thiểu hoá tổng chi phí đi lại và chờ, nên trạm được gán không nhất thiết là
+trạm gần nhất. Thời gian chờ dùng hàng đợi
+M/M/1/N có bộ đệm hữu hạn và thích ứng theo cường độ tới của từng trạm: các mô
+hình không chặn phân kỳ khi cường độ tải tiến tới một, làm mất tín hiệu học
+đúng ở chế độ tắc nghẽn mà tác tử cần học cách tránh.
+
+
+\subsection{Nhu cầu động}
+
+Việc lắp đặt một trạm đáp ứng nhu cầu tại chỗ và do đó làm giảm nhu cầu biên
+của các nút lân cận:
+\begin{equation}\small
+\label{eq:demand}
+\text{dem}_{\text{dyn}}(v,p) = \text{dem}(v)\exp\!\Big(-\eta\!\!\sum_{\substack{s\in p\\ d_{v,s}<r(s)}}\!\! C(s)\,e^{-\beta d_{v,s}}\Big)
+\end{equation}
+với $d_{v,s}$ là khoảng cách Haversine, $\eta>0$ là hệ số co giãn theo công
+suất tích luỹ và $\beta>0$ là hệ số suy giảm theo khoảng cách. Khi công suất
+trong bán kính $r(s)$ tăng dần, nhu cầu chưa đáp ứng suy giảm theo hàm mũ, qua
+đó ngăn việc dồn cụm trạm vào cùng một khu vực.
+
+\subsection{Ràng buộc lưới điện}
+
+Mỗi nút $v$ được gán trước cho nút lưới trung áp gần nhất
+$b(v)\in\mathcal{B}_d$, với khoảng cách đấu nối $\delta(v)$. Nút lưới $b$ có dư
+địa công suất $A_b=\lambda S^{\max}-P_b^{\text{load}}$ sau phụ tải nền, trong
+đó $S^{\max}$ là công suất định mức của xuất tuyến và $\lambda$ là hệ số mang
+tải cho phép; kế hoạch $p$ rút từ nó công suất
+$Q_b=\sum_{s:\,b(v_s)=b} C(s)$. Hàm phạt lưới gồm khoảng cách đấu nối đã chuẩn
+hoá $\hat\delta(v_s)\in[0,1]$ và mức vượt dư địa cộng dồn tại mỗi nút lưới:
+\begin{equation}\small
+\label{eq:pen}
+\begin{aligned}
+\Phi_{\text{grid}}(p) = {} & \frac{1}{\max(1,|p|)}\sum_{s\in p}\hat\delta(v_s)\\
+& + \frac{1}{|\mathcal{B}_d|}\sum_{b\in\mathcal{B}_d}\min\!\left(\frac{\max(0,Q_b-A_b)}{\max(A_b,A_{\min})},\;\Psi\right)
+\end{aligned}
+\end{equation}
+với tỉ lệ quá tải chặn dưới bởi $A_{\min}$ và chặn trên bởi $\Psi$. Điểm phúc
+lợi tổng hợp là
+\begin{equation}\small
+\label{eq:score}
+R(p) = \frac{\text{benefit}(p) - \text{cost}(p) + \text{fairness}(p)}{3} - w_g\,\Phi_{\text{grid}}(p)
+\end{equation}
+
+\subsection{Tổng hợp bài toán}
+\label{subsec:problem}
+
+Cho đồ thị $G$, kế hoạch hiện hữu $p_0$, ngân sách $B$ và tập nút lưới
+$\mathcal{B}_d$ kèm dư địa $A_b$, cần tìm kế hoạch mở rộng $p\supseteq p_0$ --
+tức vị trí đặt trạm và cấu hình bộ sạc tại mỗi trạm -- tối đa hoá điểm phúc lợi
+ròng:
+\begin{align}\small
+p^\star &= \arg\max_{p\,\supseteq\,p_0} R(p) \label{eq:objective}\\
+\text{v.đ.k}\quad & \sum_{s\in p}\mathrm{fee}(s)-\sum_{s\in p_0}\mathrm{fee}(s) \le B, \label{eq:budget}\\
+& n(s)\le K \qquad \forall s\in p^\star . \label{eq:cap}
+\end{align}
+
+Dung lượng lưới tham gia $R(p)$ qua số hạng phạt $\Phi_{\text{grid}}$
+ở~\eqref{eq:pen}: mức vượt dư địa càng lớn thì điểm càng thấp, nhờ đó tác tử
+nhận được tín hiệu định lượng về mức độ quá tải ở mọi bước quyết định. Việc
+chọn đồng thời vị trí và cấu hình bộ sạc trên mọi nút khiến tìm kiếm vét cạn
+bất khả thi ở quy mô một quận, và đó là lý do chúng tôi học chính sách theo
+cách trình bày ở Mục~\ref{sec:method}.
+
+%======================================================================
+\section{Phương pháp đề xuất}
+\label{sec:method}
+
+\subsection{Quá trình quyết định Markov}
+\label{sec:mdp}
+
+\textbf{Trạng thái} $s_t=(\mathbf{X}_t, g_t)$ gồm ma trận đặc trưng nút
+$\mathbf{X}_t\in\mathbb{R}^{|V|\times 10}$ -- mỗi hàng chứa toạ độ, nhu cầu
+tĩnh và động, giá đất, mật độ đường, công suất đã lắp tại nút, khoảng cách đấu
+nối $\delta(v)$, dung lượng còn lại của thanh cái cục bộ $A_{b(v)}-Q_{b(v)}$,
+và khoảng cách tới trạm gần nhất -- cùng mô tả toàn cục $g_t\in\mathbb{R}^3$
+(ngân sách còn lại, tiến độ episode, mức cải thiện điểm). Mọi đặc trưng được
+co giãn về $[-1,1]$ theo hằng số chuẩn hoá riêng của từng quận.
+
+\textbf{Hành động} là một trong năm macro-action (Bảng~\ref{tab:actions}).
+Chính sách chọn một \emph{chiến lược}; một heuristic xác định sau đó quyết
+định nút cụ thể. Thiết kế này giữ không gian hành động ở kích thước năm thay
+vì $O(|V|\times m)$, và là lý do bộ mã hoá chỉ cần sinh một véc-tơ tóm tắt duy
+nhất cho toàn đồ thị. Với hai hành động \emph{tạo mới}, cấu hình bộ sạc được
+lấy từ một bảng tra ngoại tuyến lưu tổ hợp rẻ nhất khả thi theo từng mức công
+suất.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.1}
+\caption{\uppercase{Không gian macro-action}}
+\label{tab:actions}
+\centering
+\footnotesize
+\begin{tabular}{@{}p{1.75cm}p{5.0cm}@{}}
+\toprule
+\textbf{Macro-action} & \textbf{Cách chọn nút} \\
+\midrule
+Tạo theo lợi ích & Nút trống tối đa hoá độ phủ tiềm năng, chiết khấu theo lợi ích của các trạm lân cận. \\
+Tạo theo nhu cầu & Nút trống có $\text{dem}_{\text{dyn}}(v,p_t)$ lớn nhất. \\
+Bổ sung theo lợi ích & Cùng quy tắc lợi ích, giới hạn ở nút đã có trạm với $<K$ bộ sạc; thêm một bộ sạc. \\
+Bổ sung theo nhu cầu & Cùng quy tắc nhu cầu dưới cùng giới hạn. \\
+Di dời & Chuyển một bộ sạc từ trạm lợi ích thấp nhất sang trạm có thời gian chờ tệ nhất. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Phần thưởng.} Gọi $R^{*}_{t}$ là điểm tốt nhất quan sát được trong
+episode tính đến bước $t$:
+\begin{equation}\small
+\label{eq:reward}
+r_t = \underbrace{R(p_t)-R(p_{t-1})}_{\text{định hình}} + w_b\underbrace{\max\big(0,\;R(p_t)-R^{*}_{t-1}\big)}_{\text{thưởng phá kỷ lục}}
+\end{equation}
+Số hạng đầu có dạng định hình dựa trên thế năng \cite{ng1999policy}, tổng dồn
+theo episode bằng đúng cải thiện ròng của kế hoạch nên không làm thay đổi
+chính sách tối ưu. Số hạng thứ hai thưởng cho việc vượt kỷ lục của chính tác
+tử, phù hợp với thực tế triển khai: cái được xây là kế hoạch \emph{tốt nhất
+từng gặp}, không phải trạng thái cuối episode. Episode kết thúc khi ngân sách
+cạn, mọi nút đều có trạm, hoặc đạt chân trời $T_{\max}$.
+
+\subsection{Bộ mã hoá tự chú ý và lớp gộp Set Transformer}
+\label{sec:encoder}
+
+Kế thừa PPO-Attention \cite{liu2023optimal}, bộ mã hoá của chúng tôi
+(Hình~\ref{fig:arch}) bổ sung ba điểm.
+
+\emph{Thứ nhất, tự chú ý không mặt nạ.} Mọi nút chú ý tới toàn bộ các nút khác
+ngay từ lớp đầu tiên, thay vì chỉ các nút kề, giúp mở rộng tầm nhìn toàn cục
+mà không cần ma trận kề. Mỗi khối dùng Transformer encoder tiền chuẩn hoá:
+\begin{equation}\small
+\label{eq:block}
+\begin{aligned}
+h &\leftarrow h + \text{MHA}\big(\text{LN}(h),\text{LN}(h),\text{LN}(h)\big)\\
+h &\leftarrow h + \text{FF}\big(\text{LN}(h)\big)
+\end{aligned}
+\end{equation}
+
+\emph{Thứ hai, gộp kiểu Set Transformer.} Sau các khối tự chú ý, Pooling by
+Multi-head Attention \cite{lee2019set} dùng $n_{\text{seed}}$ véc-tơ truy vấn
+\emph{học được} để chú ý tới toàn bộ embedding nút
+$h\in\mathbb{R}^{|V|\times D}$:
+\begin{equation}\small
+\label{eq:pma}
+\text{pooled} = \text{LN}\big(\text{seed} + \text{MHA}(\text{seed}, h, h)\big)
+\end{equation}
+Đầu ra có kích thước cố định $n_{\text{seed}}\!\times\!D$, không phụ thuộc số
+nút. Đây là phần bổ sung chính của chúng tôi, phù hợp với không gian năm
+macro-action.
+
+\emph{Thứ ba, LayerNorm thay cho BatchNorm.} Do kích thước lô thay đổi giữa
+tương tác môi trường và cập nhật gradient, LayerNorm giúp ổn định huấn luyện
+ở cả hai chế độ.
+
+Véc-tơ $\text{pooled}$ được ghép với đầu ra MLP trên $g_t$ và đưa vào đầu
+ước lượng giá trị hành động của DQN \cite{mnih2015human}, tối ưu bằng sai số
+thời gian trên bộ đệm phát lại. Chúng tôi sử dụng Stable-Baselines3
+\cite{stable_baselines3} với các siêu tham số trong Bảng~\ref{tab:hparams},
+gradient clipping ở chuẩn $1{,}0$, seed cố định và chế độ tất định của
+PyTorch để bảo đảm tái lập. Thuật toán~\ref{alg:rollout} tóm tắt một episode.
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[
+  font=\scriptsize,
+  box/.style={draw, rounded corners, minimum height=0.55cm, align=center, inner sep=2.5pt, text width=3.5cm},
+  sbox/.style={draw, rounded corners, minimum height=0.55cm, align=center, inner sep=2.5pt, text width=2.35cm},
+  arr/.style={-{Latex[length=1.5mm]}}
+]
+\node[box, fill=blue!8] (x) {$\mathbf{X}_t\in\mathbb{R}^{|V|\times 10}$};
+\node[box, below=0.24cm of x] (emb) {Embed tuyến tính + LN ($D{=}128$)};
+\node[box, below=0.24cm of emb] (attn) {$n_{\text{layer}}$ khối tự chú ý,~\eqref{eq:block}};
+\node[box, below=0.24cm of attn, fill=green!10] (pma) {Gộp PMA,~\eqref{eq:pma}};
+\node[sbox, right=0.3cm of x, fill=blue!8] (g) {$g_t\in\mathbb{R}^{3}$};
+\node[sbox, right=0.3cm of attn, fill=blue!8] (mlp) {MLP toàn cục (32)};
+\node[box, below=0.24cm of pma, fill=orange!12, text width=5.0cm] (cat) {Ghép $\rightarrow$ đầu Q, net\_arch $[256,256]$};
+\draw[arr] (x) -- (emb);
+\draw[arr] (emb) -- (attn);
+\draw[arr] (attn) -- (pma);
+\draw[arr] (g) -- (mlp);
+\draw[arr] (pma) -- (cat);
+\draw[arr] (mlp.south) |- (cat.east);
+\end{tikzpicture}
+\caption{Bộ mã hoá đề xuất. Lớp gộp PMA đảm bảo kích thước đầu ra độc lập với $|V|$.}
+\label{fig:arch}
+\end{figure}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.05}
+\setlength{\tabcolsep}{4pt}
+\caption{SIÊU THAM SỐ MÔ HÌNH}
+\label{tab:hparams}
+\centering\footnotesize
+\begin{tabular}{llll}
+\toprule
+\multicolumn{2}{l}{\textbf{Bộ mã hoá}} & \multicolumn{2}{l}{\textbf{Huấn luyện DQN}} \\
+\midrule
+$D$ & 128 & bộ đệm phát lại & 20\,000 \\
+số đầu chú ý & 4 & kích thước lô & 128 \\
+$n_{\text{layer}}$ & 2 & tốc độ học & $10^{-4}$ \\
+$n_{\text{seed}}$ & 1 & $\varepsilon$: $1{,}0\!\rightarrow\!0{,}05$ & 50\% số bước \\
+hệ số FF & 4 & cập nhật mạng đích & 1000 bước \\
+dropout & 0,0 & tổng số bước & 120\,000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{algorithm}
+\caption{Thuật toán mở rộng kế hoạch trạm sạc}
+\label{alg:rollout}
+\begin{algorithmic}[1]
+\STATE $p \leftarrow p_0$, ngân sách $B$, $R^{*} \leftarrow R(p_0)$
+\WHILE{$B > 0$ và $t < T_{\max}$}
+  \STATE Mã hoá $s_t$ theo (\ref{eq:block})--(\ref{eq:pma});
+  \STATE $a_t \leftarrow \arg\max_a Q_\theta(s_t,a)$
+  \STATE Chọn nút theo heuristic của $a_t$; cập nhật $p$, $B$, $Q_b$
+  \STATE Tính $r_t$ theo (\ref{eq:reward}); cập nhật $R^{*}$, $p^{*}$
+\ENDWHILE
+\STATE \textbf{return} $p^{*}$
+\end{algorithmic}
+\end{algorithm}
+
+%======================================================================
+\section{Thiết lập thực nghiệm}
+\label{sec:setup}
+
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{5pt}
+\caption{SO SÁNH HIỆU NĂNG TRÊN QUẬN ĐỐNG ĐA. MỌI GIÁ TRỊ QUY VỀ PHẦN TRĂM SO VỚI HẠ TẦNG HIỆN HỮU ($=100$).}
+\label{tab:results}
+\centering
+\footnotesize
+\begin{tabular}{lcccccccccc}
+\toprule
+Phương pháp & $R(p)\uparrow$ & Lợi ích $\uparrow$ & Chi phí $\downarrow$ & Công bằng $\uparrow$ & Đi lại $\downarrow$ & Chờ $\downarrow$ & Sạc $\downarrow$ & Quá tải $\downarrow$ & Số trạm & Ngân sách \\
+\midrule
+Hạ tầng hiện hữu            & 100,0 & 100,0 & 120,0 & 100,0 & 100,0 & 100,0 & 100,0 & 0 & 5 & 0,0 \\
+Greedy-Benefit              & 150,3 & 191,9 & 68,1 & 15,1 & 58,1 & 64,7 & 43,4 & 1 & 47 & 56,6 \\
+Greedy-Demand               & 210,8 & 215,6 & 79,3 & 41,2 & 83,7 & 33,5 & 28,5 & 1 & 67 & 98,4 \\
+Giải thuật di truyền        & 219,8 & 214,8 & \textbf{53,1} & 40,9 & 54,6 & \textbf{25,7} & \textbf{21,3} & \textbf{0} & 66 & 99,3 \\
+\textbf{DQN nhận biết lưới} & \textbf{224,5} & \textbf{230,2} & 58,4 & \textbf{49,1} & \textbf{53,2} & 33,8 & 45,4 & \textbf{0} & \textbf{44} & \textbf{86,0} \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Greedy-Benefit]{\includegraphics[width=0.235\textwidth]{figures/DongDa/map_DongDa_G_Benefit.png}}\hfill
+\subfloat[Greedy-Demand]{\includegraphics[width=0.235\textwidth]{figures/DongDa/map_DongDa_G_Demand.png}}\hfill
+\subfloat[Giải thuật di truyền]{\includegraphics[width=0.235\textwidth]{figures/DongDa/map_DongDa_GA.png}}\hfill
+\subfloat[DQN nhận biết lưới]{\includegraphics[width=0.235\textwidth]{figures/DongDa/map_DongDa_RL_102353.png}}
+\caption{Bản đồ triển khai trạm sạc trên quận Đống Đa. Kích thước điểm đánh dấu tỉ lệ với công suất lắp đặt của trạm.}
+\label{fig:maps_dongda}
+\end{figure*}
+
+\textbf{Dữ liệu.} Chúng tôi dùng đồ thị đường bộ OpenStreetMap
+\cite{boeing2017osmnx} của quận Đống Đa, Hà Nội ($|V|=639$). Lưới phân phối
+được dựng từ toạ độ và công suất định mức của các trạm biến áp 500/220/110~kV
+thực tế, với xuất tuyến 22~kV chạy dọc mạng đường bộ và $S^{\max}=16{,}0$~MVA
+đồng nhất; tại $\lambda=0{,}8$ mỗi thanh cái cung cấp $12{,}8$~MW. Quận trải
+trên $18$ thanh cái, tổng dư địa $173{,}1$~MW sau phụ tải nền mô phỏng theo dân
+số và điểm thu hút. Dư địa này không đồng đều giữa các thanh cái, nên chính
+sách phải cân đối vị trí trạm theo dung lượng còn lại của từng thanh cái.
+
+\textbf{Đối sánh và độ đo.} Mọi phương pháp khởi động từ cùng $p_0$, cùng ngân
+sách, cùng đồ thị và cùng seed. Đối sánh gồm Greedy-Benefit (chọn nút có lợi
+ích biên trên chi phí cao nhất), Greedy-Demand (chọn nút có nhu cầu chưa đáp
+ứng lớn nhất) và một giải thuật di truyền tiến hoá trọng số mạng chính sách
+theo hướng neuroevolution \cite{such2017deep} trên cùng không gian quan sát và
+macro-action. Mọi độ đo được quy về phần trăm so với hạ tầng hiện hữu ($=100$).
+
+%======================================================================
+\section{Kết quả và thảo luận}
+\label{sec:results}
+
+\textbf{So sánh tổng thể.} Bảng~\ref{tab:results} cho thấy DQN nhận biết lưới đạt
+điểm phúc lợi cao nhất ($224{,}5$), trên giải thuật di truyền ($219{,}8$) và
+hai chiến lược tham lam ($210{,}8$ và $150{,}3$). Dù chênh lệch với giải thuật
+di truyền nhỏ, DQN chỉ dùng $44$ trạm và $86{,}0\%$ ngân sách, so với $66$ trạm
+và $99{,}3\%$ của giải thuật di truyền, tức còn $14\%$ ngân sách.
+
+\textbf{Ràng buộc lưới.} DQN và giải thuật di truyền không làm quá tải thanh
+cái, trong khi mỗi chiến lược tham lam làm quá tải một thanh cái. Greedy-Benefit
+gây quá tải dù chỉ triển khai $47$ trạm, còn giải thuật di truyền dùng $66$
+trạm mà vẫn không vượt ngưỡng, cho thấy quá tải phụ thuộc vào \emph{phân bố}
+hơn số trạm. Hai chiến lược tham lam tối ưu lợi ích tức thời nên dồn trạm vào
+các vùng nhu cầu cao, khiến nhiều trạm quy về cùng thanh cái. Ngược lại, bộ mã
+hoá tự chú ý xét dung lượng của toàn bộ thanh cái, cho phép chính sách hy sinh
+lợi ích tức thời để duy trì dư địa lưới cho các bước sau.
+
+\textbf{Phân bố không gian.} Hình~\ref{fig:maps_dongda} cho thấy Greedy-Benefit
+dồn trạm vào các cụm hẹp và có công bằng thấp nhất ($15{,}1$), trong khi chính
+sách đề xuất phân bố đều hơn, đạt công bằng cao nhất ($49{,}1$) và thời gian đi
+lại thấp nhất ($53{,}2$). Tuy nhiên, công bằng cần được xét cùng lợi ích, vì
+xây ít trạm có thể cho công bằng cao; ở đây, lợi ích cao ($230{,}2$) giúp chỉ
+số này có ý nghĩa.
+
+\textbf{Đánh đổi.} Dùng ít trạm hơn khiến mỗi trạm phục vụ nhiều xe hơn, nên
+thời gian chờ ($33{,}8$) và sạc ($45{,}4$) cao hơn giải thuật di truyền
+($25{,}7$ và $21{,}3$), trong khi chi phí cũng cao hơn ($58{,}4$ so với
+$53{,}1$). Do đó, chính sách phù hợp với quy hoạch ưu tiên hiệu quả vốn và an
+toàn lưới; nếu ưu tiên giảm thời gian chờ, có thể tăng trọng số thành phần bất
+tiện trong~\eqref{eq:score}.
+
+%======================================================================
+\section{Kết luận}
+\label{sec:conclusion}
+
+Bài báo phát biểu bài toán mở rộng mạng trạm sạc xe điện như một quá trình
+quyết định Markov nhận biết lưới điện, trong đó dung lượng thanh cái trung áp
+tham gia hàm mục tiêu dưới dạng phạt mềm cộng dồn theo chuỗi quyết định, và đề
+xuất một bộ mã hoá trạng thái kết hợp tự chú ý không mặt nạ với lớp gộp kiểu
+Set Transformer \cite{lee2019set}, cho véc-tơ tóm tắt kích thước cố định độc
+lập với số nút của đồ thị. Trên dữ liệu quận Đống Đa, chính sách học được đạt
+điểm phúc lợi cao nhất trong bốn phương pháp đối sánh, với ít hơn một phần ba
+số trạm và thấp hơn $13$ điểm phần trăm ngân sách so với giải thuật di truyền,
+mà không thanh cái nào bị quá tải.
+
+Nghiên cứu còn một số hạn chế. Lưới điện được tổng hợp từ toạ độ và công suất
+định mức của các trạm biến áp chứ chưa dùng số liệu vận hành thực, phụ tải nền
+là kết quả mô phỏng theo dân số, và thực nghiệm mới thực hiện trên một quận --
+chưa kiểm chứng trên đồ thị lớn hơn nhiều lần, nơi lợi thế tầm nhìn toàn cục
+của cơ chế tự chú ý được kỳ vọng thể hiện rõ hơn. Hướng phát triển tiếp theo gồm hai
+nhánh. Thứ nhất, bộ mã hoá hiện bỏ hẳn cấu trúc cạnh nên hai nút cách xa nhau
+chú ý tới nhau mạnh ngang hai nút liền kề; cộng vào trọng số chú ý một số hạng
+suy giảm theo khoảng cách sẽ khôi phục thiên kiến lân cận mà vẫn giữ tầm nhìn
+toàn cục. Thứ hai, do lớp gộp PMA cho biểu diễn kích thước cố định độc lập với
+$|V|$, chính sách đã huấn luyện có thể dùng lại cho quận khác mà không cần đổi
+kiến trúc; bài báo chưa kiểm chứng khả năng chuyển giao này.
+
+\bibliographystyle{IEEEtran}
+\bibliography{vnict_references}
+
+\end{document}

@@ -34,7 +34,7 @@ def waiting_metric(my_plan):
 
 def eci_test(my_plan, my_node_list, my_norm_benefit, my_norm_charging, my_norm_waiting,
              my_norm_travel):
-    score, benefit, cost, charg_time, wait_time, cost_travel, _ = H.norm_score(my_plan, my_node_list, my_norm_benefit,
+    score, benefit, cost, charg_time, wait_time, cost_travel, _, unserved = H.norm_score(my_plan, my_node_list, my_norm_benefit,
                                                                              my_norm_charging, my_norm_waiting,
                                                                              my_norm_travel)
     return score
@@ -47,7 +47,7 @@ def test(my_plan, my_node_list, my_basic_cost, my_norm_benefit, my_norm_charging
     """
     travel_max = travel_metric(my_node_list)
     wait_max = waiting_metric(my_plan)
-    score, benefit, cost, charg_time, wait_time, cost_travel, _ = H.norm_score(my_plan, my_node_list, my_norm_benefit,
+    score, benefit, cost, charg_time, wait_time, cost_travel, _, unserved = H.norm_score(my_plan, my_node_list, my_norm_benefit,
                                                                              my_norm_charging, my_norm_waiting,
                                                                              my_norm_travel)
     # test if solution satisfies all constraints
@@ -58,6 +58,7 @@ def test(my_plan, my_node_list, my_basic_cost, my_norm_benefit, my_norm_charging
     print("Benefit: {}".format(benefit * 100))
     print("Waiting time: {}, Travel time: {}, Charging time: {}".format(wait_time * 100, cost_travel * 100,
                                                                         charg_time * 100))
+    print("Unserved demand: {}% of arrivals turned away".format(unserved * 100))
     print(travel_max, wait_max)
     print("Used budget: {} \n".format(total_inst_cost * 100))
 

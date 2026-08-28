@@ -1,0 +1,264 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{url}
+\usepackage{hyperref}
+
+% ---------------------------------------------------------------
+% PAGE BUDGET (6-page hard limit, two-column IEEEtran conference
+% format is roughly 900-950 words per column, ~1900 words/page).
+% Use this as a planning guide while drafting; delete once final.
+%   I.    Introduction ................ 0.75 page
+%   II.   Related Work ................ 0.75 page
+%   III.  Problem Formulation ......... 1.00 page
+%   IV.   Methodology (RL + GNN) ...... 1.25 page
+%   V.    Baselines ................... 0.50 page
+%   VI.   Experimental Setup .......... 0.75 page
+%   VII.  Results & Discussion ........ 0.75 page  (+ 1 table, 1-2 figs)
+%   VIII. Conclusion ................... 0.25 page
+%   References .......................  fits in remaining space
+%   TOTAL .............................. ~6.0 pages
+% ---------------------------------------------------------------
+
+\begin{document}
+
+\title{Reinforcement Learning for Grid-Aware Electric Vehicle\\
+Charging Station Placement in Urban Networks\\
+\large[Working Title -- Replace With Final Title]}
+
+% --- Author block -------------------------------------------------
+% IEEE conference style hides author identity blocks are fine for
+% camera-ready but check the target venue's double-blind policy
+% before submission (many RL/power-systems venues are single-blind).
+\author{
+\IEEEauthorblockN{First Author\IEEEauthorrefmark{1}, Second Author\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Department/Institution, City, Country\\
+Email: \{author1, author2\}@institution.edu}
+}
+
+\maketitle
+
+% ===================================================================
+\begin{abstract}
+% TODO (~150-200 words): 1 sentence problem statement (EV charging
+% station siting under budget + power-grid capacity constraints);
+% 1-2 sentences on the proposed approach (MDP formulation, GNN-based
+% policy over the street/grid graph, DRL training); 1 sentence on
+% baselines compared against (genetic algorithm, greedy-benefit,
+% greedy-demand); 1-2 sentences on the evaluation setting (Hanoi
+% districts: Cau Giay, Dong Da, Nam Tu Liem, Tay Ho -- real road
+% network + synthesized power grid); 1 sentence quantifying the
+% headline result (e.g. X\% reduction in waiting time / Y\% higher
+% coverage at equal budget vs. the strongest baseline).
+\end{abstract}
+
+\begin{IEEEkeywords}
+electric vehicle charging, facility location, reinforcement learning,
+graph neural networks, power distribution networks, urban infrastructure planning
+\end{IEEEkeywords}
+
+% ===================================================================
+\section{Introduction}
+% TODO (~0.75 page):
+% - Motivate EV adoption growth and the charging-infrastructure siting
+%   problem as a bottleneck.
+% - State why siting is NOT just a coverage/demand problem: new
+%   stations draw load from the existing distribution grid, and
+%   substations/feeders have finite spare capacity -- placement must
+%   be grid-aware or it creates overload risk.
+% - Position against prior siting work (typically ignores grid
+%   constraints) and prior grid-aware work (typically uses static
+%   optimization, not sequential/adaptive decision-making).
+% - State contributions as a bullet list, e.g.:
+%   1) An MDP formulation of sequential station placement jointly
+%      over spatial demand and grid capacity constraints.
+%   2) A GNN-based policy/value architecture that consumes the road
+%      network graph directly (node features, edge index, edge attr).
+%   3) A city-scale power grid simulator (feeders, substations, POI
+%      load) coupled to the placement environment as a hard/soft
+%      constraint source.
+%   4) An empirical comparison against genetic-algorithm and greedy
+%      baselines across four real Hanoi districts.
+
+% ===================================================================
+\section{Related Work}
+% TODO (~0.75 page), suggested subsections or a single flowing
+% section with 3 paragraphs:
+% A. EV charging station placement (facility location, MILP/greedy
+%    heuristics, GIS-based siting studies).
+% B. RL / metaheuristics for infrastructure placement (GA, PSO,
+%    and DRL approaches to siting/routing problems).
+% C. Grid-aware placement / hosting-capacity analysis (power-flow
+%    constrained siting, distribution network impact studies).
+% End with 1-2 sentences on the gap this paper fills.
+
+% ===================================================================
+\section{Problem Formulation}
+\label{sec:problem}
+% TODO (~1.0 page)
+
+\subsection{System Model}
+% - City road/POI graph $G=(V,E)$: nodes = intersections/POIs with
+%   features (land price, demand, existing infrastructure); edges =
+%   road segments with distances.
+% - Power grid model: substations/feeders/buses with available
+%   capacity (MW); mapping from graph node -> nearest bus.
+% - Existing charging plan (pre-placed stations) as the environment's
+%   starting state; budget $B$ as a depleting resource.
+
+\subsection{MDP Formulation}
+% Define formally:
+% - State $s_t$: current plan (station locations + config), remaining
+%   budget, per-node demand/coverage features, grid headroom.
+% - Action $a_t$: choose a node to place/upgrade a station and a
+%   charger configuration (or "stop").
+% - Transition: budget and grid capacity update deterministically
+%   given the chosen action.
+% - Reward $r_t$: state the actual reward decomposition used in
+%   \texttt{StationPlacementEnv.py} (score delta term + best-score
+%   bonus term -- NOTE: verify in code before publishing, see \S
+%   reward-audit item below) plus any grid-violation penalty term.
+% - Episode termination: budget exhausted or max steps reached.
+
+\begin{equation}
+\label{eq:reward}
+r_t = \Delta \text{score}_t \;+\; \lambda \cdot \mathbb{1}[\text{grid violation}] \quad \text{(fill in exact form)}
+\end{equation}
+
+% ===================================================================
+\section{Methodology}
+% TODO (~1.25 page)
+
+\subsection{Graph-Based Observation Encoding}
+% Describe graph\_features.py's node/edge feature construction and
+% the normalization/scaling pipeline (preprocess_scaling.py /
+% scaling\_constants.json) -- state what is normalized and why
+% (comparability across districts of different size/demand).
+
+\subsection{GNN Feature Extractor}
+% Describe gnn\_extractor.py architecture: input node features,
+% adjacency construction from edge\_index/edge\_attr, graph
+% convolution layers, pooling into a fixed-size embedding, and how
+% it is fused with global (budget, step count) features before the
+% policy/value heads.
+
+\subsection{RL Algorithm and Training}
+% Name the DRL algorithm (e.g., DQN, given target\_update\_interval
+% appears in configs) and give: network update rule, exploration
+% schedule, replay buffer, key hyperparameters (learning rate,
+% gamma, batch size, target update interval, max\_grad\_norm),
+% and training compute budget (steps, wall-clock, hardware).
+
+\begin{algorithm}[t]
+\caption{Grid-Aware Station Placement (Rollout)}
+\label{alg:rollout}
+\begin{algorithmic}[1]
+\State Initialize plan from existing infrastructure, budget $B$
+\While{budget remains and not terminal}
+    \State Observe graph state $s_t$ (node feats, edges, global feats)
+    \State $a_t \leftarrow \pi_\theta(s_t)$ \Comment{GNN policy}
+    \State Apply $a_t$: place/upgrade station, deduct cost
+    \State Update grid headroom at affected bus
+    \State Compute reward $r_t$ (Eq.~\ref{eq:reward})
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+% ===================================================================
+\section{Baselines}
+% TODO (~0.5 page): briefly describe, one short paragraph each:
+% - Greedy-Benefit (greedy_benefit.py): iteratively picks the
+%   node/config maximizing marginal social-benefit per cost.
+% - Greedy-Demand (greedy_demand.py): iteratively picks the
+%   highest-unmet-demand node.
+% - Genetic Algorithm (algorithms/ga/train_ga.py): chromosome
+%   encoding of the plan, fitness = norm\_score, selection/
+%   crossover/mutation operators, population size, generations.
+% State explicitly that all methods are evaluated on identical
+% start-of-episode conditions (same existing plan file, same graph,
+% same budget, same seed(s)) -- confirm this in code before writing
+% it (see audit note below).
+
+% ===================================================================
+\section{Experimental Setup}
+% TODO (~0.75 page)
+\subsection{Datasets}
+% Four Hanoi districts: Cau Giay, Dong Da, Nam Tu Liem, Tay Ho.
+% Table with per-district stats: \#nodes, \#existing stations,
+% \#substations/buses, budget.
+
+\subsection{Power Grid Simulation}
+% One paragraph: how the synthetic grid (feeders, substations, POI
+% load) was generated / calibrated, and what "grid violation" means
+% operationally (bus overload threshold, feeder capacity, etc).
+
+\subsection{Metrics}
+% Define each metric precisely, matching the actual code:
+% - Coverage: fraction of demand nodes within service radius.
+% - Waiting time: mean vs. max over stations -- STATE WHICH ONE,
+%   the current code names variables inconsistently with a
+%   ``mean'' docstring while computing a maximum; pick the true
+%   statistic and document it accurately here.
+% - Travel time, social benefit / fairness term, budget utilization.
+
+\subsection{Reproducibility}
+% Seeds used per run, number of independent seeds/replications
+% (recommend $\geq$5 if only 1 is currently used), hardware/software
+% versions, and a link/footnote to the code repository.
+
+% ===================================================================
+\section{Results and Discussion}
+% TODO (~0.75 page + 1 table + 1-2 figures)
+
+\begin{table}[t]
+\centering
+\caption{Performance comparison across districts (fill in; report mean $\pm$ std over $\geq$5 seeds).}
+\label{tab:results}
+\begin{tabular}{lcccc}
+\toprule
+Method & Coverage & Wait (min) & Travel (min) & Cost util. \\
+\midrule
+Greedy-Demand   & -- & -- & -- & -- \\
+Greedy-Benefit  & -- & -- & -- & -- \\
+Genetic Alg.    & -- & -- & -- & -- \\
+\textbf{RL (ours)} & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Figure placeholder: e.g. learning curve, or map of chosen station
+% locations overlaid on the district graph (visualise.py output).
+\begin{figure}[t]
+\centering
+% \includegraphics[width=\columnwidth]{figures/learning_curve.pdf}
+\caption{Placeholder -- e.g., training reward curve or a map of the
+resulting station placement for one district.}
+\label{fig:placeholder}
+\end{figure}
+
+% Discussion: where RL wins/loses vs. GA/greedy, and WHY (sample
+% efficiency vs. solution quality trade-off, sensitivity to grid
+% constraints, generalization across districts of different size).
+
+% ===================================================================
+\section{Conclusion and Future Work}
+% TODO (~0.25 page): 2-3 sentence summary of contribution + result,
+% 2-3 sentences on limitations (single-city, synthetic grid, fixed
+% budget model) and future work (multi-objective, real grid data,
+% transfer across cities).
+
+% ===================================================================
+\section*{Acknowledgment}
+% Optional -- funding, data providers, etc.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

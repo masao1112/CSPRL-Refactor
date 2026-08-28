@@ -31,12 +31,7 @@ FEEDER_CONFIG = {
     "n_feeders_per_tba": 3,
     "points_per_feeder": 4,
     "node_spacing_km": 0.6,
-    "max_i_ka": 0.20,
-    # Matches the 22kV distribution cable type used elsewhere (citywide_generator.py,
-    # grid_loader.py's own default). Was missing, which made every call into this
-    # function raise a KeyError, silently swallowed by the caller's broad
-    # except-Exception fallback -- this road/population-driven feeder path never
-    # actually ran.
+    "max_i_ka": 0.42,  # Physical cable limit for NAYY 4x240 SE
     "std_type": "NAYY 4x240 SE",
 }
 
@@ -258,6 +253,7 @@ def generate_feeders_from_roads(
     new_lines = []
     bus_idx = start_bus_idx
     config = FEEDER_CONFIG
+    n_feeders = config["n_feeders_per_tba"]
 
     for sub in substations:
         sub_name = sub["name"]

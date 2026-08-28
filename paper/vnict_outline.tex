@@ -1,0 +1,323 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% OUTLINE / SKELETON -- Hội thảo quốc gia lần thứ XXIX (VNICT 2026)
+%% Giới hạn: 6 trang. Mỗi \section bên dưới kèm ngân sách trang/chữ.
+%% Preamble giữ nguyên theo bare_conf.tex của BTC -- KHÔNG sửa lề/font.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[10pt, conference, a4paper, compsocconf]{IEEEtran}
+\usepackage{amsmath,amsxtra,amssymb,amsthm,latexsym,amscd,amsfonts}
+\usepackage[utf8]{vietnam}
+
+\usepackage[top=2.7cm, bottom = 5.4cm, left=2.72cm, right = 3.0cm]{geometry}
+\headsep = 0.7cm
+\headheight = 1.0cm
+\footskip = 1.0cm
+\voffset = -0.74 cm
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\sectionmark}[1]{\markright{\MakeUppercase{#1}}{}}
+\renewcommand{\headrulewidth}{0pt}
+
+\ifCLASSINFOpdf
+  \usepackage[pdftex]{graphicx}
+  \DeclareGraphicsExtensions{.pdf,.jpeg,.png,.jpg}
+\else
+  \usepackage[dvips]{graphicx}
+  \DeclareGraphicsExtensions{.eps}
+\fi
+
+\usepackage{array}
+\usepackage[font=footnotesize]{subfig}
+\usepackage{booktabs}
+\usepackage{algorithmic}
+
+\makeatletter
+\def\ps@IEEEtitlepagestyle{%
+\def\@oddhead{\centering{\mbox{\footnotesize{\textit{\;\;\;\; Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}%
+\def\@evenhead{\centering{\mbox{\footnotesize{\textit{\;\;\;\; Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}}%
+\def\@oddfoot{\scriptsize \thepage \hfil }%
+\def\@evenfoot{\scriptsize \hfil \thepage}
+}
+}
+\makeatother
+
+\begin{document}
+\pagenumbering{gobble}
+\fontsize{10}{12}
+\selectfont
+
+\fancyhead[RE,LO]{\centering{\footnotesize{\textit{Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TITLE -- 3 phương án, chọn 1:
+%  (a) Quy hoạch trạm sạc xe điện có xét ràng buộc lưới điện phân phối
+%      bằng học tăng cường sâu trên đồ thị đô thị
+%  (b) Học tăng cường sâu dựa trên mạng nơ-ron đồ thị cho bài toán mở
+%      rộng mạng lưới trạm sạc xe điện tại Hà Nội
+%  (c) Đặt trạm sạc xe điện nhận biết lưới điện: tiếp cận MDP và GNN-DQN
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{Quy hoạch trạm sạc xe điện có xét ràng buộc lưới điện phân phối\\
+bằng học tăng cường sâu trên đồ thị đô thị}
+
+\author{\IEEEauthorblockN{Nguyễn Văn A\IEEEauthorrefmark{1}, Nguyễn Văn B\IEEEauthorrefmark{2}}
+	\IEEEauthorblockA{\IEEEauthorrefmark{1}Đơn vị 1, \IEEEauthorrefmark{2}Đơn vị 2}
+	\IEEEauthorblockA{Email: a@abc.xyz, b@abc.xyz}
+}
+
+\maketitle
+
+%======================================================================
+\begin{abstract}
+% NGÂN SÁCH: 150--180 từ (~1/4 cột). Cấu trúc 6 câu:
+% 1. Bối cảnh: xe điện tăng nhanh ở đô thị VN, mở rộng mạng trạm sạc là nút thắt.
+% 2. Khoảng trống: các nghiên cứu đặt trạm thường chỉ tối ưu phủ/nhu cầu, bỏ qua
+%    khả năng tải còn lại của lưới phân phối -> kế hoạch "tốt trên giấy" nhưng
+%    gây quá tải thanh cái 22 kV.
+% 3. Đề xuất: mô hình hoá bài toán thành MDP mở rộng kế hoạch hiện hữu, hàm
+%    thưởng gồm lợi ích xã hội, chi phí đi lại/chờ/sạc, độ công bằng và phạt
+%    ràng buộc lưới; chính sách học bằng DQN với bộ trích đặc trưng đồ thị.
+% 4. Dữ liệu: 4 quận Hà Nội (Cầu Giấy, Đống Đa, Nam Từ Liêm, Tây Hồ), đồ thị
+%    đường bộ OSM + lưới điện dựng từ toạ độ TBA 500/220/110/22 kV thực tế.
+% 5. Kết quả: vượt greedy-benefit / greedy-demand / GA về điểm chuẩn hoá, đồng
+%    thời đưa số thanh cái quá tải về 0 (điền số cụ thể X%, Y).
+% 6. Ablation khẳng định vai trò của phạt lưới và mô hình nhu cầu suy giảm.
+% LƯU Ý BTC: không dùng ký hiệu toán/ký tự đặc biệt trong tiêu đề và tóm tắt.
+\end{abstract}
+
+\begin{IEEEkeywords}
+trạm sạc xe điện; học tăng cường sâu; mạng nơ-ron đồ thị; lưới điện phân phối;
+bài toán định vị cơ sở; quy hoạch hạ tầng đô thị
+\end{IEEEkeywords}
+
+\IEEEpeerreviewmaketitle
+
+%======================================================================
+\section{Giới thiệu}
+% NGÂN SÁCH: 0,75 trang (~1300 từ đôi cột => ~600--650 từ). 4 đoạn.
+%
+% Đ1 (bối cảnh, 5--6 câu): tốc độ điện hoá phương tiện; hạ tầng sạc công cộng
+%   là điều kiện cần; đặc thù đô thị VN (mật độ dân cư cao, quỹ đất/giá đất là
+%   ràng buộc mạnh, lưới phân phối đã vận hành gần ngưỡng).
+%
+% Đ2 (vấn đề, 4--5 câu): đặt trạm KHÔNG chỉ là bài toán phủ nhu cầu.
+%   - Mỗi trạm là một phụ tải mới quy về thanh cái 22 kV gần nhất;
+%   - Dung lượng dự phòng của thanh cái là hữu hạn và mang tính CỘNG DỒN:
+%     nhiều trạm "tốt" cục bộ vẫn có thể cùng làm quá tải một thanh cái;
+%   - Khoảng cách tới điểm đấu nối cũng là chi phí (chi phí đường dây/tổn thất).
+%   Đây là loại ràng buộc mà các phương pháp tham lam/tĩnh xử lý kém vì nó phụ
+%   thuộc toàn bộ chuỗi quyết định trước đó.
+%
+% Đ3 (định vị đóng góp, 3--4 câu): tách khỏi (i) nhóm định vị cơ sở cổ điển
+%   (MILP/GIS, bỏ qua lưới) và (ii) nhóm phân tích hosting capacity (có lưới
+%   nhưng tối ưu tĩnh, một lần). Ta xử lý bài toán như ra quyết định TUẦN TỰ có
+%   ngân sách suy giảm, xuất phát từ kế hoạch trạm HIỆN HỮU chứ không từ số 0.
+%
+% Đ4 (đóng góp -- itemize 4 gạch đầu dòng, mỗi gạch 1--2 dòng):
+%   1) Phát biểu MDP cho bài toán mở rộng mạng trạm sạc, hợp nhất mục tiêu phúc
+%      lợi xã hội với ràng buộc dung lượng lưới phân phối ở mức thanh cái.
+%   2) Mô hình nhu cầu động, suy giảm theo khoảng cách và theo công suất đã lắp,
+%      khiến lợi ích biên của trạm mới bão hoà -> tránh đặt trùng lặp.
+%   3) So sánh có kiểm soát 4 cách mã hoá trạng thái (MLP, MLP+đặc trưng đồ thị,
+%      GCN, attention+PMA) trên cùng một thuật toán DQN và cùng một môi trường.
+%   4) Đánh giá thực nghiệm trên 4 quận Hà Nội với dữ liệu TBA thực tế, đối
+%      sánh 3 baseline và 4 kịch bản ablation.
+%
+% Đ5 (1 câu): bố cục bài báo.
+
+%======================================================================
+\section{Các nghiên cứu liên quan}
+% NGÂN SÁCH: 0,5--0,6 trang (~450 từ). 3 đoạn, KHÔNG chia mục con (tiết kiệm chỗ).
+%
+% Đ1 -- Định vị trạm sạc: p-median/MCLP, MILP, nghiên cứu GIS đa tiêu chí.
+%      Điểm chung: mục tiêu phủ/nhu cầu/chi phí, coi lưới điện là vô hạn.
+% Đ2 -- Metaheuristic và học tăng cường cho quy hoạch hạ tầng: GA/PSO cho định
+%      vị; DRL cho bài toán tổ hợp trên đồ thị (S2V-DQN và các biến thể), DRL
+%      cho định giá/điều độ sạc. Chỉ ra: DRL cho SITING (không phải routing hay
+%      pricing) còn ít, đặc biệt là dạng mở rộng kế hoạch hiện hữu.
+% Đ3 -- Ràng buộc lưới: hosting capacity, siting có ràng buộc dòng công suất,
+%      đánh giá tác động phụ tải sạc lên lưới hạ thế.
+% Câu kết (2 câu): khoảng trống = ra quyết định tuần tự + ràng buộc lưới cộng dồn
+%      + biểu diễn đồ thị đô thị, đồng thời trong một khung duy nhất.
+
+%======================================================================
+\section{Phát biểu bài toán}
+\label{sec:problem}
+% NGÂN SÁCH: 1,0--1,1 trang. Đây là phần "lõi khoa học", đừng cắt.
+
+\subsection{Mô hình hệ thống}
+% ~250 từ + 1 bảng ký hiệu nhỏ (tuỳ chọn, cắt nếu thiếu chỗ).
+% - Đồ thị đường bộ G=(V,E) trích từ OSM cho từng quận; mỗi nút v mang:
+%   toạ độ (x,y), dân số pop, nhu cầu cơ sở demand, giá đất land_price,
+%   street_count, tỉ lệ trạm sạc tư nhân private_cs. Cạnh mang chiều dài.
+% - Trạm sạc s = (vị trí, cấu hình bộ sạc, thuộc tính dẫn xuất). 12 mức công
+%   suất bộ sạc {3,...,250} kW với suất đầu tư tương ứng; tối đa K=100 trụ/trạm.
+% - Kế hoạch hiện hữu P_0 (các trạm đã có) là điểm xuất phát; ngân sách B.
+% - Lưới điện: thanh cái 500/220/110/22 kV dựng từ toạ độ TBA thực tế của Hà
+%   Nội; mỗi nút đồ thị ánh xạ tới thanh cái 22 kV gần nhất; mỗi thanh cái có
+%   dung lượng khả dụng available_mw sau khi trừ phụ tải nền.
+
+\subsection{Hàm mục tiêu phúc lợi xã hội}
+% ~300 từ + 3 phương trình. ĐÂY LÀ PHẦN PHẢI VIẾT ĐÚNG CODE.
+% (1) Nhu cầu động: d_v(P) = d_v^0 * exp(-eta * sum_{s: dist<r_s} c_s e^{-beta*dist})
+%     với eta = 0.4 (scaling), beta = 0.6 (distance decay).  <-- ĐÓNG GÓP 2
+% (2) Thời gian chờ: hàng đợi M/M/1/N tại mỗi trạm, lambda = tổng xe quy đổi từ
+%     dân số (ev_per_capita = 0.022), mu = capability*1000/BATTERY,
+%     N_hiệu_dụng = max(100, ceil(lambda)); W_s theo định luật Little.
+% (3) Điểm chuẩn hoá:
+%     cost = (alpha*travel + (1-alpha)*(charging + waiting))/3, alpha = 0.8
+%     fairness = 1/(1 + std(số trạm phủ mỗi nút))
+%     score = (benefit - cost + fairness)/3 - w_grid * penalty_grid
+% (4) penalty_grid = phạt khoảng cách đấu nối (trung bình theo trạm) + phạt
+%     vượt dung lượng CỘNG DỒN theo từng thanh cái.
+\begin{equation}
+\label{eq:score}
+\mathcal{S}(P) = \frac{B(P) - C(P) + F(P)}{3} - w_g\,\Phi_{\text{grid}}(P)
+\end{equation}
+
+\subsection{Phát biểu MDP}
+% ~350 từ. Định nghĩa hình thức:
+% - Trạng thái s_t: ma trận đặc trưng nút (N x 10) gồm lon, lat, nhu cầu tĩnh,
+%   nhu cầu động, giá đất, street_count, công suất trạm tại nút, khoảng cách
+%   tới lưới, dung lượng còn lại của thanh cái cục bộ, khoảng cách tới trạm gần
+%   nhất; cộng 3 đặc trưng toàn cục (ngân sách còn lại, tiến độ episode,
+%   độ cải thiện điểm so với đầu episode). Tất cả co giãn về [-1,1].
+% - Hành động a_t in {0,...,4}: MACRO-ACTION tham số hoá bằng heuristic --
+%   (0) mở trạm mới tại nút lợi ích biên cao nhất, (1) mở trạm mới tại nút nhu
+%   cầu chưa đáp ứng cao nhất, (2)/(3) bổ sung trụ sạc cho trạm hiện có theo
+%   lợi ích / theo nhu cầu, (4) di dời một trụ từ trạm kém hiệu quả sang trạm
+%   thiếu. NHẤN MẠNH: đây là lựa chọn thiết kế cốt lõi -- nó giữ không gian hành
+%   động ở kích thước 5 thay vì O(|V| x 12), giúp bài toán khả học; heuristic
+%   quyết định "ở đâu", chính sách quyết định "chiến lược nào, khi nào".
+% - Chuyển trạng thái: trừ ngân sách, cập nhật gán nút-trạm, cập nhật phụ tải
+%   thanh cái. Kết thúc khi hết ngân sách hoặc t >= |V|/2.
+% - Hàm thưởng (viết đúng như evaluation() trong code):
+%     r_t = [S(P_t) - S(P_{t-1})] + w_b * max(0, S(P_t) - S*_{t-1})
+%   Giải thích 2 câu: số hạng 1 là potential-based shaping (tổng telescoping =
+%   cải thiện ròng của episode); số hạng 2 thưởng riêng cho việc phá kỷ lục, do
+%   ta chỉ quan tâm KẾ HOẠCH TỐT NHẤT tìm được chứ không phải trạng thái cuối.
+\begin{equation}
+\label{eq:reward}
+r_t = \big[\mathcal{S}(P_t)-\mathcal{S}(P_{t-1})\big] + w_b\max\big(0,\;\mathcal{S}(P_t)-\mathcal{S}^{*}_{t-1}\big)
+\end{equation}
+
+%======================================================================
+\section{Phương pháp đề xuất}
+% NGÂN SÁCH: 1,2--1,3 trang, gồm 1 hình kiến trúc (Fig.~1) + 1 giả mã.
+
+\subsection{Mã hoá quan sát trên đồ thị}
+% ~200 từ. Vì sao cần chuẩn hoá theo hằng số riêng của từng quận
+% (scaling_constants.json): các quận khác nhau về quy mô/dân số/giá đất, chuẩn
+% hoá riêng giúp cùng một chính sách đọc được đặc trưng có ý nghĩa so sánh.
+
+\subsection{Bộ trích đặc trưng}
+% ~450 từ -- so sánh 4 phương án (ĐÓNG GÓP 3), mỗi phương án 1 đoạn ngắn:
+% (a) MLP: làm phẳng ma trận nút, không dùng cấu trúc đồ thị (mốc dưới).
+% (b) MLP + đặc trưng đồ thị: nối thêm trung bình đặc trưng lân cận 1-hop và
+%     thống kê mức đồ thị -> có thông tin cấu trúc nhưng không cần lan truyền.
+% (c) GCN: 3 lớp tích chập (32->64->128->256) trên ma trận kề đối xứng đã chuẩn
+%     hoá; trọng số cạnh w_uv = exp(-d_uv) (đường ngắn -> liên kết mạnh); có kết
+%     nối tắt; đọc ra theo nút rồi nối với nhánh MLP của đặc trưng toàn cục.
+% (d) Attention: các khối tự chú ý đa đầu + gộp PMA (coi các nút là một tập).
+% Fig.~1 = sơ đồ kiến trúc 2 nhánh (đồ thị + toàn cục) -> hợp nhất -> Q-head.
+
+\subsection{Huấn luyện}
+% ~250 từ + Bảng I siêu tham số. DQN (Stable-Baselines3): buffer 20k,
+% batch 128, lr 1e-4 (tuỳ chọn giảm tuyến tính), epsilon 1.0 -> 0.05 trong 30%
+% số bước, target update 1000, clip gradient 1.0, 200k bước, seed cố định,
+% torch.use_deterministic_algorithms(True). Nêu phần cứng + thời gian huấn luyện.
+
+\begin{algorithm}
+\caption{Một episode mở rộng kế hoạch trạm sạc}
+\label{alg:rollout}
+\begin{algorithmic}[1]
+\STATE Khởi tạo $P \leftarrow P_0$, ngân sách $B$, $\mathcal{S}^{*} \leftarrow \mathcal{S}(P_0)$
+\WHILE{$B > 0$ và $t < |V|/2$}
+  \STATE Quan sát $s_t$ (đặc trưng nút, cạnh, toàn cục)
+  \STATE $a_t \leftarrow \arg\max_a Q_\theta(s_t,a)$ \COMMENT{$\varepsilon$-greedy khi huấn luyện}
+  \STATE Chọn nút theo heuristic ứng với $a_t$; cập nhật $P$ và $B$
+  \STATE Gán lại nút--trạm; cập nhật phụ tải thanh cái
+  \STATE Tính $r_t$ theo (\ref{eq:reward}); cập nhật $\mathcal{S}^{*}$ và $P^{*}$
+\ENDWHILE
+\STATE \textbf{return} $P^{*}$
+\end{algorithmic}
+\end{algorithm}
+
+%======================================================================
+\section{Thiết lập thực nghiệm}
+% NGÂN SÁCH: 0,7 trang.
+
+\subsection{Dữ liệu}
+% Bảng II: thống kê 4 quận (số nút, số cạnh, dân số, số trạm hiện hữu, số thanh
+% cái 22 kV, ngân sách). Nguồn: OSM + dữ liệu TBA Hà Nội (500/220/110 kV).
+
+\subsection{Các phương pháp đối sánh}
+% 4 mốc so sánh, mỗi mốc 2--3 câu:
+% - Kế hoạch hiện hữu (không can thiệp) -- mốc gốc.
+% - Greedy-Benefit: mỗi bước chọn nút có lợi ích biên trên chi phí cao nhất.
+% - Greedy-Demand: mỗi bước chọn nút có nhu cầu chưa đáp ứng lớn nhất.
+% - GA: tiến hoá TRỌNG SỐ của mạng chính sách (neuroevolution) trên cùng không
+%   gian quan sát MLP; fitness = điểm chuẩn hoá tốt nhất trong episode; nêu
+%   pop_size, số thế hệ, tỉ lệ đột biến/lai ghép.
+% Nhấn mạnh: tất cả khởi động từ CÙNG kế hoạch hiện hữu, cùng ngân sách,
+% cùng đồ thị, cùng seed.
+
+\subsection{Độ đo}
+% Liệt kê chính xác các cột sẽ báo cáo:
+% điểm chuẩn hoá; lợi ích; chi phí; công bằng; thời gian chờ LỚN NHẤT (phút);
+% thời gian đi lại LỚN NHẤT (phút); phạt lưới; SỐ THANH CÁI QUÁ TẢI; số trạm;
+% tỉ lệ ngân sách đã dùng.
+% CẢNH BÁO: code hiện tính max chứ không phải trung bình -> phải ghi rõ "lớn
+% nhất/xấu nhất", đừng viết "trung bình".
+
+%======================================================================
+\section{Kết quả và thảo luận}
+% NGÂN SÁCH: 1,0--1,1 trang gồm Bảng III + Fig.~2 + Fig.~3.
+
+% Bảng III (chính): so sánh 4 phương pháp x 4 quận. Nếu chật, chỉ để 2 quận
+% trong bảng chính, 2 quận còn lại tóm tắt bằng 1 câu.
+% -> BẮT BUỘC: báo cáo trung bình +/- độ lệch chuẩn trên >= 5 seed. Hiện repo
+%    mới chạy 1 seed; đây là việc cần làm trước khi nộp.
+
+% Fig.~2: bản đồ quận với vị trí trạm do RL chọn (Results/maps/*), đặt cạnh
+%         kết quả của greedy để thấy khác biệt về phân bố không gian.
+% Fig.~3: đường cong huấn luyện (reward + best score) HOẶC biên Pareto
+%         (plots/pareto_frontier) -- chọn 1, không đủ chỗ cho cả hai.
+
+\subsection{So sánh với các phương pháp đối sánh}
+% 2 đoạn: (i) RL thắng ở đâu, thua ở đâu; (ii) GIẢI THÍCH VÌ SAO -- greedy tối
+% ưu lợi ích tức thời nên dồn trạm vào cùng vùng phụ tải và làm quá tải thanh
+% cái; chính sách RL học được cách "trả giá" ngắn hạn để giữ dung lượng lưới.
+
+\subsection{Phân tích loại bỏ (ablation)}
+% Bảng IV hoặc gộp vào Bảng III. 4 kịch bản đã có sẵn số liệu:
+% Full / beta=0 (bỏ suy giảm theo khoảng cách) / eta=0 (bỏ co giãn nhu cầu) /
+% bỏ phạt lưới / nhu cầu tĩnh.
+% Thông điệp chính (số liệu hiện có ủng hộ): bỏ phạt lưới hoặc bỏ suy giảm nhu
+% cầu đều làm TĂNG điểm thô nhưng kéo theo 1--2 thanh cái quá tải và 49 trạm
+% (dùng gần 100% ngân sách) -- tức là mô hình đầy đủ đánh đổi điểm lấy tính khả
+% thi vận hành. Phải diễn giải theo hướng này, đừng né việc điểm thô thấp hơn.
+
+\subsection{Thảo luận về biểu diễn trạng thái}
+% 1 đoạn ngắn so sánh MLP / MLP+graph / GCN / attention: cái nào đáng công sức.
+
+%======================================================================
+\section{Kết luận}
+% NGÂN SÁCH: 0,2 trang (~150 từ). 3 câu tổng kết + 2 câu hạn chế (lưới điện
+% tổng hợp từ toạ độ TBA chứ chưa có số liệu vận hành thực; một thành phố; ngân
+% sách cố định) + 2 câu hướng phát triển (đa mục tiêu, dữ liệu lưới thực,
+% chuyển giao chính sách giữa các quận/thành phố).
+
+%======================================================================
+\section*{Cảm tạ}
+% 1--2 câu (đề tài/quỹ tài trợ). Cắt bỏ nếu thiếu trang.
+
+%======================================================================
+% TÀI LIỆU THAM KHẢO -- NGÂN SÁCH: 0,4 trang, 15--18 mục.
+% Phân bổ gợi ý: 5 định vị trạm sạc, 3 GA/metaheuristic, 4 DRL + DRL trên đồ
+% thị, 3 ràng buộc lưới/hosting capacity, 2 công cụ (Stable-Baselines3, OSMnx,
+% pandapower).
+\begin{thebibliography}{1}
+\bibitem{sb3} A.~Raffin \emph{et al.}, ``Stable-Baselines3: Reliable reinforcement learning implementations,'' \emph{JMLR}, 2021.
+\end{thebibliography}
+
+\end{document}

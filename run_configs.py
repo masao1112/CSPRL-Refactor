@@ -25,27 +25,27 @@ CONFIGS = [
     # Ordered longest-first so the slowest run starts first.
     # Config 0
     {
-        "location": "NamTuLiem", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
+        "location": "NamTuLiem", "obs_type": "mlp", "ns": "hard_s1", "seed": 1,
         "learning_rate": 8e-5, "total_timesteps": 200000,
-        "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
+        "exploration_fraction": 0.3, "exploration_final_eps": 0.02,
     },
     # Config 1
     {
-        "location": "TayHo", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
+        "location": "TayHo", "obs_type": "mlp", "ns": "hard_s1", "seed": 1,
         "learning_rate": 8e-5, "total_timesteps": 200000,
-        "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
+        "exploration_fraction": 0.3, "exploration_final_eps": 0.02,
     },
     # Config 2
     {
-        "location": "CauGiay", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
+        "location": "CauGiay", "obs_type": "mlp", "ns": "hard_s1", "seed": 1,
         "learning_rate": 8e-5, "total_timesteps": 200000,
-        "exploration_fraction": 0.5, "exploration_final_eps": 0.02,
+        "exploration_fraction": 0.3, "exploration_final_eps": 0.02,
     },
     # Config 3  -- also serves as the "Full Model" row of the ablation table
     {
-        "location": "DongDa", "obs_type": "mlp", "ns": "mlp_s1", "seed": 1,
+        "location": "DongDa", "obs_type": "mlp", "ns": "hard_s1", "seed": 1,
         "learning_rate": 8e-5, "total_timesteps": 200000,
-        "exploration_fraction": 0.5, "exploration_final_eps": 0.05,
+        "exploration_fraction": 0.3, "exploration_final_eps": 0.05,
     },
 
     # ── Wave 2: extra seeds on the two headline districts (mean +/- std) ──

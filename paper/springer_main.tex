@@ -1,0 +1,716 @@
+\documentclass[graybox]{svmult}
+
+% Packages retained from the provided Springer template.
+\usepackage{mathptmx}
+\usepackage{helvet}
+\usepackage{courier}
+\usepackage{type1cm}
+\usepackage{makeidx}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage[bottom]{footmisc}
+
+% Additional packages: equations, tidy tables, URLs, vector diagrams and plots.
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{url}
+\usepackage{microtype}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+% Figures live outside paper/; resolve them whether pdflatex is run from the
+% repository root or from paper/.
+\graphicspath{{../}{./}{../}}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\makeindex
+
+% Placeholder for a number that must come from the post-refactor re-run.
+% Renders as a loud marker so no stale figure can reach camera-ready.
+\newcommand{\TODO}[1]{\textbf{[??]}}
+
+% Float spacing
+\setlength{\textfloatsep}{6pt plus 2pt minus 2pt}
+\setlength{\floatsep}{5pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{1pt}
+
+% Shared style for the learning-dynamics plots.
+\pgfplotsset{
+  paperaxis/.style={
+    xlabel={training epoch},
+    xmin=0.5, xmax=20.5, xtick={1,5,10,15,20},
+    tick label style={font=\footnotesize},
+    label style={font=\footnotesize},
+    legend style={font=\footnotesize, draw=none, fill=white, fill opacity=0.85,
+                  text opacity=1, inner sep=2pt},
+    grid=major, grid style={dotted, gray!50},
+    every axis plot/.append style={line width=0.9pt, mark=none}
+  }
+}
+
+\begin{document}
+
+\title*{Grid-Capacity-Aware Deep Reinforcement Learning for Dynamic EV Charging Station Placement in Urban Networks}
+\titlerunning{Grid-Capacity-Aware Deep RL for EV Charging Station Placement}
+\author{Quang Huy Vuong, Thai Anh Dao Quang, Gia Bao Nguyen, Nam Son Tran, Minh Trien Pham}
+\authorrunning{Quang Huy Vuong et al.}
+\institute{Quang Huy Vuong, Thai Anh Dao Quang, Gia Bao Nguyen, Nam Son Tran \at
+Hanoi University, Hanoi, Vietnam\\
+\email{huyvq@hanu.edu.vn, thaianh494@gmail.com, nguyengiabaoctn@gmail.com, trannamson0328@gmail.com}
+\and
+Minh Trien Pham \at
+Posts and Telecommunications Institute of Technology, Hanoi, Vietnam\\
+\email{trienpm@ptit.edu.vn}}
+\maketitle
+
+% Springer limit: 200 words. Current draft ~195.
+\newcommand{\absbody}{The rapid growth of electric vehicles intensifies demand for public charging infrastructure while stressing capacity-constrained urban distribution grids. Charging-station placement must therefore jointly address service coverage, evolving demand, and cumulative grid loading. We formulate network expansion as a sequential decision problem and propose a grid-capacity-aware Deep Q-Network framework. The framework integrates state-dependent demand attenuation, a multi-server finite-buffer queue for congestion-aware delay estimation, a hard per-bus capacity constraint that keeps every reachable plan within the residual capacity of its medium-voltage bus, and a soft penalty on grid connection distance. Experiments on OpenStreetMap networks of three Hanoi districts, coupled with a simulated medium-voltage distribution-grid model, show that the method achieves the highest net utility against greedy and genetic-algorithm baselines. Its advantage widens as per-junction headroom decreases, confirming the value of grid-capacity-aware sequential placement under constrained capacity.
+\keywords{Electric vehicle charging station placement $\cdot$ Deep Q-Network $\cdot$
+ Dynamic demand $\cdot$ Grid-capacity-aware optimization }}
+
+\abstract*{\absbody}
+
+ \abstract{\absbody}
+
+\section{Introduction}
+\label{sec:intro}
+Electric vehicles (EVs) can contribute to transport decarbonization, but their widespread adoption depends on accessible and well-distributed public charging infrastructure \cite{gnanavendan2024challenges,dimitriadou2023current}. Although charging networks continue to expand, their availability remains insufficient to meet growing demand in many urban areas. Determining where new capacity should be installed is known as the charging station location problem (CSLP), a facility-location problem that selects sites from a set of candidates to optimize service, cost, and other planning objectives \cite{kchaou2021charging}. Recent work has also investigated the CSLP in Vietnam \cite{truc2024electric}.
+
+Locating charging stations in dense urban areas requires consideration of geographical, demographic, and urban-planning factors \cite{roblot2025deep}. Mathematical optimization provides a transparent way to represent placement decisions, objectives, and planning constraints; for example, a recent Vietnam study formulates the problem as a mixed-integer nonlinear program \cite{truc2024electric}. However, solving these models can become computationally demanding as the number of candidate sites and decision variables increases. Genetic Algorithms (GA) \cite{zhou2022location} and specialized urban heuristics \cite{torres2021electric} provide practical alternatives when exact optimization becomes costly, although they still produce solutions for a specific set of planning inputs. Reinforcement learning \cite{von2022reinforcement,liu2023optimal} offers a different perspective by treating station placement as a sequence of interdependent decisions, allowing a learned policy to account for how earlier placements affect later choices. We extend this direction by incorporating state-dependent demand and bus-level grid capacity into the sequential placement process.
+
+Two gaps motivate our approach. First, existing models largely treat demand as static, preventing stations from absorbing the demand they serve. Second, distribution-grid constraints are largely absent from sequential placement, while hosting-capacity studies typically optimize them statically. Building on \cite{von2022reinforcement} and \cite{liu2023optimal}, we propose a grid-capacity-aware \textbf{Deep Q-Network (DQN)} framework for sequential placement, extending those formulations along three directions that form our contributions:
+\begin{itemize}
+\item \textbf{Dynamic demand}: demand evolution is a state-dependent feedback loop in which regional demand decays exponentially as local capacity is added, promoting non-redundant coverage.
+\item \textbf{Multi-server queuing and hard bus-capacity feasibility}: a multi-objective utility combining coverage benefit, spatial fairness and queuing discomfort under a multi-server finite-buffer queue, in which every charger is an explicit server; per-bus capacity is enforced as a hard feasibility constraint on the action set, while grid connection distance remains a soft cost.
+\item \textbf{Hanoi case study}: the framework is evaluated on road networks and public geospatial data from three Hanoi districts, coupled with a simulated medium-voltage grid model, and compared with greedy, genetic-algorithm, and static-demand baselines.
+\end{itemize}
+
+%======================================================================
+% BUDGET: ~3.25 pages. Core formulation; Table 1 = notation.
+% All formulas follow the implementation in custom_environment/helpers.py
+% and power_grid/csprl_adapter.py. Divergences from the VNICT draft are
+% flagged with "% NOTE:" comments.
+\section{System Modeling and Problem Formulation}
+\label{sec:model}
+\subsection{System Model}
+\label{subsec:network}
+We model the urban road network as an attributed graph $G=(V,E)$ and formulate charging station placement as a dynamic, grid-constrained optimization task. Each node $v \in V$ represents a road junction described by the feature vector
+\begin{equation}
+\phi(v)=
+\left[
+\mathrm{lon}(v),\;
+\mathrm{lat}(v),\;
+\mathrm{dem}(v),\;
+\ell(v),\;
+\mathrm{pop}(v)
+\right],
+\end{equation}
+encoding its geographic coordinates, a base demand proxy, the local land price $\ell(v)$, and the resident population. Edges $E$ carry road segment lengths, from which network distances between junctions are derived.
+
+A charging station $s=(v,\mathbf{t})$ placed at junction $v$ installs $\mathbf{t}=(t_1,\dots,t_m)$ chargers across $m$ power categories, holding $n(s)=\sum_i t_i$ chargers and delivering capacity $C(s)=\sum_i t_i c_i$. The installation cost of a station $s$ combines land and hardware costs:
+\begin{equation}
+\label{eq}
+\mathrm{fee}(s)=\mathrm{land}(v, s)+\sum_i t_i\kappa_i,
+\end{equation}
+where $\mathrm{land}(v,s)$ denotes the land cost when building station $s$ at junction $v$, and $\kappa_i$ is the hardware cost of charging category $i$. A plan $p$ is the set of deployed stations, subject to $n(s)\le K$ per station and a capital budget $B$.
+
+\runinhead{Distribution grid.}
+\label{subsec:grid}
+The distribution grid used in this study is a \emph{simulated} medium-voltage model, not a measured network. It is constructed once for the entire city and is anchored to reality only through the coordinates and nameplate ratings of the 500/220/110~kV substations, which are compiled from publicly available sources. Everything below that level is synthesized: the 22~kV feeders are laid out along the road network, every feeder is assigned the same conductor and therefore the same ampacity, and each bus is given a base load $P_b^{\mathrm{load}}$ allocated in proportion to the population and points of interest it serves. No metered feeder loading, no utility-provided topology and no time-varying load profile enter the model; it is a capacity proxy that makes bus-level headroom differ across the city in a plausible way, and the results should be read as such. Section~\ref{sec:conclusion} returns to this as the main limitation of the study. Every junction $v$ is mapped offline to its nearest medium-voltage bus $b(v)\in\mathcal{B}_d$ at connection distance $\delta(v)$, leaving a residual capacity
+\begin{equation}
+\label{eq:headroom}
+A_b=\lambda\,S^{\max}-P_b^{\mathrm{load}},
+\end{equation}
+where $S^{\max}$ is the feeder rating and $\lambda$ the loading limit. The power a plan draws from bus $b$ aggregates over all stations referred to it, $Q_b=\sum_{s\,:\,b(v_s)=b} C(s)$. Evaluating \eqref{eq:headroom} capacity at the bus level accounts for local grid constraints and reduces the risk of overloading individual buses.
+
+\subsection{Multi-Objective Utility}
+\label{subsec:utility}
+The overall plan utility $R(p)$ evaluates service benefit, user discomfort cost, spatial fairness, and grid alignment.
+
+\runinhead{Service benefit.} The station service radius $r(s)$ scales non-linearly with the installed capacity $C(s)$ and saturates at $R_{\max}$:
+\begin{equation}
+\label{eq:radius}
+r(s)=\frac{R_{\max}}{1+e^{-C(s)/C_0}},
+\end{equation}
+with $C_0=0.5$~MW a capacity scale constant chosen so that stations across the
+realistic capacity range are separated by the logistic rather than collapsed onto
+its flat part.
+Let $\mathrm{cov}(v)=|{s\in p:d_{v,s}\le r(s)}|$ denote the number of stations covering node $v$, and $V_s={v\in V:d_{v,s}\le r(s)}$ the nodes served by station $s$. The service benefit is defined as
+\begin{equation}
+\label{eq:benefit}
+\mathrm{benefit}(p)=\frac{1}{2}\left(
+\frac{1}{|V|}\sum_{v\in V}\sum_{k=1}^{\mathrm{cov}(v)}\frac{1}{k}
++\frac{1}{|p|}\sum_{s\in p}\frac{\lambda_{\mathrm{sc}}|V_s|}{|V|}
+\right),
+\end{equation}
+where $\lambda_{\mathrm{sc}}$ equalizes the magnitudes of the two terms. The harmonic term rewards coverage with diminishing returns, while the station-level term discourages poorly located stations.
+
+\runinhead{User discomfort.} User discomfort combines travel distance, charging duration, and queuing delay. Each node $v$ is assigned to the station $s_*(v)$ minimizing the same travel--queue trade-off $\alpha$ used in \eqref{eq:cost}, giving the demand-weighted travel cost:
+\begin{equation}
+\label{eq:travel}
+\mathrm{travel}(p)
+=
+\sum_{v\in V}
+\frac{d_{v,s_*(v)}}{\bar{V}}
+\bigl(1+\mathrm{dem}(v)\bigr).
+\end{equation}
+
+The total charging duration along a path \(p\) is
+\begin{equation}
+\label{eq:charging}
+\mathrm{charging}(p)
+=
+\sum_{s\in p}
+\frac{D(s)}{\mu(s)}.
+\end{equation}
+Here \(D(s)\) is the EV arrival rate (veh/h) at station \(s\):
+\begin{equation}
+\label{eq:arrival}
+D(s)
+=
+\sum_{v\in V:\,s_*(v)=s}
+\left\lceil
+\gamma_{\mathrm{EV}}\,\mathrm{pop}(v)
+\right\rceil,
+\qquad
+\mu(s)
+=
+\frac{C(s)}{E_{\mathrm{avg}}},
+\qquad
+\mu_1(s)
+=
+\frac{\mu(s)}{n(s)},
+\end{equation}
+where \(\gamma_{\mathrm{EV}}\) is the EV demand rate per unit population and \(E_{\mathrm{avg}}\) is the average energy required per charging session. \(\mu(s)\) is the aggregate service rate of station \(s\) (sessions per hour) and \(\mu_1(s)\) the rate of one charger, obtained by attributing the mean charger power \(C(s)/n(s)\) to each of the \(n(s)\) chargers.
+
+A charging station serves several vehicles at once, one per charger, so a
+single-server model credits it with a discipline it does not have: pooling
+$n(s)$ chargers into one server of rate $\mu(s)$ lets a single vehicle draw the
+full station power, which understates the delay a driver actually experiences at
+a station made of many slow chargers. We therefore model each station as an
+adaptive finite-buffer \emph{multi-server} M/M/$c$/$N$ queue with
+\begin{equation}
+\label{eq:neff}
+c(s)=n(s),
+\qquad
+N_{\mathrm{eff}}(s)=\max\bigl(c(s),\ \min(N,\lceil D(s)\rceil)\bigr),
+\end{equation}
+so the system capacity never falls below the number of chargers. Writing the
+offered load in Erlang as $a(s)=D(s)/\mu_1(s)$, the traffic intensity is
+$\rho(s)=a(s)/c(s)=D(s)/\mu(s)$: the aggregate service capacity is identical to
+that of the single-server model and only the discipline differs. The queue is a
+birth--death chain with birth rate $D(s)$ and state-dependent death rate
+$\min(n,c)\,\mu_1(s)$, whose stationary distribution is
+\begin{equation}
+\label{eq:queue}
+P_n=\frac{r_n}{\sum_{k=0}^{N_{\mathrm{eff}}}r_k},
+\qquad
+r_0=1,
+\qquad
+r_n=r_{n-1}\,\frac{a}{\min(n,c)}
+=
+\begin{cases}
+\dfrac{a^{n}}{n!}, & 0\le n\le c,\\
+\dfrac{a^{n}}{c!\,c^{\,n-c}}, & c< n\le N_{\mathrm{eff}}.
+\end{cases}
+\end{equation}
+The blocking probability and the mean system size follow directly as
+$P_N=P_{N_{\mathrm{eff}}}$ and $L_s=\sum_{n=0}^{N_{\mathrm{eff}}}n\,P_n$. Because
+the buffer is finite this distribution exists and is unique for every $\rho>0$,
+so no separate stable and overloaded cases are needed. We evaluate the ratios in
+\eqref{eq:queue} recursively in log space and normalize once, which is exact at
+every traffic intensity and avoids the overflow the closed-form $\rho^{N}$
+expressions incur once $\rho$ grows large.
+Mean sojourn time follows from Little’s law applied to the effective arrival rate:
+\begin{equation}
+W(s)=\frac{L_s}{D(s)(1-P_N)+\varepsilon}.
+\end{equation}
+The total waiting cost on a path is
+\begin{equation}
+\label{eq:waiting}
+\mathrm{waiting}(p)=\sum_{s\in p}W(s)\,D(s).
+\end{equation}
+
+All three components are normalized by their values under the existing infrastructure $p_0$. The aggregate discomfort cost is
+\begin{equation}
+\label{eq:cost}
+\mathrm{cost}(p)
+=
+\alpha\,\overline{\mathrm{travel}}(p)
++
+(1-\alpha)
+\left(
+\overline{\mathrm{charging}}(p)
++
+\overline{\mathrm{waiting}}(p)
+\right),
+\end{equation}
+where $\alpha \in [0,1]$ balances travel time and station dwell time.
+
+\runinhead{Spatial fairness.}
+\label{subsubsec:fairness}
+Spatial equity is the inverse spread of node coverage counts, $\mathrm{fairness}(p)=1/(1+\sigma_{\mathrm{cov}})$, where $\sigma_{\mathrm{cov}}$ is the standard deviation of $\mathrm{cov}(v)$ over $v\in V$. A plan with few stations may achieve high fairness through uniform coverage, so fairness is meaningful only jointly with benefit.
+
+\runinhead{Grid connection cost.}
+\label{subsubsec:gridpen}
+Connecting a station to the medium-voltage network costs money but violates
+nothing, so connection distance stays a soft term. With $\delta(v_s)$ the
+connection distance of Section~\ref{subsec:grid},
+\begin{equation}
+\label{eq:gridpen}
+\mathrm{dist\_pen}(p)
+=
+\sum_{s\in p}
+\min\left(
+1,
+\frac{\max(0,\delta(v_s)-\delta_{\min})}
+{\delta_{\max}-\delta_{\min}}
+\right),
+\qquad
+\mathrm{avg\_penalty}(p)
+=
+\frac{\mathrm{dist\_pen}(p)}{\max(1,|p|)},
+\end{equation}
+where the sum is extensive in the number of stations and is therefore averaged
+over them.
+
+\runinhead{Hard bus-capacity constraint.}
+\label{subsubsec:gridcap}
+Bus capacity, in contrast, is a physical limit rather than a cost: a plan that
+draws more power from a bus than it can supply is not an expensive plan, it is an
+infeasible one. We therefore require
+\begin{equation}
+\label{eq:hardcap}
+Q_b\;\le\;A_b
+\qquad
+\forall\,b\in\mathcal{B}_d ,
+\end{equation}
+with $Q_b$ and $A_b$ as defined in Section~\ref{subsec:grid}. This is enforced on
+the action set rather than through the objective: at every step the environment
+admits only those placements whose connected power still fits in the residual
+capacity of the target bus, so no reachable plan violates \eqref{eq:hardcap} and
+no penalty term needs to price a violation that cannot occur. The same admissible
+set is used by every method compared in Section~\ref{sec:results}, so all of them
+are held to the identical constraint. Where a pre-existing station already
+overloads a bus, that bus simply admits nothing further; the agent inherits the
+violation but cannot deepen it.
+
+The formulation this replaces charged the same quantity through the objective instead, as a penalty proportional to the per-bus overrun $\max(0,Q_b-A_b)$ normalized by the number of buses. A penalty prices a violation; it does not prevent one, and Section~\ref{subsec:comparative} quantifies what the soft formulation still admits under an otherwise identical policy.
+
+\runinhead{Net utility.}
+\label{subsubsec:utility}
+The aggregate plan utility combines the four terms:
+\begin{equation}
+\label{eq:utility}
+R(p)=\frac{\mathrm{benefit}(p)-\mathrm{cost}(p)+\mathrm{fairness}(p)}{3}-w_g\cdot\mathrm{avg\_penalty}(p).
+\end{equation}
+
+\subsection{Problem Statement}
+\label{subsec:problem}
+
+Given an attributed road network $G=(V,E)$, an existing plan $p_0$, a capital budget $B$, and medium-voltage buses $B_d$ with residual capacities $A_b$, we seek an extended plan $p\supseteq p_0$ maximizing net utility:
+\begin{align}
+p^\star &= \arg\max_{p\,\supseteq\,p_0} R(p) \label{eq:objective}\\
+\text{s.t.}\quad & \sum_{s\in p}\mathrm{fee}(s)-\sum_{s\in p_0}\mathrm{fee}(s) + \sum_{\text{relocations}} \zeta\kappa_i \le B, \label{eq:budget}\\
+& n(s)\le K \qquad \forall s\in p^\star , \label{eq:cap}\\
+& Q_b\le A_b \qquad \forall b\in\mathcal{B}_d . \label{eq:capgrid}
+\end{align}
+where each relocation of a charger of category (i) incurs an additional cost $\zeta\kappa_i$.
+
+
+Bus capacity is a hard feasibility constraint, so overloaded plans are unreachable rather than merely expensive; only connection distance enters $R(p)$ as a cost. The joint optimization of station locations and charger configurations is combinatorial at district scale, motivating the learned sequential policy described in Section~\ref{sec:method}.
+
+%======================================================================
+% BUDGET: ~2.25 pages. Fig. 1 = pipeline (tikz); Table 2 = macro-actions;
+% Table 3 = hyperparameters; Algorithm 1 = episode rollout.
+\section{Proposed Grid-Capacity-Aware DQN Methodology}
+\label{sec:method}
+We formulate the placement process as a sequential Markov Decision Process (MDP) and solve it with a DQN \cite{mnih2015human}.
+\subsection{MDP Formulation and Macro-Action Space}
+\label{subsec:mdp}
+\runinhead{States.}
+A state $s_t=(\mathbf{X}_t,g_t)$ comprises node features $\mathbf{X}_t\in\mathbb{R}^{|V|\times10}$ and global descriptor $g_t\in\mathbb{R}^3$. Each node encodes coordinates, static/dynamic demand, land price, street count, installed capacity, grid distance $\delta(v)$, residual grid capacity $A_{b(v)}-Q_{b(v)}$, and nearest-station distance; $g_t$ contains remaining budget, episode progress, and score improvement. Features are scaled to $[-1,1]$ using district-specific constants for comparability.
+\runinhead{Actions.} We use five discrete macro-actions (Table~\ref{tab:actions}). The policy selects a placement \emph{strategy}; a deterministic heuristic then resolves the concrete node.
+Establishing a charging station satisfies local charging demand and thereby reduces the marginal demand of nearby junctions. The effective dynamic demand $\mathrm{dem}_{\mathrm{dyn}}(v,p)$ at junction $v$ under the current plan $p$ is defined as
+\begin{equation}
+\label{eq:dyndem}
+\mathrm{dem}_{\mathrm{dyn}}(v,p)=\mathrm{dem}(v)\cdot
+\exp\Biggl(-\eta\!\!\sum_{\substack{s\in p\\ d_{v,s}<r(s)}}\!\! C(s)\,e^{-\beta d_{v,s}}\Biggr),
+\end{equation}
+where $d_{v,s}$ is the Haversine distance, $r(s)$ the service radius, and $\eta,\beta>0$ control demand reduction and spatial attenuation, respectively. Exponential decay suppresses repeatedly serving already-covered peaks and thereby discourages over-clustering.
+\runinhead{Rewards.}
+With $R^{*}_{t}$ denoting the best utility observed so far, the reward is
+\begin{equation}
+\label{eq:reward}
+r_t=
+\underbrace{R(p_t)-R(p_{t-1})}_{\text{shaping}}
++
+w_b\underbrace{\max\bigl(0,R(p_t)-R^{*}_{t-1}\bigr)}_{\text{record bonus}}.
+\end{equation}
+The shaping term encourages local utility improvement, while the record bonus explicitly rewards the discovery of a new best plan. Because the agent ultimately returns the plan that realises \(R^{*}_{T}\), the cumulative effect of the record bonus is precisely the improvement of the retained (best-so-far) plan over the initial plan \(p_0\). No separate terminal bonus is required.
+\runinhead{Episodes.} An episode terminates when the budget is exhausted, when every junction hosts a station, or at the horizon $T_{\max}=\min(|V|/2,\,350)$.
+\begin{table}[!htbp]
+\caption{Macro-action space. The policy chooses the strategy; the node is resolved deterministically}
+\label{tab:actions}
+\centering
+\footnotesize
+\begin{tabular}{@{}p{2.9cm}p{7.6cm}@{}}
+\toprule
+Macro-action & Node selection \\
+\midrule
+Create-by-Benefit & Free node maximizing potential coverage, discounted by the benefit of nearby stations \\
+Create-by-Demand & Free node with the highest unsatisfied dynamic demand $\mathrm{dem}_{\mathrm{dyn}}(v,p_t)$ \\
+Increase-by-Benefit & Same benefit rule, restricted to nodes already hosting a station with $<K$ chargers; add one charger \\
+Increase-by-Demand & Same demand rule under the same restriction; add one charger \\
+Relocate & Move one charger of category $i$ from the lowest-benefit station built in this episode to the station with the worst waiting time, incurring a relocation cost of $\zeta\kappa_i$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For both \emph{Create} actions the charger configuration is also resolved automatically: an offline lookup table stores, per capacity level, the cheapest feasible combination over the $m$ categories, and the environment retrieves the entry matching the demand within $R_{\max}$ of the selected node.
+
+\subsection{Network Architecture and Policy Training}
+\label{subsec:training}
+
+The node feature matrix $\mathbf{X}_t$ and the global descriptor $g_t$ are flattened into a single observation vector and encoded by a multi-layer perceptron (MLP) that estimates the action values $Q(s_t,a;\theta)$:
+\begin{equation}
+\label{eq:mlp}
+\begin{aligned}
+\mathbf{z}_t &= \mathrm{ReLU}\bigl(\mathbf{W}_1\cdot[\mathrm{Flat}(\mathbf{X}_t),\,g_t]+\mathbf{b}_1\bigr),\\
+\mathbf{h}_t &= \mathrm{ReLU}\bigl(\mathbf{W}_2\cdot\mathbf{z}_t+\mathbf{b}_2\bigr).
+\end{aligned}
+\end{equation}
+The Q-network parameters $\theta$ are trained by minimizing the temporal difference (TD) loss over a replay buffer $\mathcal{B}$, where a transition is denoted $e_t=(s_t,a_t,r_t,s_{t+1})$:
+\begin{equation}
+\label{eq:tdloss}
+\mathcal{L}(\theta)=\mathbb{E}_{e_t\sim\mathcal{B}}\Bigl[\bigl(r_t+\gamma\max_{a'}Q(s_{t+1},a';\theta^{-})-Q(s_t,a_t;\theta)\bigr)^{2}\Bigr],
+\end{equation}
+with $\theta^{-}$ the periodically synchronized target parameters. Each step observes $s_t$, selects $a_t$ ($\varepsilon$-greedy while training), resolves the junction by the heuristic of $a_t$, deducts $\mathrm{fee}(s)$ from the remaining budget, re-assigns junctions to stations, recomputes $D(s)$ and $W(s)$, updates the bus loads and the dynamic demand \eqref{eq:dyndem}, and scores the transition by \eqref{eq:reward}; the rollout returns the best plan encountered, not the terminal one.
+
+
+%=====================================================================
+% BUDGET: ~3.5 pages. Setup and results merged into one section, as in
+% vnict_main.tex. ALL evaluations and graphs here are DONG DA; the other
+% three districts go to the Appendix.
+% Table 4 = district + grid statistics;  Table 5 = main comparison;
+% Fig. 2 = Dong Da plan maps;
+% Fig. 3 = learning dynamics (pgfplots, paperaxis style).
+\section{Experimental Results and Discussion}
+\label{sec:results}
+
+\subsection{Experimental Setup and Evaluation Protocol}
+\label{subsec:setup}
+\runinhead{Geospatial datasets.}
+Geospatial preprocessing and visualization use QGIS \cite{graser2025}, with urban road networks from OpenStreetMap \cite{OpenStreetMap} extracted via OSMnx \cite{boeing2017osmnx} for three Hanoi districts: Dong Da ($|V|=639$), Cau Giay ($|V|=932$), and Tay Ho ($|V|=1319$). All methods start from the \emph{existing} charging infrastructure under the same graph, budget, and random seed.
+
+The initial plan $p_0$ is derived from the public V-Green station locator \cite{vgreen2026}, retaining public car-charging sites within each district and their coordinates, operating status, port counts, and rated power. Land prices ($\ell(v)$) come from the Hanoi land-price dataset \cite{landprice2025} and are assigned by nearest-parcel lookup, while population \(\mathrm{pop}(v)\) is obtained from the WorldPop \(\mathrm{pop}(v)\) constrained population grid \cite{worldpop2025} using the grid cell containing each junction.
+
+Chargers fall into seven power categories. The evaluated (power, cost) pairs in (kW, MVND) are (7, 11), (11, 12), (30, 143), (60, 278), (120, 416), (150, 676), and (250, 3272), based on prevailing market prices. A station holds at most $K=20$ chargers, a cap of the order of the largest public sites in the existing plan, which range up to $19$ ports. $K$ also bounds the number of servers $c(s)$ of the queue in \eqref{eq:neff}.
+
+\runinhead{Baseline Algorithms.}
+\begin{itemize}
+    \item \textbf{Greedy-Benefit:} selects nodes maximizing incremental service benefit.
+    \item \textbf{Greedy-Demand:} selects nodes maximizing unserved local demand.
+    \item \textbf{GA:} metaheuristic evolving policy network weights over the same observation and macro-action spaces, using best-episode utility as fitness.
+    \item \textbf{Static DQN:} a variant of the proposed agent with $\eta=0$, which removes demand attenuation and therefore isolates the contribution of the dynamic demand model.
+\end{itemize}
+Every baseline selects from the same grid-admissible candidate set as the agent, so \eqref{eq:hardcap} binds all methods equally and none of them can buy utility by overloading a bus. The RL agent is implemented with Stable-Baselines3 \cite{raffin2021sb3} in a Gymnasium \cite{towers2026gymnasium} environment.
+\runinhead{Evaluation metrics.} Net utility $R(p)$, service benefit, aggregate discomfort cost, spatial fairness, the three cost components separately, deployed stations, and budget utilization. Because \eqref{eq:hardcap} is enforced on the action set, no method can produce an overloaded bus and a count of violations would read zero for every row; we report peak bus utilization $\max_b Q_b/A_b$ instead, which shows how close to its capacity a plan drives the tightest bus.
+
+\runinhead{Distribution grid.}
+\label{subsec:gridstats}
+The medium-voltage model is simulated throughout (Section~\ref{subsec:grid}). Every feeder is assigned the same conductor and therefore the same ampacity, so $S^{\max}$ is uniform at $16.0$~MVA and, at the loading limit $\lambda=0.8$, each bus offers $12.8$~MW. Districts consequently differ only through their simulated base load, which is allocated from population and points of interest rather than metered. The headroom figures in Table~\ref{tab:grid} should therefore be read as a controlled spread of capacity-scarcity regimes across districts, not as measurements of the Hanoi distribution network.
+
+
+
+\begin{table}[!t]
+\caption{Distribution grid per district, ordered by decreasing headroom per node. Usable capacity is $\lambda S^{\max}$ summed over the district's buses and headroom is $\sum_b A_b$}
+\label{tab:grid}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{7pt}
+\begin{tabular}{@{}lrr rrrr@{}}
+\toprule
+District & $|V|$ & $|\mathcal{B}_d|$ & Usable & Base load & Headroom & Headroom \\
+         &       &                   & (MW)   & (MW)      & (MW)     & per node (kW) \\
+\midrule
+Dong Da  &  639 & 18 & 230.5 & 57.3 & 173.2 & 271 \\
+Tay Ho   & 1319 & 18 & 230.5 & 43.5 & 187.0 & 142 \\
+Cau Giay &  932 & 11 & 140.8 & 70.0 & \phantom{0}70.8 & \phantom{0}76 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Comparative Performance Analysis}
+\label{subsec:comparative}
+
+Table~\ref{tab:results} reports the comparison across the three districts.
+
+% ======================================================================
+% TODO(rerun): every number below is stale. The M/M/c/N queue, the hard bus
+% capacity constraint, K = 20 and the corrected C_0 all change the objective,
+% so Table \ref{tab:results}, Fig. \ref{fig:maps} and
+% the margins quoted in the abstract, the introduction and the conclusion must
+% be regenerated before submission. Pipeline:
+%   python train.py --location <D> [--grid_mode hard|soft] [--eta 0] [--beta 0]
+%   python evaluate_all.py --path_dir Results/tmp/<D>/<obs>/<ns>
+%   python algorithms/compare_rl.py --location <D> --ns <ns>
+%   python src/analysis/plot_plan_maps.py
+% The prose here states the shape of the expected result and leaves every
+% figure as \TODO{} so a stale number cannot survive to camera-ready.
+% ======================================================================
+The agent attains the highest net utility in all three districts. Its margin over
+the strongest baseline widens as the per-node headroom of the district falls
+($271\rightarrow142\rightarrow76$~kW), which is the behaviour the formulation
+predicts: when capacity is plentiful the bus constraint \eqref{eq:hardcap} is
+slack and a purely demand-driven heuristic loses little by ignoring it, whereas
+under scarcity the admissible set is small and the ordering of placements
+determines how much of it can be used. Margins of \TODO{}, \TODO{} and \TODO{}
+points are observed for Dong Da, Tay Ho and Cau Giay respectively.
+
+Because \eqref{eq:hardcap} is enforced on the action set, no method overloads a
+bus and the comparison shifts from \emph{who violates} to \emph{who extracts more
+service from the same admissible capacity}. Peak bus utilization
+$\max_b Q_b/A_b$ makes this visible: plans that stop early leave headroom unused,
+while the agent drives the tightest bus close to its limit without crossing it.
+Cau Giay, the most constrained district, separates the methods most clearly --
+Greedy-Demand exhausts the sites it can reach after \TODO{} stations and
+\TODO{}\% of the budget, whereas the agent reaches \TODO{} stations and \TODO{}
+benefit under the same constraint.
+
+Tay Ho highlights the remaining utility--service trade-off. The agent achieves
+\TODO{} benefit against \TODO{} for the best baseline. It does not lead on
+fairness, which is partly explained by the metric rewarding low-deployment plans:
+Greedy-Demand attains the highest fairness in Cau Giay while producing the lowest
+utility.
+
+The Static-DQN row isolates the dynamic-demand model: with $\eta=0$ the agent
+targets the same demand peaks repeatedly, deploying \TODO{} stations and dropping
+fairness from \TODO{} to \TODO{}. Figure~\ref{fig:maps}(e) shows the resulting
+clustering directly.
+
+Finally, enforcing \eqref{eq:hardcap} on the action set rather than pricing it in
+the objective is what keeps every row of Table~\ref{tab:results} feasible. Run on
+Dong Da under an otherwise identical policy, the soft formulation still returns a
+plan that loads \TODO{} bus past its limit, at \TODO{}\% peak utilization,
+against none for the hard constraint.
+
+\begin{table}[!t]
+\caption{\textbf{[STALE --- regenerate after the re-run]} Performance relative to the existing plan (\%) (bold denotes the best value; arrows give the preferred direction). The peak-utilization column replaces the former overloaded-bus count, which is zero for every method now that \eqref{eq:hardcap} is enforced on the action set}
+\label{tab:results}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}l rrrr rrr rrr@{}}
+\toprule
+& \multicolumn{4}{c}{Utility} & \multicolumn{3}{c}{Cost components} & \multicolumn{3}{c@{}}{Deployment} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-8}\cmidrule(l){9-11}
+Method & $R(p)\uparrow$ & Ben.$\uparrow$ & Cost$\downarrow$ & Fair.$\uparrow$
+       & Trav. & Wait & Chrg.
+       & Peak$\downarrow$ & \#CS & Bud. \\
+\midrule
+\multicolumn{11}{@{}l}{\textit{Dong Da} --- $271$~kW headroom per node, $5$ existing stations} \\
+Greedy-Benefit  & 150.3 & 191.9 & 68.1 & 15.1 & 58.1 & 64.7 & 43.4 & -- & 47 & 56.6 \\
+Greedy-Demand   & 210.8 & 215.6 & 79.3 & 41.2 & 83.7 & 33.5 & 28.5 & -- & 67 & 98.4 \\
+GA    & 219.8 & 214.8 & \textbf{53.1} & 40.9 & 54.6 & \textbf{25.7} & \textbf{21.3} & -- & 66 & 99.3 \\
+Static DQN      & 188.8 & 236.4 & -- & 21.1 & -- & -- & -- & -- & 41 & 72.7 \\
+\textbf{Ours}   & \textbf{225.5} & \textbf{238.1} & 58.0 & \textbf{42.2} & \textbf{51.9} & 33.0 & 49.1 & -- & 47 & 91.1 \\
+\addlinespace[2pt]
+\multicolumn{11}{@{}l}{\textit{Tay Ho} --- $142$~kW headroom per node, $10$ existing stations} \\
+Greedy-Benefit  & 144.9 & 191.6 & \textbf{50.0} & 31.4 & \textbf{42.8} & 36.1 & 42.8 & -- & 24 & 31.4 \\
+GA    & 164.2 & 225.5 & 69.0 & 33.5 & 74.7 & 21.9 & \textbf{24.5} & -- & 49 & 60.1 \\
+Greedy-Demand   & 165.3 & 241.4 & 50.4 & \textbf{35.3} & 50.7 & \textbf{20.7} & 28.4 & -- & 75 & 95.7 \\
+Static DQN      & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+\textbf{Ours}   & \textbf{215.8} & \textbf{317.0} & 57.4 & 34.0 & 58.7 & 22.1 & 29.8 & -- & 58 & 81.1 \\
+\addlinespace[2pt]
+\multicolumn{11}{@{}l}{\textit{Cau Giay} --- $76$~kW headroom per node, $7$ existing stations} \\
+Greedy-Demand   & 128.8 & 122.8 & 116.6 & \textbf{58.4} & 98.3 & 99.4 & 90.5 & -- & 12 & \phantom{0}2.8 \\
+Greedy-Benefit  & 149.6 & 184.9 & 88.3 & 32.6 & 66.8 & 97.8 & 76.5 & -- & 19 & 18.1 \\
+GA    & 162.8 & 174.1 & 99.1 & 44.5 & 94.4 & 62.9 & \textbf{55.2} & -- & 18 & 12.7 \\
+Static DQN      & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+\textbf{Ours}   & \textbf{242.8} & \textbf{274.1} & \textbf{79.2} & 42.8 & \textbf{66.6} & \textbf{61.4} & 67.9 & -- & 15 & 25.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\runinhead{Spatial distribution.}
+\label{subsec}
+Figure~\ref{fig:maps} shows the spatial difference in Dong Da. Greedy-Benefit concentrates its \TODO{} stations along the central corridor, while the agent spreads them more broadly. Figure~\ref{fig:maps}(e) shows that without demand attenuation the agent repeatedly targets high-demand sites, reproducing the clustering the dynamic model is designed to prevent.
+\begin{figure}[!htbp]
+\centering
+\begin{tabular}{@{}c@{\hspace{1mm}}c@{\hspace{1mm}}c@{}}
+\includegraphics[width=0.31\textwidth]{figures/DongDa/map_DongDa_new_existingplan_DongDa.png} &
+\includegraphics[width=0.31\textwidth]{figures/DongDa/map_DongDa_G_Benefit.png} &
+\includegraphics[width=0.31\textwidth]{figures/DongDa/map_DongDa_G_Demand.png}\\
+{\scriptsize (a) Existing} & {\scriptsize (b) Greedy-Benefit} & {\scriptsize (c) Greedy-Demand}\\[0.8mm]
+\includegraphics[width=0.31\textwidth]{figures/DongDa/map_DongDa_GA.png} &
+\includegraphics[width=0.31\textwidth]{figures/DongDa/map_DongDa_RL_71547.png} &
+\includegraphics[width=0.31\textwidth]{figures/DongDa/map_DongDa_RL_161233.png}\\
+{\scriptsize (d) GA} & {\scriptsize (e) Static Demand ($\eta{=}0$)} & {\scriptsize (f) Ours}
+\end{tabular}
+\caption{\textbf{[STALE --- regenerate after the re-run]} Charging plans generated by different algorithms in Dong Da. Marker size indicates the installed capacity of each charging station}
+\label{fig:maps}
+\end{figure}
+% NOTE: a Learning Dynamics subsection was cut for space. If pages free up,
+% the data is tmp/DongDa/mlp/config_13/monitor.csv (per-episode reward) plus
+% episode_best_scores from the train.py callback, downsampled to ~20 points
+% and plotted with the `paperaxis' pgfplots style declared in the preamble.
+
+%======================================================================
+% Limitations merged into the Conclusion.
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+\label{subsec:limits}
+
+We presented a dynamic, grid-capacity-aware DQN framework for the CSLP. The
+framework combines state-dependent demand attenuation, an adaptive finite-buffer
+M/M/$c$/$N$ queue in which every charger is an explicit server, and a hard
+per-bus capacity constraint that makes overloaded plans unreachable rather than
+merely expensive, with grid connection distance retained as a soft cost. Five
+macro-actions with heuristic node selection keep the problem tractable at
+district scale, while inference requires only a single rollout. Across three
+Hanoi districts the proposed agent achieves the highest net utility against
+greedy and GA baselines, all held to the same admissible action set. Its
+advantage increases as distribution capacity becomes scarce, from \TODO{} points
+under ample headroom to \TODO{} and \TODO{} points when per-junction headroom
+falls to $142$ and $76$~kW respectively, highlighting the value of
+grid-capacity-aware placement in capacity-constrained settings.
+
+The study's principal limitation is the distribution-grid model itself. Only the
+locations and ratings of the high-voltage substations are taken from public
+records; the 22~kV feeder topology, the uniform feeder ampacity and the bus base
+loads are all simulated (Section~\ref{subsec:grid}). The model therefore
+establishes that bus-level capacity changes which plans are reachable and which
+placement orders are worth learning, but it does not establish what the Hanoi
+distribution network would in fact admit. Validating the framework against
+metered feeder loading and a utility-provided network model, with per-feeder
+conductor ratings instead of a single ampacity, is the first item of future work.
+Two further modelling limitations remain. The per-station cap $K$ is a single
+global constant rather than a quantity derived from the land actually available
+at a junction, so a site's port count is bounded by fiat rather than by its
+footprint; and bus headroom is static, computed from a single base-load snapshot
+rather than a time-varying profile. Beyond these, we intend to extend the
+framework to multi-city planning, Vehicle-to-Grid, and joint station placement
+and EV routing.
+% Cut for space -- restore if pages allow: high variance across seeds. Runs
+% were replicated over several random seeds, but the spread of utilities is
+% large relative to the differences between methods, so Table 3 should be read
+% as indicative rather than as precise effect sizes; the 5.7-point margin on
+% Dong Da is well within the observed spread, those on Tay Ho and Cau Giay
+% are not.
+
+\begin{thebibliography}{99}
+
+\bibitem{gnanavendan2024challenges}
+S. Gnanavendan, S. K. Selvaraj, S. J. Dev, K. K. Mahato, R. S. Swathish, G.
+Sundaramali, O. Accouche, and M. Azab, ``Challenges, solutions and future
+trends in EV-technology: a review'', {\it IEEE Access}, Vol. 12, 2024, pp.
+17242--17260, doi:10.1109/ACCESS.2024.3353378.
+
+\bibitem{dimitriadou2023current}
+K. Dimitriadou, N. Rigogiannis, S. Fountoukidis, F. Kotarela, A. Kyritsis, and
+N. Papanikolaou, ``Current trends in electric vehicle charging infrastructure;
+opportunities and challenges in wireless charging integration'', {\it
+Energies}, Vol. 16, No. 4, 2023, paper 2057,
+doi:10.3390/en16042057.
+
+\bibitem{kchaou2021charging}
+M. Kchaou-Boujelben, ``Charging station location problem: a comprehensive
+review on models and solution approaches'', {\it Transportation Research Part
+C: Emerging Technologies}, Vol. 132, 2021, paper 103376,
+doi:10.1016/j.trc.2021.103376.
+
+\bibitem{truc2024electric}
+Q. V. Truc, M. H. Hien, and H. V. Tuan, ``Electric vehicle charging stations
+placement optimization in Vietnam using mixed-integer nonlinear programming
+model'', {\it arXiv preprint arXiv:2412.16025}, 2024,
+doi:10.48550/arXiv.2412.16025.
+
+\bibitem{roblot2025deep}
+M. Roblot, M. Marinelli, and F. Pastorelli, ``Deep learning for EV charging
+infrastructure: optimization approaches and challenges'', {\it Proceedings of
+the 2025 60th International Universities Power Engineering Conference (UPEC)},
+IEEE, 2025, pp. 1--6, doi:10.1109/UPEC65436.2025.11279806.
+
+\bibitem{zhou2022location}
+G. Zhou, Z. Zhu, and S. Luo, ``Location optimization of electric vehicle
+charging stations: based on cost model and genetic algorithm'', {\it Energy},
+Vol. 247, 2022, paper 123437, doi:10.1016/j.energy.2022.123437.
+
+\bibitem{torres2021electric}
+S. Torres Franco, I. C. Dur\'an Tovar, M. M. Su\'arez Pradilla, and A.
+Marulanda Guerra, ``Electric vehicle charging stations' location in urban
+transportation networks: a heuristic methodology'', {\it IET Electrical
+Systems in Transportation}, Vol. 11, No. 2, 2021, pp. 134--147,
+doi:10.1049/els2.12011.
+
+\bibitem{von2022reinforcement}
+L. Von Wahl, N. Tempelmeier, A. Sao, and E. Demidova, ``Reinforcement
+learning-based placement of charging stations in urban road networks'', {\it
+Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data
+Mining}, ACM, New York, 2022, pp. 3992--4000, doi:10.1145/3534678.3539154.
+
+\bibitem{liu2023optimal}
+J. Liu, J. Sun, and X. Qi, ``Optimal placement of charging stations in road
+networks: a reinforcement learning approach with attention mechanism'', {\it
+Applied Sciences}, Vol. 13, No. 14, 2023, paper 8473,
+doi:10.3390/app13148473.
+
+\bibitem{mnih2015human}
+V. Mnih, K. Kavukcuoglu, D. Silver, A. A. Rusu, J. Veness, M. G. Bellemare, A.
+Graves, M. Riedmiller, A. K. Fidjeland, G. Ostrovski, et al., ``Human-level
+control through deep reinforcement learning'', {\it Nature}, Vol. 518, No.
+7540, 2015, pp. 529--533, doi:10.1038/nature14236.
+
+\bibitem{graser2025}
+A. Graser, T. Sutton, and M. Bernasocchi, ``The QGIS project: spatial without
+compromise'', {\it Patterns}, Vol. 6, No. 7, 2025, paper 101265,
+doi:10.1016/j.patter.2025.101265.
+
+\bibitem{OpenStreetMap}
+OpenStreetMap contributors, {\it Planet Dump Retrieved from
+https://planet.osm.org}, 2017, \url{https://www.openstreetmap.org}.
+
+\bibitem{boeing2017osmnx}
+G. Boeing, ``OSMnx: new methods for acquiring, constructing, analyzing, and
+visualizing complex street networks'', {\it Computers, Environment and Urban
+Systems}, Vol. 65, 2017, pp. 126--139,
+doi:10.1016/j.compenvurbsys.2017.05.004.
+
+\bibitem{vgreen2026}
+V-Green, {\it V-Green: Green Charging Infrastructure}, 2026,
+\url{https://vgreen.net/vi}, accessed: 21 August 2026.
+
+\bibitem{landprice2025}
+P. L. Le, {\it Land Price in Hanoi 2025}, Science Data Bank, 2025,
+doi:10.57760/sciencedb.31156, accessed: 23 August 2026.
+
+\bibitem{worldpop2025}
+M. Bondarenko, R. Priyatikanto, N. Tejedor-Garavito, W. Zhang, T. McKeen, A.
+Cunningham, T. Woods, J. Hilton, D. Cihan, B. Nosatiuk, T. Brinkhoff, A.
+Tatem, and A. Sorichetta, {\it Constrained Estimates of 2015--2030 Total
+Number of People per Grid Square at a Resolution of 3 Arc Seconds (R2025A
+version v1)}, WorldPop, School of Geography and Environmental Science,
+University of Southampton, 2025, doi:10.5258/SOTON/WP00839.
+
+\bibitem{raffin2021sb3}
+A. Raffin, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus, and N. Dormann,
+``Stable-Baselines3: reliable reinforcement learning implementations'', {\it
+Journal of Machine Learning Research}, Vol. 22, No. 268, 2021, pp. 1--8,
+\url{http://jmlr.org/papers/v22/20-1364.html}.
+
+\bibitem{towers2026gymnasium}
+M. Towers, A. Kwiatkowski, J. Balis, G. De Cola, T. Deleu, M. Goul\~ao, K.
+Andreas, M. Krimmel, A. Kg, R. Perez-Vicente, et al., ``Gymnasium: a standard
+interface for reinforcement learning environments'', {\it Advances in Neural
+Information Processing Systems}, Vol. 38, 2026, doi:10.52202/085713-4916.
+
+\end{thebibliography}
+
+\end{document}

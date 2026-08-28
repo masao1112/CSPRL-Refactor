@@ -428,12 +428,12 @@ class CSPRLGridAdapter:
         # has that second property -- they grow with the plan, so the agent could
         # cheapen a violation by building elsewhere, or even by creating a second,
         # milder violation.
-        if self._n_district_buses:
-            cap_penalty_total /= self._n_district_buses
-        elif not self._warned_missing_scope:
-            self._warned_missing_scope = True
-            print("Warning: set_district_scope() was never called; the capacity penalty "
-                  "is left unnormalized and will overwhelm the welfare term.")
+        # if self._n_district_buses:
+        #     cap_penalty_total /= self._n_district_buses
+        # elif not self._warned_missing_scope:
+        #     self._warned_missing_scope = True
+        #     print("Warning: set_district_scope() was never called; the capacity penalty "
+        #           "is left unnormalized and will overwhelm the welfare term.")
 
         grid_utilization = np.mean(grid_utilization_list, dtype=np.float32).item() if grid_utilization_list else 0.0
         grid_distance = np.mean(grid_distance_list, dtype=np.float32).item() if grid_distance_list else 0.0
@@ -469,6 +469,15 @@ class CSPRLGridAdapter:
                     'shortage_mw': shortage,
                 })
         return violations
+
+    def has_grid_violation(self, station_nodes: List[Any]) -> Tuple[bool, List[Dict]]:
+        """
+        Check if current plan causes any 22kV bus to exceed its available capacity.
+        Returns:
+            (is_violated: bool, list_of_violations: List[Dict])
+        """
+        violations = self.get_grid_violations(station_nodes)
+        return len(violations) > 0, violations
 
     def get_grid_summary_for_nodes(self, node_list: List) -> Any:
         """

@@ -177,7 +177,7 @@ def evaluate_single_model(model_path: str, env: StationPlacement, obs_type: str,
                 dist_penalty, cap_penalty, _, _ = env.grid_adapter.calculate_grid_penalty(station_nodes)
                 grid_penalty = {"dist_penalty": dist_penalty, "cap_penalty": cap_penalty}
                 n_overloaded = len(env.grid_adapter.get_grid_violations(station_nodes))
-            score, benefit, cost, charg_time, wait_time, cost_travel, fairness = H.norm_score(
+            score, benefit, cost, charg_time, wait_time, cost_travel, fairness, unserved = H.norm_score(
                 best_plan, best_node_list,
                 env.plan_instance.norm_benefit, env.plan_instance.norm_charg,
                 env.plan_instance.norm_wait, env.plan_instance.norm_travel,
@@ -194,7 +194,7 @@ def evaluate_single_model(model_path: str, env: StationPlacement, obs_type: str,
                 ("num_stations", len(best_plan)), ("used_budget_ratio", total_inst_cost),
                 ("benefit", benefit), ("cost", cost), ("fairness", fairness),
                 ("charg_time", charg_time), ("wait_time", wait_time),
-                ("cost_travel", cost_travel),
+                ("cost_travel", cost_travel), ("unserved", unserved),
                 ("travel_max", H.travel_metric(best_node_list)),
                 ("wait_max", H.waiting_metric(best_plan)),
                 ("dist_penalty", dist_penalty), ("cap_penalty", cap_penalty),

@@ -280,6 +280,41 @@ class GridLoader:
 
         return violations
 
+    def _find_root_substation_bus(self, bus_idx: int) -> Optional[int]:
+        """
+        Tìm bus trạm biến áp gốc (lv_bus của transformer 110/22kV) của bus 22kV hiện tại
+        bằng thuật toán BFS tìm kiếm theo đồ thị các đường dây 22kV.
+        """
+        if self.net is None:
+            return None
+
+        lv_buses = set(self.net.trafo["lv_bus"].values)
+        if bus_idx in lv_buses:
+            return bus_idx
+
+        visited = {bus_idx}
+        queue = [bus_idx]
+
+        while queue:
+            curr = queue.pop(0)
+            if curr in lv_buses:
+                return curr
+
+            # Tìm các đường dây nối với bus hiện tại
+            connected_lines = self.net.line[
+                (self.net.line["from_bus"] == curr) | (self.net.line["to_bus"] == curr)
+            ]
+            for _, line in connected_lines.iterrows():
+                fb, tb = int(line["from_bus"]), int(line["to_bus"])
+                
+                # Chỉ đi trong lưới 22kV để tránh đi ngược lên lưới 110kV/220kV
+                if self.net.bus.at[fb, "vn_kv"] == 22.0 and self.net.bus.at[tb, "vn_kv"] == 22.0:
+                    neighbor = tb if fb == curr else fb
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append(neighbor)
+        return None
+
     def get_available_capacity(self, bus_idx: int) -> Dict[str, float]:
         """
         Tính công suất còn lại có thể sử dụng tại một bus.
@@ -319,21 +354,36 @@ class GridLoader:
         else:
             max_line_mva = 9999.0  # Limitless if no lines (unlikely)
 
-        # Check for connected transformers (feeding into this bus)
-        # Typically transformers connect HV bus to LV bus.
-        # If this is an LV bus, we care about trafo connecting to HV.
-        connected_trafos = self.net.trafo[
-            (self.net.trafo["lv_bus"] == bus_idx) |
-            (self.net.trafo["hv_bus"] == bus_idx)
-            ]
-
-        if len(connected_trafos) > 0:
-            # Sum of capacities if parallel, but usually we just take the one feeding it
-            # For simplicity, assume redundancy or parallel operation sum
-            # BUT safe bet: max_trafo_mva = sum(sn_mva)
-            max_trafo_mva = connected_trafos["sn_mva"].sum()
+        # Check for connected transformers / upstream substation
+        vn_kv = self.net.bus.at[bus_idx, "vn_kv"]
+        if vn_kv == 22.0:
+            root_bus = self._find_root_substation_bus(bus_idx)
+            if root_bus is not None:
+                trafos = self.net.trafo[self.net.trafo["lv_bus"] == root_bus]
+                if len(trafos) == 0:
+                    trafos = self.net.trafo[self.net.trafo["hv_bus"] == root_bus]
+                
+                S_trafo = trafos["sn_mva"].sum() if len(trafos) > 0 else 9999.0
+                
+                # Đếm số feeder thực tế kết nối vào root bus này
+                feeders = self.net.line[
+                    (self.net.line["from_bus"] == root_bus) | 
+                    (self.net.line["to_bus"] == root_bus)
+                ]
+                n_feeders = max(1, len(feeders))
+                max_trafo_mva = S_trafo / n_feeders
+            else:
+                max_trafo_mva = 9999.0
         else:
-            max_trafo_mva = 9999.0  # No trafo limit found
+            # Fallback cho các cấp điện áp khác (110kV, 220kV...)
+            connected_trafos = self.net.trafo[
+                (self.net.trafo["lv_bus"] == bus_idx) |
+                (self.net.trafo["hv_bus"] == bus_idx)
+                ]
+            if len(connected_trafos) > 0:
+                max_trafo_mva = connected_trafos["sn_mva"].sum()
+            else:
+                max_trafo_mva = 9999.0
 
         max_capacity_mva = min(max_line_mva, max_trafo_mva)
 

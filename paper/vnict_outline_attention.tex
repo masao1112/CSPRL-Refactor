@@ -1,0 +1,395 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% OUTLINE / SKELETON -- Hội thảo quốc gia lần thứ XXIX (VNICT 2026)
+%% BIẾN THỂ: bộ mã hoá quan sát DUY NHẤT là attention/PMA
+%%   (custom_environment/attention_extractor.py, obs_type="attention").
+%%   Khác với paper/vnict_outline.tex (đóng góp = SO SÁNH 4 bộ mã hoá),
+%%   bản này coi attention là kiến trúc ĐỀ XUẤT chính; MLP/GCN chỉ còn
+%%   xuất hiện trong "Các nghiên cứu liên quan" và như 1 dòng ablation
+%%   phụ ở Bảng ablation (không phải đóng góp trung tâm) -- việc này giúp
+%%   Mục IV tập trung, đủ chỗ để trình bày kiến trúc attention chi tiết
+%%   trong ngân sách 6 trang.
+%% Giới hạn: 6 trang. Mỗi \section bên dưới kèm ngân sách trang/chữ.
+%% Preamble giữ nguyên theo bare_conf.tex của BTC -- KHÔNG sửa lề/font.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[10pt, conference, a4paper, compsocconf]{IEEEtran}
+\usepackage{amsmath,amsxtra,amssymb,amsthm,latexsym,amscd,amsfonts}
+\usepackage[utf8]{vietnam}
+
+\usepackage[top=2.7cm, bottom = 5.4cm, left=2.72cm, right = 3.0cm]{geometry}
+\headsep = 0.7cm
+\headheight = 1.0cm
+\footskip = 1.0cm
+\voffset = -0.74 cm
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\sectionmark}[1]{\markright{\MakeUppercase{#1}}{}}
+\renewcommand{\headrulewidth}{0pt}
+
+\ifCLASSINFOpdf
+  \usepackage[pdftex]{graphicx}
+  \DeclareGraphicsExtensions{.pdf,.jpeg,.png,.jpg}
+\else
+  \usepackage[dvips]{graphicx}
+  \DeclareGraphicsExtensions{.eps}
+\fi
+
+\usepackage{array}
+\usepackage[font=footnotesize]{subfig}
+\usepackage{booktabs}
+\usepackage{algorithmic}
+
+\makeatletter
+\def\ps@IEEEtitlepagestyle{%
+\def\@oddhead{\centering{\mbox{\footnotesize{\textit{\;\;\;\; Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}%
+\def\@evenhead{\centering{\mbox{\footnotesize{\textit{\;\;\;\; Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}}%
+\def\@oddfoot{\scriptsize \thepage \hfil }%
+\def\@evenfoot{\scriptsize \hfil \thepage}
+}
+}
+\makeatother
+
+\begin{document}
+\pagenumbering{gobble}
+\fontsize{10}{12}
+\selectfont
+
+\fancyhead[RE,LO]{\centering{\footnotesize{\textit{Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông -- Hà Nội, 7-8/11/2026}}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TITLE -- 3 phương án, chọn 1 (nhấn mạnh RÕ chữ "tự chú ý" / "attention"
+% ngay trên tiêu đề vì đây là đóng góp trung tâm của bản outline này):
+%  (a) Quy hoạch trạm sạc xe điện nhận biết lưới điện phân phối bằng học
+%      tăng cường sâu với bộ mã hoá tự chú ý trên đồ thị đô thị
+%  (b) Học tăng cường sâu với bộ mã hoá Set Transformer cho bài toán mở
+%      rộng mạng lưới trạm sạc xe điện có ràng buộc lưới phân phối
+%  (c) Mã hoá trạng thái bằng tự chú ý và gộp PMA cho học tăng cường sâu
+%      trong quy hoạch trạm sạc xe điện nhận biết lưới điện
+% LƯU Ý BTC: không dùng ký hiệu toán/ký tự đặc biệt trong tiêu đề.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{Quy hoạch trạm sạc xe điện nhận biết lưới điện phân phối\\
+bằng học tăng cường sâu với bộ mã hoá tự chú ý trên đồ thị đô thị}
+
+\author{\IEEEauthorblockN{Nguyễn Văn A\IEEEauthorrefmark{1}, Nguyễn Văn B\IEEEauthorrefmark{2}}
+	\IEEEauthorblockA{\IEEEauthorrefmark{1}Đơn vị 1, \IEEEauthorrefmark{2}Đơn vị 2}
+	\IEEEauthorblockA{Email: a@abc.xyz, b@abc.xyz}
+}
+
+\maketitle
+
+%======================================================================
+\begin{abstract}
+% NGÂN SÁCH: 150--180 từ (~0,2 trang). Cấu trúc 6 câu:
+% 1. Bối cảnh: xe điện tăng nhanh ở đô thị VN, mở rộng mạng trạm sạc là nút thắt.
+% 2. Khoảng trống: đặt trạm là ra quyết định TUẦN TỰ trên một đồ thị đô thị cỡ
+%    hàng trăm nút; các bộ mã hoá trạng thái phổ biến (làm phẳng MLP, hoặc GNN
+%    lan truyền thông điệp cục bộ) hoặc bỏ qua cấu trúc, hoặc chỉ có tầm nhìn
+%    vài bước lan truyền -- không rõ đủ để tóm tắt TOÀN đồ thị cho MỘT quyết
+%    định toàn cục ở mỗi bước.
+% 3. Đề xuất: mô hình hoá bài toán thành MDP mở rộng kế hoạch hiện hữu (hàm
+%    thưởng gồm lợi ích xã hội, chi phí đi lại/chờ/sạc, công bằng, phạt lưới);
+%    CHÍNH SÁCH DQN với bộ mã hoá tự chú ý (embed từng nút -> vài khối tự chú ý
+%    không mặt nạ, mọi nút thấy mọi nút ngay từ lớp đầu -> gộp bằng Pooling by
+%    Multi-head Attention/PMA) tạo một vector tóm tắt kích thước CỐ ĐỊNH, không
+%    phụ thuộc số nút, cho quyết định 5 macro-action.
+% 4. Dữ liệu: 2 quận Hà Nội (Cầu Giấy, Đống Đa), đồ thị đường bộ OSM + lưới
+%    điện dựng từ toạ độ TBA 500/220/110/22 kV thực tế.
+% 5. Kết quả: vượt kế hoạch hiện hữu / greedy-benefit / greedy-demand / GA về
+%    điểm chuẩn hoá trên cả hai quận, đồng thời không để thanh cái quá tải ở
+%    quận có dư địa lưới thấp (điền số cụ thể X%, Y thanh cái).
+% 6. Ablation khẳng định PMA học được đóng góp thực (so với mean-pool) và
+%    kiến trúc ổn định qua số lớp/số đầu chú ý.
+\end{abstract}
+
+\begin{IEEEkeywords}
+trạm sạc xe điện; học tăng cường sâu; cơ chế tự chú ý; Set Transformer;
+lưới điện phân phối; bài toán định vị cơ sở; quy hoạch hạ tầng đô thị
+\end{IEEEkeywords}
+
+\IEEEpeerreviewmaketitle
+
+%======================================================================
+\section{Giới thiệu}
+% NGÂN SÁCH: 0,85 trang (~750--800 từ đôi cột). 5 đoạn.
+%
+% Đ1 (bối cảnh, 4--5 câu): tốc độ điện hoá phương tiện; hạ tầng sạc công cộng
+%   là điều kiện cần; đặc thù đô thị VN (mật độ dân cư cao, quỹ đất/giá đất là
+%   ràng buộc mạnh, lưới phân phối đã vận hành gần ngưỡng).
+%
+% Đ2 (vấn đề mô hình hoá, 4 câu): đặt trạm là bài toán ra quyết định TUẦN TỰ
+%   trên một đồ thị -- mỗi trạm quy về thanh cái 22 kV gần nhất, dung lượng
+%   thanh cái hữu hạn và CỘNG DỒN qua các quyết định trước đó; cần một chính
+%   sách nhìn được TOÀN CỤC trạng thái đồ thị ở mỗi bước, không chỉ vùng lân
+%   cận nút vừa chọn.
+%
+% Đ3 (vấn đề biểu diễn trạng thái, 5--6 câu -- ĐÂY LÀ ĐỘNG LỰC RIÊNG CỦA BẢN
+%   NÀY): chính sách chỉ chọn giữa 5 macro-action (không chọn trực tiếp một
+%   nút trong |V|), nên bộ mã hoá cần sinh MỘT vector tóm tắt cố định của cả
+%   đồ thị, không phải embedding theo từng nút. Làm phẳng ma trận nút bằng MLP
+%   bỏ hoàn toàn cấu trúc quan hệ và buộc mạng vào đúng số nút của một quận.
+%   GNN kiểu tích chập lan truyền thông điệp cục bộ, tầm nhìn giới hạn bởi số
+%   lớp xếp chồng (thường 2--3 hop) -- chưa chắc đủ cho quyết định toàn cục
+%   trên đồ thị cỡ hàng trăm nút. Tự chú ý (self-attention) không mặt nạ cho
+%   mỗi nút một tầm nhìn TOÀN CỤC ngay từ lớp đầu tiên, và một bước gộp học
+%   được (PMA) nén tập nút biến-đổi-số-lượng thành vector cố định mà không cần
+%   ma trận kề.
+%
+% Đ4 (định vị đóng góp, 2--3 câu): khác các công trình DRL+attention đặt trạm
+%   trước đó (attention bị giới hạn theo cạnh đồ thị -- thực chất là GAT, và
+%   không có bước gộp tường minh nên đầu ra vẫn phụ thuộc số nút), ta dùng tự
+%   chú ý KHÔNG mặt nạ (toàn cục ngay từ đầu) + PMA (đầu ra cố định kích
+%   thước), đồng thời hợp nhất với ràng buộc lưới phân phối ở mức thanh cái --
+%   điều các công trình đó không có.
+%
+% Đ5 (đóng góp -- itemize 4 gạch đầu dòng, mỗi gạch 1--2 dòng):
+%   1) Phát biểu MDP cho bài toán mở rộng mạng trạm sạc, hợp nhất phúc lợi xã
+%      hội với ràng buộc dung lượng lưới phân phối ở mức thanh cái.
+%   2) Mô hình nhu cầu động, suy giảm theo khoảng cách và công suất đã lắp,
+%      khiến lợi ích biên của trạm mới bão hoà -> tránh đặt trùng lặp.
+%   3) Bộ mã hoá trạng thái bằng tự chú ý không mặt nạ + gộp PMA: tầm nhìn
+%      toàn cục từ lớp đầu, đầu ra kích thước cố định độc lập số nút -- đối
+%      sánh với đường cơ sở mean-pool (không tham số học) để tách riêng đóng
+%      góp của bước gộp có học so với chỉ riêng các lớp tự chú ý.
+%   4) Đánh giá thực nghiệm trên 2 quận Hà Nội với dữ liệu TBA thực tế, đối
+%      sánh 4 baseline (hiện hữu, greedy-benefit, greedy-demand, GA).
+%
+% Đ6 (1 câu): bố cục bài báo.
+
+%======================================================================
+\section{Các nghiên cứu liên quan}
+% NGÂN SÁCH: 0,5 trang (~450 từ). 3 đoạn, KHÔNG chia mục con.
+%
+% Đ1 -- Định vị trạm sạc cổ điển: p-median/MCLP \cite{hakimi1964optimum,
+%      church1974maximal}, MILP/MINLP \cite{veisi2021optimal, erbas2022optimal,
+%      vu2025vietnam, zhang2023commercial}. Điểm chung: tối ưu TĨNH, một lần;
+%      hoặc bỏ qua lưới điện, hoặc có xét lưới nhưng không phải quyết định
+%      tuần tự.
+% Đ2 -- Metaheuristic \cite{zhang2022location, ali2022improved, wang2019pso,
+%      rahman2024hybrid} và DRL cho quy hoạch hạ tầng/định vị trên đồ thị
+%      \cite{dai2017learning, khan2023joint, li2021optimal, von2022reinforcement,
+%      hassan2025optimizing}: có học tuần tự nhưng phần lớn dùng bộ mã hoá
+%      MLP hoặc GNN cục bộ.
+% Đ3 -- DRL + attention cho đặt trạm sạc (liên quan trực tiếp nhất): PPO-
+%      Attention \cite{liu2023optimal} embed nút rồi tự chú ý CÓ MẶT NẠ theo
+%      cạnh đồ thị (u_ij = -inf nếu không kề nhau) -- thực chất là một lớp
+%      Graph Attention Network, vẫn phụ thuộc ma trận kề, và bộ giải mã là MLP
+%      áp trực tiếp lên embedding từng nút nên đầu ra dường như vẫn phụ thuộc
+%      số nút N. \cite{chen2025scalable} dùng GNN cho điều phối quy mô lớn.
+%      Set Transformer \cite{lee2019set} đề xuất Pooling by Multi-head
+%      Attention (PMA) để gộp một TẬP có số phần tử thay đổi thành vector cố
+%      định -- kỹ thuật ta mượn cho bước gộp, khác với mọi công trình đặt
+%      trạm sạc nêu trên.
+% Câu kết (2 câu): khoảng trống = tự chú ý TOÀN CỤC (không mặt nạ theo cạnh)
+%      + gộp PMA cho đầu ra cố định kích thước + ràng buộc lưới cộng dồn ở
+%      mức thanh cái, đồng thời trong một khung duy nhất.
+
+%======================================================================
+\section{Phát biểu bài toán}
+\label{sec:problem}
+% NGÂN SÁCH: 1,0 trang. Nội dung GIỮ NGUYÊN từ paper/vnict_main.tex (đã xác
+% minh khớp code trong custom_environment/helpers.py và
+% power_grid/csprl_adapter.py) -- phần này KHÔNG đổi theo lựa chọn bộ mã hoá,
+% chỉ copy sang. Rút gọn còn 1,0 trang bằng cách bỏ bớt diễn giải câu chữ,
+% giữ đủ 3 phương trình cốt lõi + 1 bảng ký hiệu.
+
+\subsection{Mô hình hệ thống và nhu cầu động}
+% ~300 từ. Đồ thị đường bộ G=(V,E) từ OSM; trạm sạc s=(v,t) với t là số bộ sạc
+% theo từng mức công suất; kế hoạch hiện hữu P_0, ngân sách B; lưới điện dựng
+% từ toạ độ TBA 500/220/110/22kV thực tế, mỗi nút ánh xạ tới thanh cái 22kV
+% gần nhất. Nhu cầu động suy giảm theo dung lượng đã lắp trong bán kính phục
+% vụ (eta = hệ số co giãn, beta = suy giảm theo khoảng cách).
+\begin{equation}\small
+\label{eq:demand}
+\text{dem}_{\text{dyn}}(v,p) = \widetilde{\text{dem}}(v)\exp\!\Big(-\eta\!\!\sum_{\substack{s\in p\\ d_{v,s}<r(s)}}\!\! C(s)e^{-\beta d_{v,s}}\Big)
+\end{equation}
+
+\subsection{Hàm mục tiêu phúc lợi xã hội}
+% ~300 từ. benefit (bao phủ điều hoà + hiệu quả trạm), cost (đi lại + sạc +
+% chờ theo hàng đợi M/M/1/N thích ứng), fairness (nghịch đảo độ lệch chuẩn độ
+% phủ), penalty_grid (khoảng cách đấu nối + vượt dung lượng cộng dồn theo
+% thanh cái).
+\begin{equation}\small
+\label{eq:score}
+R(p) = \frac{\text{benefit}(p) - \text{cost}(p) + \text{fairness}(p)}{3} - w_g\,\Phi_{\text{grid}}(p)
+\end{equation}
+
+\subsection{Phát biểu bài toán tối ưu}
+% ~200 từ. Đầu vào/đầu ra/mục tiêu p* = argmax R(p) với p chứa p_0, ràng buộc
+% ngân sách và K bộ sạc tối đa/trạm; lưới là RÀNG BUỘC MỀM (phạt trong R chứ
+% không phải ràng buộc cứng) -- nêu 1 câu vì sao (không gian khả thi rời rạc,
+% cứng hoá sẽ loại nhiều kế hoạch tốt-gần-khả-thi khỏi tầm học của agent).
+\begin{equation}\small
+\label{eq:opt}
+p^{\star} = \arg\max_{p\supseteq p_0} R(p) \quad\text{s.t.}\quad \textstyle\sum_{s\in p}\text{fee}(s) - \sum_{s\in p_0}\text{fee}(s) \le B
+\end{equation}
+
+%======================================================================
+\section{Phương pháp đề xuất: DQN với bộ mã hoá tự chú ý}
+\label{sec:method}
+% NGÂN SÁCH: 1,35 trang -- phần TRỌNG TÂM của bản outline này, gồm 1 hình
+% kiến trúc (Fig.~1), 1 bảng siêu tham số, 1 giả mã.
+
+\subsection{Phát biểu MDP (trạng thái, hành động, thưởng)}
+% ~250 từ. Trạng thái s_t = (X_t in R^{|V| x 10}, g_t in R^3): mỗi hàng của
+% X_t là 10 đặc trưng nút (toạ độ, nhu cầu tĩnh/động, giá đất, street_count,
+% công suất trạm tại nút, khoảng cách tới lưới, dung lượng còn lại của thanh
+% cái cục bộ, khoảng cách tới trạm gần nhất); g_t = (ngân sách còn lại, tiến
+% độ episode, độ cải thiện điểm). Hành động a_t in {0,...,4}: 5 MACRO-ACTION
+% (mở-theo-lợi-ích, mở-theo-nhu-cầu, bổ-sung-theo-lợi-ích, bổ-sung-theo-nhu-
+% cầu, di dời trụ) -- một heuristic xác định quyết định "ở đâu", chính sách
+% quyết định "chiến lược nào, khi nào"; đây là lý do bộ mã hoá chỉ cần sinh
+% MỘT vector tóm tắt cho quyết định 5 lựa chọn, không phải embedding từng nút.
+\begin{equation}\small
+\label{eq:reward}
+r_t = \big[R(p_t)-R(p_{t-1})\big] + w_b\max\big(0,\;R(p_t)-R^{*}_{t-1}\big)
+\end{equation}
+
+\subsection{Kiến trúc mã hoá tự chú ý (encoder trung tâm)}
+% ~500 từ -- phần dài nhất mục IV, mô tả đúng
+% custom_environment/attention_extractor.py:
+% (a) Embed tuyến tính từng nút: F chiều đặc trưng thô -> D chiều (D=embed_dim,
+%     mặc định 128), theo sau LayerNorm.
+% (b) n_layers khối tự chú ý tiền-chuẩn-hoá (mặc định 2), MỖI khối:
+%       h' = LayerNorm(h);  Attn = MultiHeadAttention(h',h',h');
+%       h  = h + Attn;      h = h + FeedForward(LayerNorm(h))
+%     KHÔNG mặt nạ theo cạnh đồ thị -- mọi nút thấy mọi nút ngay từ lớp đầu,
+%     khác PPO-Attention \cite{liu2023optimal} (mặt nạ theo cạnh, tương đương
+%     một lớp GAT). LayerNorm thay vì BatchNorm vì SB3 gọi forward() với
+%     batch=1 lúc rollout môi trường và batch=batch_size lúc cập nhật gradient
+%     -- BatchNorm không ổn định qua hai chế độ này, LayerNorm không phụ thuộc
+%     kích thước batch.
+% (c) Gộp bằng Pooling by Multi-head Attention (PMA, Set Transformer
+%     \cite{lee2019set}): pma_seeds (mặc định 1) vector truy vấn HỌC ĐƯỢC chú
+%     ý lên toàn bộ tập embedding nút, tạo pma_seeds vector tóm tắt kích thước
+%     CỐ ĐỊNH, không phụ thuộc |V| -- khác GCN (đầu ra phẳng theo N x k, buộc
+%     vào đúng số nút của một quận) và khác PPO-Attention (không có bước gộp
+%     tường minh). Đường cơ sở đối chứng use_pma=False: mean-pool không tham
+%     số, giữ nguyên phần embed+tự chú ý, dùng để tách riêng đóng góp của
+%     BƯỚC GỘP CÓ HỌC (mục V-C).
+\begin{equation}\small
+\label{eq:pma}
+\text{pooled} = \text{LN}\big(\text{seed} + \text{MHA}(\text{seed}, h, h)\big),\quad h\in\mathbb{R}^{N\times D}
+\end{equation}
+% (d) Nhánh toàn cục: MLP nhỏ (32 chiều) trên g_t. Ghép [pooled; global] đưa
+%     vào Q-head (net_arch [256,256] của SB3). Fig.~1 = sơ đồ 2 nhánh (nút +
+%     toàn cục) -> hợp nhất -> Q-head.
+
+\begin{table}[!t]
+\caption{Siêu tham số bộ mã hoá tự chú ý}
+\label{tab:hparams}
+\centering\footnotesize
+\begin{tabular}{ll}
+\toprule
+Tham số & Giá trị mặc định \\
+\midrule
+embed\_dim ($D$) & 128 \\
+n\_heads & 4 \\
+n\_layers & 2 \\
+pma\_seeds & 1 \\
+ff\_mult & 4 \\
+dropout & 0,0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+% Bảng trên có thể gộp chung với Bảng huấn luyện (mục IV-C) nếu thiếu chỗ.
+
+\subsection{Huấn luyện}
+% ~200 từ + có thể gộp vào Bảng~\ref{tab:hparams}. DQN (Stable-Baselines3):
+% buffer 20000, batch 128, lr 1e-4 (tuỳ chọn giảm tuyến tính còn 10% qua 70%
+% số bước), epsilon 1.0 -> 0.05 trong 30% số bước, target update 1000, clip
+% gradient 1.0, 200000 bước, seed cố định, torch.use_deterministic_algorithms
+% (True). Nêu phần cứng + thời gian huấn luyện cho 1 lần chạy.
+
+\begin{algorithm}
+\caption{Một episode mở rộng kế hoạch trạm sạc}
+\label{alg:rollout}
+\begin{algorithmic}[1]
+\STATE Khởi tạo $p \leftarrow p_0$, ngân sách $B$, $R^{*} \leftarrow R(p_0)$
+\WHILE{$B > 0$ và $t < T_{\max}$}
+  \STATE Quan sát $s_t=(X_t,g_t)$; mã hoá bằng attention+PMA (\ref{eq:pma})
+  \STATE $a_t \leftarrow \arg\max_a Q_\theta(s_t,a)$ \COMMENT{$\varepsilon$-greedy khi huấn luyện}
+  \STATE Chọn nút theo heuristic ứng với $a_t$; cập nhật $p$, $B$, phụ tải thanh cái
+  \STATE Tính $r_t$ theo (\ref{eq:reward}); cập nhật $R^{*}$ và $p^{*}$
+\ENDWHILE
+\STATE \textbf{return} $p^{*}$
+\end{algorithmic}
+\end{algorithm}
+
+%======================================================================
+\section{Thiết lập thực nghiệm}
+% NGÂN SÁCH: 0,55 trang.
+
+\subsection{Dữ liệu}
+% 2 quận Hà Nội (Cầu Giấy, Đống Đa) -- 1 câu vì sao chỉ 2, không phải 4 (dư
+% địa lưới khác biệt rõ rệt giữa 2 quận này, đủ để làm nổi bật vai trò của
+% ràng buộc lưới; xem Bảng lưới trong vnict_main.tex nếu cần khôi phục số
+% liệu |V|, số thanh cái, headroom/nút). OSM + toạ độ TBA Hà Nội thực tế.
+
+\subsection{Các phương pháp đối sánh}
+% 4 mốc, mỗi mốc 1--2 câu: Kế hoạch hiện hữu (mốc gốc); Greedy-Benefit;
+% Greedy-Demand; GA (tiến hoá trọng số mạng chính sách trên CÙNG bộ mã hoá
+% attention, fitness = điểm tốt nhất trong episode). Tất cả khởi động từ CÙNG
+% kế hoạch hiện hữu, cùng ngân sách, cùng đồ thị, cùng seed.
+
+\subsection{Độ đo}
+% Điểm chuẩn hoá R(p); lợi ích; chi phí; công bằng; đi lại/chờ/sạc (LỚN NHẤT,
+% không phải trung bình -- code tính max); phạt lưới; SỐ THANH CÁI QUÁ TẢI;
+% số trạm; tỉ lệ ngân sách đã dùng. Mọi giá trị quy về % so với hiện hữu=100.
+
+%======================================================================
+\section{Kết quả và thảo luận}
+% NGÂN SÁCH: 1,05 trang gồm Bảng chính + Fig.~2 (bản đồ) + Bảng ablation nhỏ.
+
+\subsection{So sánh với các phương pháp đối sánh}
+% Bảng III: DQN-attention vs. 4 baseline x 2 quận (dùng lại khung Bảng kết
+% quả của vnict_main.tex, XÁC NHẬN LẠI SỐ trước khi nộp -- các số đã có trong
+% vnict_main.tex là của cấu hình MLP, KHÔNG được copy thẳng cho attention).
+% 2 đoạn: (i) DQN-attention thắng ở đâu, thua ở đâu, đặc biệt trên quận dư
+% địa lưới thấp; (ii) giải thích -- attention thấy toàn bộ trạng thái thanh
+% cái ngay từ bước đầu nên "biết trước" vùng sắp quá tải, khác greedy chỉ
+% nhìn lợi ích cục bộ tại từng bước.
+% Fig.~2: bản đồ quận với vị trí trạm do DQN-attention chọn, đặt cạnh kết quả
+% GA/greedy để thấy khác biệt phân bố không gian (nguồn: Results/maps/*).
+
+\subsection{Ablation kiến trúc mã hoá}
+% Bảng IV, 1 quận, đủ chỗ trong 6 trang: so sánh
+%   (a) đầy đủ (attention + PMA, use_pma=True)
+%   (b) attention + mean-pool (use_pma=False) -- tách vai trò bước gộp
+%   (c) n_layers=1 (giảm tầng tự chú ý)
+%   (d) MLP phẳng làm mốc dưới (1 dòng tham chiếu duy nhất tới kiến trúc
+%       khác, KHÔNG mở rộng thành so sánh 4 bộ mã hoá như bản outline gốc)
+% Thông điệp: PMA đóng góp thực so với mean-pool (mức chênh X điểm), số lớp
+% tự chú ý ảnh hưởng nhỏ hơn kỳ vọng (nêu số liệu cụ thể khi có kết quả).
+
+\subsection{Phân tích loại bỏ ràng buộc bài toán (tuỳ chọn nếu còn chỗ)}
+% Nếu Bảng IV đã dùng hết 1 quận, phần này CHỈ 1 đoạn tóm tắt bằng lời (không
+% bảng riêng): bỏ phạt lưới hoặc bỏ suy giảm nhu cầu (eta=0) đều làm tăng
+% điểm thô nhưng gây quá tải thanh cái -- xem số liệu chi tiết trong bản đầy
+% đủ (vnict_main.tex, mục Ablation Study) nếu BTC/khách mời hỏi thêm.
+
+%======================================================================
+\section{Kết luận}
+% NGÂN SÁCH: 0,2 trang (~150 từ). 3 câu tổng kết (MDP nhận biết lưới + bộ mã
+% hoá tự chú ý/PMA sinh vector tóm tắt cố định, không phụ thuộc số nút, vượt
+% các baseline) + 2 câu hạn chế (lưới điện tổng hợp từ toạ độ TBA chứ chưa có
+% số liệu vận hành thực; 2 quận, chưa kiểm định trên đồ thị lớn hơn nhiều lần
+% để thấy rõ lợi thế tầm nhìn toàn cục của attention so với GNN) + 2 câu
+% hướng phát triển (thiên kiến khoảng cách dạng mềm thay vì bỏ hẳn mặt nạ
+% cạnh; chuyển giao chính sách/bộ mã hoá giữa các quận, thành phố khác nhau).
+
+%======================================================================
+\section*{Cảm tạ}
+% 1--2 câu (đề tài/quỹ tài trợ). Cắt bỏ nếu thiếu trang.
+
+%======================================================================
+% TÀI LIỆU THAM KHẢO -- NGÂN SÁCH: 0,4 trang, 15--18 mục.
+% Dùng chung paper/references.bib (đã có sẵn hầu hết); nhớ đã bổ sung
+% lee2019set (Set Transformer/PMA) -- xem paper/references.bib.
+% Phân bổ gợi ý: 4 định vị trạm sạc cổ điển, 3 GA/metaheuristic, 5 DRL cho
+% quy hoạch/định vị (trong đó 2 mục DRL+attention: liu2023optimal,
+% lee2019set), 2 ràng buộc lưới/hosting capacity, 2 công cụ
+% (Stable-Baselines3, OSMnx).
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

@@ -159,8 +159,16 @@ def influence_radius(my_station):
     gives the radius of the nodes whose charging demand the CS could satisfy
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-    total_capacity = s_dict["capability"]
-    radius_s = RADIUS_MAX * 1 / (1 + np.exp(-total_capacity / (1000 * capacity_unit))) # prev 100
+    total_capacity = s_dict["capability"]  # [capability] = MW
+    # Logistic saturation of installed capacity, r(s) = R_max / (1 + e^{-C/C_0}).
+    # C_0 has to sit on the scale of a real station. The divisor used to be
+    # 1000 * capacity_unit against a capability already expressed in MW, i.e.
+    # C_0 = 1 GW, which pinned the whole fleet to r = 0.500 km: an 11 kW site and
+    # a 25 MW site differed by 6 metres. Coverage benefit, fairness and the
+    # demand-attenuation radius were therefore blind to how big a station was.
+    # At C_0 = 1 MW the curve spans the range the fleet actually occupies --
+    # 0.50 km at 11 kW, 0.56 at 240 kW, 0.95 at 3 MW, ~1.00 above 10 MW.
+    radius_s = RADIUS_MAX / (1 + np.exp(-total_capacity / RADIUS_CAPACITY_SCALE))
     s_dict["radius"] = radius_s  # [radius] = km
     return my_station
 
@@ -274,43 +282,109 @@ def service_rate(my_station):
     returns how many cars can be served within one hour
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-    s_dict["service rate"] = s_dict["capability"] * 1000 / BATTERY  # [service rate] = 1/h
+    n_chargers = int(np.sum(s_x))
+    mu = s_dict["capability"] * 1000 / BATTERY  # aggregate rate, [service rate] = 1/h
+    s_dict["service rate"] = mu
+    # Per-charger rate. The aggregate capacity is split evenly over the chargers,
+    # so c * mu_1 == mu and the station's total throughput is exactly what the
+    # single-server model assumed; only the discipline differs. mu_1 is the rate
+    # a single driver actually sees, and the M/M/c/N queue runs on it.
+    s_dict["c_servers"] = n_chargers
+    s_dict["service rate 1"] = mu / n_chargers if n_chargers > 0 else 0.0
     return my_station
 
 
-def avg_waiting(my_station, N=100, eps=1e-9):
+_queue_cache = {}
+
+
+def _mmcn_solve(a, c, N):
     """
-    Returns the expected time in the system (waiting + service) using an M/M/1/N queuing model.
-    N is the system capacity (queue + service). Sized dynamically based on demand if demand exceeds default N.
+    Blocking probability and mean system size of an M/M/c/N queue at offered load
+    a (Erlang), c servers, system capacity N.
+
+    The birth-death ratios r_n = r_{n-1} * a / min(n, c) are accumulated in log
+    space and normalised once. That is exact at every traffic intensity -- there
+    is no rho < 1 / rho = 1 / rho > 1 case split -- and it cannot overflow the
+    way a**N does (a reaches ~3e3 for a station of slow chargers under load).
     """
-    # Unpack directly
-    s_pos, s_x, s_dict = my_station
+    key = (a, c, N)
+    cached = _queue_cache.get(key)
+    if cached is not None:
+        return cached
 
-    sr = max(s_dict.get("service rate", 0.0), eps)  # mu
-    ar = s_dict.get("D_s", 0.0)  # lambda
+    n = np.arange(1, N + 1)
+    log_r = np.concatenate(([0.0], np.cumsum(np.log(a) - np.log(np.minimum(n, c)))))
+    r = np.exp(log_r - log_r.max())
+    P = r / r.sum()
+    PN = float(P[-1])
+    Ls = float(np.dot(np.arange(N + 1), P))
 
-    # Dynamically adjust N to match incoming demand if demand exceeds default capacity
-    effective_N = max(1, min(N, ceil(ar)))
+    if len(_queue_cache) > 200000:
+        _queue_cache.clear()
+    _queue_cache[key] = (PN, Ls)
+    return PN, Ls
 
-    p = ar / sr  # rho (traffic intensity)
 
-    # Calculate Probability of full system (PN) and Expected number in system (Ls)
-    if math.isclose(p, 1.0, rel_tol=1e-7):
-        PN = 1.0 / (effective_N + 1)
-        Ls = effective_N / 2.0
-    elif p > 1.0:
-        # Use reciprocal (u = 1/p) to prevent exponential overflow when p > 1
-        u = 1.0 / p
-        PN = (1.0 - u) / (1.0 - u ** (effective_N + 1))
-        Ls = (effective_N - (effective_N + 1) * u + u ** (effective_N + 1)) / ((1.0 - u) * (1.0 - u ** (effective_N + 1)))
-    else:
-        # Standard stable formula when p < 1
-        PN = (p ** effective_N * (1.0 - p)) / (1.0 - p ** (effective_N + 1))
-        Ls = p / (1.0 - p) - ((effective_N + 1) * p ** (effective_N + 1)) / (1.0 - p ** (effective_N + 1))
+def avg_waiting(my_station, kappa=None, eps=1e-9):
+    """
+    Expected time in the system (queueing + charging) at one station, modelled as
+    a finite-capacity multi-server M/M/c/N queue.
 
-    # Little's Law: W = L / lambda_eff
-    lambda_eff = ar * (1.0 - PN)
-    s_dict["W_s"] = Ls / (lambda_eff + eps)
+    Every charger is an explicit server: c = n(s) chargers each at rate
+    mu_1 = mu / n(s). The aggregate rate mu -- and with it the traffic intensity
+    rho = D / mu -- is exactly the one the single-server model used, so only the
+    service discipline changes. That change matters: pooling n chargers into one
+    server of rate mu lets a single vehicle draw the full station power, which
+    credited an 8x30 kW site with charging a car in 21 min instead of 170.
+
+    The system capacity is structural, N = (1 + kappa) * c, i.e. kappa waiting
+    bays per charger. It deliberately does NOT depend on demand. A demand-sized
+    buffer (the old N_eff = max(1, min(N, ceil(D)))) is not an M/M/c/N at all:
+    it makes the blocking probability non-monotone in D -- more demand enlarges
+    the buffer, which lowers blocking -- and it ties the queue's structure to the
+    node assignment that the queue itself decides. kappa = 0 gives the Erlang
+    loss system M/M/c/c; large kappa approaches the unbounded M/M/c.
+
+    Writes into the station dict: W_s (mean sojourn time, h), P_N (blocking
+    probability) and unserved (turned-away demand D * P_N, veh/h). Under
+    saturation D * P_N -> D - mu, the plain capacity shortfall, which is
+    independent of kappa -- see unserved_demand().
+    """
+    s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
+    kappa = WAIT_BAY_RATIO if kappa is None else kappa
+
+    ar = s_dict.get("D_s", 0.0)  # arrival rate D(s), [1/h]
+    c = int(np.sum(s_x))         # servers = chargers
+
+    if c <= 0:
+        # No charger installed: nothing can be served, every arrival is turned away.
+        s_dict["N_sys"] = 0
+        s_dict["P_N"] = 1.0 if ar > 0 else 0.0
+        s_dict["unserved"] = ar
+        s_dict["W_s"] = my_inf if ar > 0 else 0.0
+        return my_station
+
+    if ar <= 0.0:
+        # No demand routed here: no queue, and no waiting cost either since
+        # waiting(p) weights W_s by D(s).
+        s_dict["N_sys"] = c + int(ceil(kappa * c))
+        s_dict["P_N"] = 0.0
+        s_dict["unserved"] = 0.0
+        s_dict["W_s"] = 0.0
+        return my_station
+
+    mu = max(s_dict.get("service rate", 0.0), eps)  # aggregate rate
+    mu_1 = mu / c                                   # per-charger rate
+    N_sys = c + int(ceil(kappa * c))                # system capacity
+
+    a = ar / mu_1                                   # offered load [Erlang] = c * rho
+    PN, Ls = _mmcn_solve(a, c, N_sys)
+
+    lambda_eff = ar * (1.0 - PN)  # only admitted traffic is served
+    s_dict["N_sys"] = N_sys
+    s_dict["P_N"] = PN
+    s_dict["unserved"] = ar * PN
+    s_dict["W_s"] = Ls / (lambda_eff + eps)  # Little's law
 
     return my_station
 
@@ -413,6 +487,43 @@ def waiting_time(my_plan):
     return my_wait_time / time_unit
 
 
+def unserved_demand(my_plan):
+    """
+    Demand the plan cannot absorb: sum_s D(s) * P_N(s), in vehicles per time unit.
+
+    This is the congestion signal that survives the choice of buffer size. Once a
+    station saturates, D * P_N converges to D - mu, the raw gap between what
+    arrives and what the chargers deliver, independent of the waiting-bay ratio
+    kappa and of c. W_s does not have that property: above saturation it grows
+    roughly like N / mu, so it scales with kappa and is only meaningful as a
+    delay while the station still has slack.
+    """
+    total = sum([my_station[2].get("unserved", 0.0) for my_station in my_plan])
+    return total / time_unit
+
+
+def unserved_ratio(my_plan):
+    """
+    Fraction of arriving demand the plan turns away, sum_s D(s) P_N(s) / sum_s D(s).
+
+    The denominator is the same for every plan: station_seeking assigns each node
+    to exactly one station, so sum_s D(s) is just the district's total demand and
+    does not move when stations are added. That makes this an absolute 0..1
+    figure -- "15% of drivers get served" reads the same in every district and
+    does not depend on how bad the existing infrastructure happens to be, which a
+    ratio against p_0 would bake in.
+
+    Note this is a level, not a spread: because the districts are provisioned far
+    below their demand, every reachable plan sits high in [0, 1] (0.85 to 1.00 on
+    DongDa), so the term shifts the objective much more than it tilts it. Raise
+    UNSERVED_WEIGHT if the gradient needs to bite harder.
+    """
+    total_demand = sum([my_station[2].get("D_s", 0.0) for my_station in my_plan])
+    if total_demand <= 0:
+        return 0.0
+    return sum([my_station[2].get("unserved", 0.0) for my_station in my_plan]) / total_demand
+
+
 def social_cost(my_plan, my_node_list):
     """
     returns the social cost, i.e. the negative side of the charging plan
@@ -459,7 +570,10 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     """
     my_score = -my_inf
     if not my_plan:
-        return my_score
+        # Every caller unpacks the full tuple, so the guard has to keep the shape.
+        # Returning the bare score here raised TypeError instead of signalling
+        # "no plan", which is what this branch exists to say.
+        return my_score, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     benefit = social_benefit(my_plan, my_node_list) / norm_benefit
     cost_travel = travel_cost(my_node_list) / norm_travel # dimensionless
     charg_time = charging_time(my_plan) / norm_charg # dimensionless
@@ -708,6 +822,12 @@ def support_stations(my_plan, free_list):
 alpha = 0.8
 my_lambda = 0.5
 GRID_PENALTY_WEIGHT = 1.0  # tunable weight on the grid (distance + capacity) penalty in norm_score
+# Queue model (see avg_waiting). kappa = waiting bays per charger; a station of
+# c chargers has system capacity N = (1 + kappa) * c. This is a property of the
+# site, not of its demand. kappa = 0 -> Erlang loss system M/M/c/c.
+WAIT_BAY_RATIO = 1.0
+# Weight on the turned-away-demand term inside the (1 - alpha) group of norm_score.
+UNSERVED_WEIGHT = 1.0
 # Dynamic-demand model (see dynamic_demand). These shape the observation and the
 # demand-targeting heuristic behind actions 1 and 3 -- they do NOT enter norm_score.
 DEMAND_ETA = 0.4    # scaling_factor: how strongly installed capacity absorbs demand
@@ -718,6 +838,7 @@ evs_parking_area = 15  # meter square
 
 K = 100  # maximal number of chargers at a station
 RADIUS_MAX = 1  # [radius_max] = km
+RADIUS_CAPACITY_SCALE = 1.0  # C_0 in the radius logistic (see influence_radius), [C_0] = MW
 CHARGING_POWER = np.array([3, 7, 11, 20, 22, 30, 60, 80, 120, 150, 180, 250])
 INSTALL_FEE = np.array([5, 11, 12, 100, 12, 143, 278, 397, 416, 676, 956, 3272])
 BATTERY = 85  # battery capacity, [BATTERY] = kWh
@@ -726,7 +847,6 @@ RELOCATION_FACTOR = 0.2  # Assumption: Moving costs 20% of a new one
 BUDGET = 900000
 
 time_unit = 1  # [time_unit] = h, introduced for getting the units correctly
-capacity_unit = 1  # [cap_unit] = kW, introduced for getting the units correctly
 VELOCITY = 40  # km/h
 
 my_inf = 10 ** 6

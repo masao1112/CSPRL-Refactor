@@ -8,7 +8,7 @@ import numpy as np
 LOCATION = "DongDa"
 STEP = 106525
 RESULT_FILE = f"Results/optimal_plan/{LOCATION}/plan_G_Demand.pkl"
-OUTPUT_CSV = f"Results/optimal_plan/{LOCATION}/station_config_{STEP}.csv"
+OUTPUT_CSV = f"Results/optimal_plan/{LOCATION}/plan_G_Demand.csv"
 
 
 def export_station_config():
@@ -54,6 +54,14 @@ def export_station_config():
             "Total_Capacity_MW": station[2].get("capability", 0),
             "Install_Fee": station[2].get("fee", 0),
             "Service_Rate_per_h": round(station[2].get("service rate", 0), 2),
+            # Per-charger rate and server count: under the M/M/c/N queue a driver
+            # is served by ONE charger, so Service_Rate_1_per_h -- not the pooled
+            # station rate -- is what sets the charging half of the wait.
+            "Servers_c": station[2].get("c_servers", int(sum(charger_counts))),
+            "Service_Rate_1_per_h": round(station[2].get("service rate 1", 0), 3),
+            "System_Capacity_N": station[2].get("N_sys", 0),
+            "Blocking_Prob_P_N": round(station[2].get("P_N", 0), 4),
+            "Unserved_EV_per_h": round(station[2].get("unserved", 0), 3),
             "Expected_Wait_Time_h": round(station[2].get("W_s", 0), 4),
             "Number of EVs": station[2].get("D_s", 0),
             "Charging Time": station[2].get("D_s", 0) / station[2].get("service rate", 0),
@@ -74,7 +82,9 @@ def export_station_config():
     # Reorder columns to put main info first
     cols = ["Station_ID", "Node_ID", "Latitude", "Longitude", "Total_Capacity_MW",
             "Total_Chargers", "Charger_Config", "Install_Fee", "Charging Time",
-            "Service_Rate_per_h", "Expected_Wait_Time_h", "Number of EVs"]
+            "Service_Rate_per_h", "Service_Rate_1_per_h", "Servers_c",
+            "System_Capacity_N", "Expected_Wait_Time_h", "Blocking_Prob_P_N",
+            "Unserved_EV_per_h", "Number of EVs"]
     # Append dynamic columns
     dt_cols = [c for c in df.columns if c.startswith("Qty_")]
     final_cols = cols + dt_cols
@@ -88,8 +98,9 @@ def export_station_config():
     print(f"Successfully exported configuration to:\n{os.path.abspath(OUTPUT_CSV)}")
     print("-" * 50)
     print(df[["Node_ID", "Total_Capacity_MW", "Charger_Config", "Number of EVs", "Expected_Wait_Time_h",
-              "Charging Time", "Service_Rate_per_h"]].to_string())
+              "Blocking_Prob_P_N", "Unserved_EV_per_h", "Charging Time", "Service_Rate_per_h"]].to_string())
     print("Total charg time:", df["Charging Time"].sum())
+    print("Total unserved demand:", round(df["Unserved_EV_per_h"].sum(), 3), "EV/h")
 
 if __name__ == "__main__":
     export_station_config()
