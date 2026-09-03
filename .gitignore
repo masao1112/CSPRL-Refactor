@@ -1,3 +1,25 @@
-custom_environment/data
 Results
 Images
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project Results & Data
+Results/*.csv
+Results/*.pkl
+Results/*.png
+.ipynb_checkpoints
+*.log
