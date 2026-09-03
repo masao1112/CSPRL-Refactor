@@ -237,6 +237,7 @@ class StationPlacement(gym.Env):
         self.config_dict = None
         self.previous_score = None
         self.starting_score = None
+        self.last_episode_best_score = -np.inf
         self.feature_scaler = FeatureScaler(location=location)
 
         # Action mapping:
@@ -471,6 +472,8 @@ class StationPlacement(gym.Env):
         if self.schritt >= len(self.node_list) / 2:
             self.game_over = True
 
+        if self.game_over:
+            self.last_episode_best_score = self.best_score
         return obs, reward, self.game_over, False, {}
 
     def station_config_check(self, my_station):
