@@ -18,7 +18,7 @@ def prepare_graph(my_graph_file, my_node_file):
     return my_graph, my_node_list
 
 
-def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
+def cost_single(my_node, my_station, my_node_dict, my_cost_dict, graph):
     """
     calculate the social cost for one station
     """
@@ -28,7 +28,7 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     if station_id in my_node_dict[node_id]:
         distance = my_node_dict[node_id][station_id]
     else:
-        distance = calculate_distance(s_pos, my_node)
+        distance = calculate_distance(s_pos, my_node, graph)
         my_node_dict[node_id][station_id] = distance
     # check if cost has to be calculated
     if node_id not in my_cost_dict:
@@ -42,8 +42,8 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     if isinstance(cached_entry, dict) and cached_entry.get("state") == station_signature:
         node_cost = cached_entry["cost"]
     else:
-        cost_travel = alpha * (distance / VELOCITY) * (1 + weak_demand(my_node)) # demand as traffic density factor
-        cost_boring = (1 - alpha) * (s_dict["W_s"] + 1 / (s_dict["service rate"] + eps))
+        cost_travel = alpha * (distance / VELOCITY) * (1 + weak_demand(my_node))  # demand as traffic density factor
+        cost_boring = (1 - alpha) * (s_dict.get("W_s", 0.0) + 1 / (s_dict.get("service rate", 0.0) + eps))
         node_cost = cost_travel + cost_boring
         my_cost_dict[node_id][station_id] = {
             "state": station_signature,
@@ -52,15 +52,14 @@ def cost_single(my_node, my_station, my_node_dict, my_cost_dict):
     return node_cost, my_node_dict, my_cost_dict
 
 
-
-def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
+def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict, graph):
     """
     output station assignment: Each node gets assigned the charging station with minimal social cost
     """
     for node in my_node_list:
         cost_list = []
         for station in my_plan:
-            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict)
+            node_cost, my_node_dict, my_cost_dict = cost_single(node, station, my_node_dict, my_cost_dict, graph)
             cost_list.append(node_cost)
         costminindex = np.argmin(cost_list)
         chosen_station = my_plan[costminindex]
@@ -73,7 +72,7 @@ def station_seeking(my_plan, my_node_list, my_node_dict, my_cost_dict):
     return my_node_list, my_node_dict, my_cost_dict
 
 
-def calculate_distance(s_pos, my_node):
+def calculate_distance(s_pos, my_node, graph):
     """
     Calculates distance between two nodes using the precomputed distance matrix.
     Falls back to haversine if matrix lookup fails.
@@ -128,7 +127,7 @@ def influence_radius(my_station):
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
     total_capacity = s_dict["capability"]
-    radius_s = RADIUS_MAX * 1 / (1 + np.exp(-total_capacity / (1000 * capacity_unit))) # prev 100
+    radius_s = RADIUS_MAX * 1 / (1 + np.exp(-total_capacity / (1000 * capacity_unit)))  # prev 100
     s_dict["radius"] = radius_s  # [radius] = km
     return my_station
 
@@ -163,9 +162,9 @@ def node_coverage(my_plan, my_node):
         if distance <= radius_s:
             I_1 += 1
     my_node[1]['n_stations'] = I_1
-            
+
     for ith in range(I_1):
-        I_2 += 1 / (ith + 1) # diminishing return, as more stations cover node v, the higher the benefit
+        I_2 += 1 / (ith + 1)  # diminishing return, as more stations cover node v, the higher the benefit
     single_benefit = I_2 * (1 - 0.1 * priv_CS)
     return single_benefit
 
@@ -189,7 +188,6 @@ def station_coverage(my_station, my_node_list):
             covered_nodes += 1
 
     # Normalize to 0-1 range based on total nodes, then scale to be comparable to node_coverage
-    # (which typically ranges from ~1-4 with diminishing returns)
     normalized_coverage = (covered_nodes / len(my_node_list)) * 10  # scale factor to match node_coverage range
 
     return normalized_coverage
@@ -200,8 +198,6 @@ def total_number_EVs(my_station, my_node_list):
     yields total number of EVs coming to S in a unit time interval for charging
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-    # D_s = sum([1 / my_node[1]["distance"] * weak_demand(my_node) if my_node[1]["charging station"] == s_pos[0]
-    #            else 0 for my_node in my_node_list])
     D_s = sum([ceil(ev_per_capita * my_node[1]['pop']) if my_node[1]["charging station"] == s_pos[0]
                else 0 for my_node in my_node_list])
     s_dict["D_s"] = D_s  # dimensionless
@@ -259,28 +255,25 @@ def social_benefit(my_plan, my_node_list):
         return 0
 
     # Component 1: Node perspective - how well are nodes covered by stations
-    # (how many charging stations can each node access)
     node_coverage_total = 0
     for my_node in my_node_list:
         node_coverage_total += node_coverage(my_plan, my_node)
     node_coverage_avg = node_coverage_total / len(my_node_list)
 
     # Component 2: Station perspective - how efficiently do stations cover nodes
-    # (with diminishing returns to encourage balanced coverage)
     station_coverage_total = 0
     for station in my_plan:
         station_coverage_total += station_coverage(station, my_node_list)
     station_coverage_avg = station_coverage_total / len(my_plan)
 
     # Balance both components equally
-    # This ensures neither metric dominates the benefit calculation
     my_benefit = (node_coverage_avg + station_coverage_avg) / 2
     return my_benefit
 
 
 def travel_cost(my_node_list):
     """ yields the estimated travel time of all vehicles """
-    my_cost_travel = sum([my_node[1]["distance"] * weak_demand(my_node) / VELOCITY for my_node in my_node_list])
+    my_cost_travel = sum([my_node[1]["distance"] * (1 + weak_demand(my_node)) / VELOCITY for my_node in my_node_list])
     return my_cost_travel
 
 
@@ -288,7 +281,6 @@ def charging_time(my_plan):
     """
     yields the total charging time given the capability of the CS of the charging plan
     """
-    # my_charg_time = sum([my_station[2]["D_s"] / my_station[2]["service rate"] for my_station in my_plan])
     my_charg_time = 0
     for my_station in my_plan:
         my_charg_time += (my_station[2]["D_s"] / (my_station[2]["service rate"] + 1e-6))
@@ -328,6 +320,7 @@ def social_fairness(my_node_list):
     std = float(np.std(counts))
     return 1.0 / (1.0 + std)
 
+
 def existing_score(my_existing_plan, my_node_list):
     """
     computes the score of the existing infrastructure
@@ -342,7 +335,7 @@ def existing_score(my_existing_plan, my_node_list):
     return my_benefit, my_cost, my_fairness, charg_time, wait_time, travel_time
 
 
-def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_travel, norm_fairness, grid_penalty=None):
+def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_travel, grid_penalty=None):
     """
     same as score, but normalised.
     """
@@ -350,20 +343,29 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     if not my_plan:
         return my_score
     benefit = social_benefit(my_plan, my_node_list) / norm_benefit
-    cost_travel = travel_cost(my_node_list) / norm_travel # dimensionless
-    charg_time = charging_time(my_plan) / norm_charg # dimensionless
-    wait_time = waiting_time(my_plan) / norm_wait # dimensionless
+    cost_travel = travel_cost(my_node_list) / norm_travel  # dimensionless
+    charg_time = charging_time(my_plan) / norm_charg  # dimensionless
+    wait_time = waiting_time(my_plan) / norm_wait  # dimensionless
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
-    fairness = social_fairness(my_node_list) / norm_fairness
-    # print(norm_benefit, norm_charg, norm_wait, norm_travel, norm_fairness)
-    # print(social_benefit(my_plan, my_node_list), charging_time(my_plan), waiting_time(my_plan), travel_cost(my_node_list), social_fairness(my_node_list))
+    fairness = social_fairness(my_node_list)
     if grid_penalty is not None:
-        avg_penalty = abs(grid_penalty) / max(1, len(my_plan))
-        grid_score = max(0.0, 1.0 - avg_penalty)
-        my_score = 0.25 * benefit - 0.25 * cost + 0.25 * fairness + 0.25 * grid_score
+        if isinstance(grid_penalty, dict):
+            dist_p = abs(grid_penalty.get('dist_penalty', 0.0))
+            cap_p = abs(grid_penalty.get('cap_penalty', 0.0))
+        elif isinstance(grid_penalty, tuple) and len(grid_penalty) == 2:
+            dist_p = abs(grid_penalty[0])
+            cap_p = abs(grid_penalty[1])
+        else:
+            dist_p = abs(grid_penalty)
+            cap_p = 0.0
+        # dist_p is an extensive sum over stations -> average it per station.
+        # cap_p arrives already normalized: calculate_grid_penalty divides the sum
+        # of per-bus overload ratios by the district's bus count, a constant.
+        avg_penalty = (dist_p / max(1, len(my_plan))) + cap_p
+        my_score = (benefit - cost + fairness) / 3 - GRID_PENALTY_WEIGHT * avg_penalty
     else:
-        my_score = 1/3 * benefit - 1/3 * cost + 1/3 * fairness
-    return my_score, benefit, cost, fairness, charg_time, wait_time, cost_travel
+        my_score = (benefit - cost + fairness) / 3
+    return my_score, benefit, cost, charg_time, wait_time, cost_travel, fairness
 
 
 def score(my_plan, my_node_list):
@@ -380,9 +382,32 @@ def score(my_plan, my_node_list):
     my_score = my_lambda * benefit - (1 - my_lambda) * cost
     return my_score, benefit, cost
 
+
+def travel_metric(my_node_list):
+    """Max (worst-case) travel time in minutes across all nodes, demand-weighted."""
+    big_travel_list = []
+    for my_node in my_node_list:
+        travel = my_node[1]["distance"] / VELOCITY * 60
+        times = ceil(10 * weak_demand(my_node))
+        for _ in range(times):
+            big_travel_list.append(travel)
+    return max(big_travel_list) if big_travel_list else 0
+
+
+def waiting_metric(my_plan):
+    """Max (worst-case) waiting time in minutes across all stations."""
+    big_waiting_list = []
+    for my_station in my_plan:
+        times = ceil(my_station[2]["D_s"])
+        for _ in range(times):
+            big_waiting_list.append(my_station[2]["W_s"] * 60)
+    return max(big_waiting_list) if big_waiting_list else 0
+
+
 def get_relocate_cost(station_config_index):
     move_cost = RELOCATION_FACTOR * INSTALL_FEE[station_config_index]
     return move_cost
+
 
 # Constraints checks ############################################################################
 def station_capacity_check(my_plan):
@@ -413,7 +438,7 @@ def control_charg_decision(my_plan, my_node_list):
 
 def waiting_time_check(my_plan):
     """
-    check that wiating time is bounded
+    check that waiting time is bounded
     """
     for my_station in my_plan:
         s_dict = my_station[2]
@@ -442,7 +467,7 @@ def initial_solution(my_config_dict, my_node_list, s_pos):
     get the initial solution for the charging configuration
     """
     W = 0  # minimum capacity constraint
-    radius = 50
+    radius = RADIUS_MAX
     # search for all nodes within station radius
     for my_node in my_node_list:
         if haversine(s_pos, my_node) <= radius:
@@ -450,7 +475,7 @@ def initial_solution(my_config_dict, my_node_list, s_pos):
     W = ceil(W) * BATTERY
     key_list = sorted(list(my_config_dict.keys()))
     for key in key_list:
-        if int(key) > W: # convert str to int
+        if int(key) > W:  # convert str to int
             break
     best_config = my_config_dict[key]
     return best_config
@@ -500,7 +525,8 @@ def choose_node_by_fairness(free_list):
         chosen_idx = 0
     chosen_node = free_list[chosen_idx]
     return chosen_node
-    
+
+
 def anti_choose_node_bybenefit(my_node_list, my_plan):
     """
     choose station with the least coverage
@@ -509,7 +535,7 @@ def anti_choose_node_bybenefit(my_node_list, my_plan):
     my_occupied_list = [node for node in my_node_list if node[0] in plan_list]
     if not my_occupied_list:
         return None
-    upbound_list = [node[1]["upper_bound"] for node in my_occupied_list]
+    upbound_list = [node[1].get("upper_bound", node[1].get("covered", 0)) for node in my_occupied_list]
     pos_minindex = upbound_list.index(min(upbound_list))
     remove_node = my_occupied_list[pos_minindex]
     plan_index = plan_list.index(remove_node[0])
@@ -544,22 +570,16 @@ def support_stations(my_plan, free_list):
     return chosen_node
 
 
-# Load graph file for travel distance computing
-location = "DongDa"
-graph_file = f"custom_environment/data/Graph/{location}/{location}.graphml"
-graph = nx.read_graphml(graph_file)
-
 # Parameters ########################################################
 alpha = 0.8
 my_lambda = 0.5
+GRID_PENALTY_WEIGHT = 1.0  # tunable weight on the grid (distance + capacity) penalty in norm_score
 eps = 1e-9
 ev_per_capita = 0.022
 evs_parking_area = 15  # meter square
 
 K = 100  # maximal number of chargers at a station
 RADIUS_MAX = 1  # [radius_max] = km
-# INSTALL_FEE = np.array([300, 750, 28000])  # fee per installing a charger of type 1, 2 or 3. [fee] = $
-# CHARGING_POWER = np.array([7, 22, 50])  # [power] = kW, rounded
 CHARGING_POWER = np.array([3, 7, 11, 20, 22, 30, 60, 80, 120, 150, 180, 250])
 INSTALL_FEE = np.array([5, 11, 12, 100, 12, 143, 278, 397, 416, 676, 956, 3272])
 BATTERY = 85  # battery capacity, [BATTERY] = kWh

@@ -1,22 +1,23 @@
 import copy
-
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 from stable_baselines3.common.env_checker import check_env
 import pickle
 from random import choice
-import custom_environment.helpers as H
 import sys
 import os
+import json
 
-# Add parent directory to path to allow importing power_grid
+# Add parent directory to path to allow importing custom_environment and power_grid
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
+import custom_environment.helpers as H
 from custom_environment.power_grid.csprl_adapter import create_adapter_for_location
+
 
 """
 Custom environment
@@ -29,21 +30,56 @@ class FeatureScaler:
     All outputs are in [-1, 1] to match Box observation space.
     """
 
-    def __init__(self):
-        # Estimated realistic ranges (adjust based on your actual dataset!)
-        self.lon_min, self.lon_max = 105.7, 106.0  # Hanoi/DongDa approximate
-        self.lat_min, self.lat_max = 20.95, 21.05
-        self.pop_min, self.pop_max = 2.646, 468.3
-        self.demand_max = 1.0  # assuming already normalized [0,1]
-        self.land_price_max = 214.245  # triệu VND/m²
-        self.private_cs_max = 1.0
+    def __init__(self, location="DongDa", base_dir=None):
+        if base_dir is None:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        json_path = os.path.join(base_dir, "data", "Graph", location, "scaling_constants.json")
+
+        # Load from file if exists, otherwise use reasonable defaults
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, "r") as f:
+                    data = json.load(f)
+                self.lon_min = data.get("x_min", 105.798)
+                self.lon_max = data.get("x_max", 105.843)
+                self.lat_min = data.get("y_min", 20.997)
+                self.lat_max = data.get("y_max", 21.032)
+                self.pop_min = data.get("pop_min", 2.646)
+                self.pop_max = data.get("pop_max", 425.7)
+                self.land_price_max = data.get("land_price_max", 186.2)
+                self.demand_max = data.get("demand_max", 0.91)
+                self.grid_dist_max = data.get("grid_dist_max", 1.02)
+                self.grid_mw_max = data.get("grid_mw_max", 12.8)
+                self.street_count_max = data.get("street_count_max", 5.0)
+                self.road_length_max = data.get("road_length_max", 363.0)
+                self.dist_to_station_max = data.get("dist_to_station_max", 2.0)
+                self.capability_max = data.get("capability_max", 1.5)
+                self.benefit_max = data.get("benefit_max", 2.0)
+                print(f"Loaded scaling constants for {location} successfully.")
+            except Exception as e:
+                print(f"Error loading scaling JSON: {e}. Using default values.")
+                self._set_defaults()
+        else:
+            print(f"Scaling JSON not found at {json_path}. Using default values.")
+            self._set_defaults()
+
         self.charger_max = float(H.K)
         self.budget_max = float(H.BUDGET)
-        self.grid_dist_max = 3.0
-        self.grid_mw_max = 10.0
-        self.benefit_max = 5.0
-        self.capability_max = 10.0
-        self.dist_to_station_max = 10.0
+
+    def _set_defaults(self):
+        self.lon_min, self.lon_max = 105.798, 105.843
+        self.lat_min, self.lat_max = 20.997, 21.032
+        self.pop_min, self.pop_max = 2.646, 425.7
+        self.land_price_max = 186.2
+        self.demand_max = 0.91
+        self.grid_dist_max = 1.02
+        self.grid_mw_max = 12.8
+        self.street_count_max = 5.0
+        self.road_length_max = 363.0
+        self.dist_to_station_max = 2.0
+        self.capability_max = 1.5
+        self.benefit_max = 2.0
 
     def scale_lon(self, v):
         return 2 * (np.clip(v, self.lon_min, self.lon_max) - self.lon_min) / (self.lon_max - self.lon_min + 1e-9) - 1
@@ -61,7 +97,7 @@ class FeatureScaler:
         return 2 * np.clip(v / (self.land_price_max + 1e-9), 0, 1) - 1
 
     def scale_private_cs(self, v):
-        return 2 * np.clip(v / (self.private_cs_max + 1e-9), 0, 1) - 1
+        return 2 * np.clip(v / (1.0 + 1e-9), 0, 1) - 1
 
     def scale_charger_count(self, v):
         return 2 * (np.clip(v, 0, self.charger_max) / (self.charger_max + 1e-9)) - 1
@@ -84,13 +120,19 @@ class FeatureScaler:
     def scale_nearest_station_dist(self, v):
         return 2 * np.clip(v / (self.dist_to_station_max + 1e-9), 0, 1) - 1
 
+    def scale_street_count(self, v):
+        return 2 * (np.clip(v, 1.0, self.street_count_max) - 1.0) / (self.street_count_max - 1.0 + 1e-9) - 1
+
+    def scale_road_length(self, v):
+        return 2 * np.clip(v / (self.road_length_max + 1e-9), 0, 1) - 1
+
 
 class Plan:
-    def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file):
-        with (open(my_plan_file, "rb")) as f:
+    def __init__(self, my_node_list, my_node_dict, my_cost_dict, my_plan_file, graph):
+        with open(my_plan_file, "rb") as f:
             self.plan = pickle.load(f)
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
-        my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict)
+        my_node_list, _, _ = H.station_seeking(self.plan, my_node_list, my_node_dict, my_cost_dict, graph)
         # update the dictionnary
         self.plan = [H.s_dictionnary(my_station, my_node_list) for my_station in self.plan]
         self.norm_benefit, self.norm_cost, self.norm_fairness, self.norm_charg, self.norm_wait, self.norm_travel = \
@@ -121,7 +163,7 @@ class Plan:
             if stolen_station[1][i] > 0:
                 self.plan[station_index][1][i] -= 1
                 config_index = i
-                break # if found the largest port, move to the next step
+                break  # if found the largest port, move to the next step
 
         if sum(stolen_station[1]) == 0:
             # this means we remove the entire stations as it only has one charger
@@ -136,9 +178,9 @@ class Plan:
 
 class Station:
     def __init__(self):
-        self.s_pos = None # station positioon
-        self.s_x = None # station config
-        self.s_dict = {} # this use to store additional station data (fee, )
+        self.s_pos = None  # station position
+        self.s_x = None    # station config
+        self.s_dict = {}   # store additional station data (fee, etc.)
         self.station = [self.s_pos, self.s_x, self.s_dict]
 
     def __repr__(self):
@@ -156,57 +198,86 @@ class Station:
 
 class StationPlacement(gym.Env):
     """Custom Environment that follows gym interface"""
-    node_dict = {}
-    cost_dict = {}
 
-    def __init__(self, my_graph_file, my_node_file, my_plan_file, location="DongDa"):
+    def __init__(self, my_graph_file, my_node_file, my_plan_file, location="DongDa", obs_type="mlp"):
         super(StationPlacement, self).__init__()
+
+        # Per-instance distance/cost caches
+        self.node_dict = {}
+        self.cost_dict = {}
+
+        self.obs_type = "mlp"
 
         # Initialize Grid Adapter with Fallback
         try:
-            # Adapter automatically finds data in CSPRL/power_grid/data
             self.grid_adapter = create_adapter_for_location(location)
         except Exception as e:
             print(f"Warning: Could not initialize Power Grid Adapter ({ascii(e)}). Grid constraints will be ignored.")
             self.grid_adapter = None
 
-        _graph, self.node_list = H.prepare_graph(my_graph_file, my_node_file)
+        self.graph, self.node_list = H.prepare_graph(my_graph_file, my_node_file)
+        self.node_id_to_idx = {node[0]: idx for idx, node in enumerate(self.node_list)}
 
         self.node_list = [self._init(my_node) for my_node in self.node_list]
 
+        self.max_steps = min(len(self.node_list) / 2, 350)
         self.plan_file = my_plan_file
+        with open(my_plan_file, "rb") as f:
+            print(f"Existing plan: {len(pickle.load(f))} stations (from {os.path.basename(my_plan_file)})")
+
         self.game_over = None
         self.budget = None
         self.plan_instance = None
         self.plan_length = None
-        self.row_length = 7
+        self.row_length = 9
         self.best_score = None
         self.best_plan = None
         self.best_node_list = None
         self.schritt = None
         self.config_dict = None
         self.previous_score = None
-        self.feature_scaler = FeatureScaler()
-        # action mapping:
+        self.starting_score = None
+        self.feature_scaler = FeatureScaler(location=location)
+
+        # Action mapping:
         # 0: create by benefit, 1: create by demand,
         # 2: add by benefit, 3: add by demand,
         # 4: move (steal) station
         self.action_space = spaces.Discrete(5)
-        shape = self.row_length * len(self.node_list) + 1
+
+        # Precompute node-to-bus mapping for local grid capacities
+        self.node_to_bus_idx = {}
+        if self.grid_adapter:
+            for node in self.node_list:
+                lat = node[1].get('y', 0.0)
+                lon = node[1].get('x', 0.0)
+                bus_info = self.grid_adapter._get_bus_info(lat, lon)
+                self.node_to_bus_idx[node[0]] = bus_info.get('bus_idx', -1)
+            self.grid_adapter.set_district_scope(self.node_to_bus_idx.values())
+            print(f"District grid scope: {self.grid_adapter._n_district_buses} buses "
+                  f"across {len(self.node_list)} nodes.")
+
+        shape = self.row_length * len(self.node_list) + 3
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(shape,), dtype=np.float32)
 
     def reset(self, seed=None, options=None):
         """
         Reset the state of the environment to an initial state
         """
-        # Handle the seed for Gymnasium compatibility
         if seed is not None:
             np.random.seed(seed)
 
+        # Clear node->station assignment left by previous episode
+        for node in self.node_list:
+            node[1]["charging station"] = None
+            node[1]["distance"] = None
+            if "covered" in node[1]:
+                del node[1]["covered"]
+
         self.budget = H.BUDGET
         self.game_over = False
-        self.plan_instance = Plan(self.node_list, StationPlacement.node_dict, StationPlacement.cost_dict,
-                                  self.plan_file)
+        self.plan_instance = Plan(self.node_list, self.node_dict, self.cost_dict,
+                                  self.plan_file, self.graph)
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
@@ -214,44 +285,38 @@ class StationPlacement(gym.Env):
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(
                 station_nodes)
-
+            total_grid_penalty = {'dist_penalty': dist_penalty, 'cap_penalty': cap_penalty}
             self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit,
                                                              self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait,
                                                              self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness, dist_penalty)
-            if cap_penalty < 0:
-                self.best_score -= 100
+                                                             total_grid_penalty)
         else:
             self.best_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
                                                              self.plan_instance.norm_benefit,
                                                              self.plan_instance.norm_charg,
                                                              self.plan_instance.norm_wait,
-                                                             self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness)
+                                                             self.plan_instance.norm_travel)
 
         self.previous_score = self.best_score
-
-        self.best_score = max(self.best_score, -25)
+        self.starting_score = self.best_score
         self.plan_length = len(self.plan_instance.existing_plan)
         self.schritt = 0
-        self.best_plan = []
-        self.best_node_list = []
-        self.best_node_list = []
-        # Use absolute path for config lookup
+        self.best_plan = copy.deepcopy(self.plan_instance.plan)
+        self.best_node_list = copy.deepcopy(self.node_list)
+
         config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "processed",
                                    "config_lookup.json")
         self.config_dict = H.get_lookup(config_path)
         H.coverage(self.node_list, self.plan_instance.plan)
         obs = self.establish_observation()
 
-        # Return obs AND an empty info dict (Required by new SB3/Gymnasium)
         return obs, {}
 
     def _init(self, my_node):
-        StationPlacement.node_dict[my_node[0]] = {}  # prepare node_dict
-        StationPlacement.cost_dict[my_node[0]] = {}
+        self.node_dict[my_node[0]] = {}
+        self.cost_dict[my_node[0]] = {}
         my_node[1]["charging station"] = None
         my_node[1]["distance"] = None
         return my_node
@@ -260,7 +325,7 @@ class StationPlacement(gym.Env):
         """
         Build observation matrix (MLP)
         """
-        # Precompute capability dict to avoid nested lookups (O(M) instead of O(N*M))
+        # Precompute capability dict to avoid nested lookups
         station_caps = {s[0][0]: s[2]["capability"] for s in self.plan_instance.plan}
 
         # Precompute distances to nearest existing station
@@ -273,69 +338,91 @@ class StationPlacement(gym.Env):
         else:
             nearest_dists = [self.feature_scaler.dist_to_station_max] * len(self.node_list)
 
+        # Get local bus capacity
+        bus_caps = {}
+        if self.grid_adapter:
+            station_items = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
+            net = self.grid_adapter.loader.net
+            bus_loads = self.grid_adapter.get_accumulate_load(station_items)
+            for idx, row in net.bus.iterrows():
+                if abs(row['vn_kv'] - 22.0) < 0.5:
+                    cap_info = self.grid_adapter.loader.get_available_capacity(idx)
+                    available = cap_info.get('available_mw', 0.0)
+                    if idx in bus_loads:
+                        available -= bus_loads[idx]['required']
+                    bus_caps[idx] = max(0.0, available)
+
         node_features = np.zeros((len(self.node_list), self.row_length), dtype=np.float32)
 
         for j, node in enumerate(self.node_list):
-            demand = node[1]['demand']
-            # 0: static demand
-            node_features[j, 0] = self.feature_scaler.scale_demand(demand)
-            # 1: land price
-            node_features[j, 1] = self.feature_scaler.scale_land_price(node[1]['land_price'])
-            # 2: grid distance
-            node_features[j, 2] = self.feature_scaler.scale_grid_distance(node[1].get('grid_distance_km', 3.0))
-            # 3: grid capability
-            node_features[j, 3] = self.feature_scaler.scale_grid_mw(node[1].get('grid_available_mw', 0.0))
-            # 4: benefit
-            node_features[j, 4] = self.feature_scaler.scale_benefit(node[1].get('benefit', 0.0))
+            # 0: longitude (scaled)
+            node_features[j, 0] = self.feature_scaler.scale_lon(node[1].get('x', 105.8))
+            # 1: latitude (scaled)
+            node_features[j, 1] = self.feature_scaler.scale_lat(node[1].get('y', 21.0))
+            # 2: static demand (representing baseline population)
+            node_features[j, 2] = self.feature_scaler.scale_demand(node[1].get('demand', 0.0))
+            # 3: land price
+            node_features[j, 3] = self.feature_scaler.scale_land_price(node[1].get('land_price', 90.0))
+            # 4: street count
+            node_features[j, 4] = self.feature_scaler.scale_street_count(node[1].get('street_count', 3))
             # 5: current station capability at this node
             capability = station_caps.get(node[0], 0.0)
             node_features[j, 5] = self.feature_scaler.scale_capability(capability)
-            # 6: distance to nearest station
-            node_features[j, 6] = self.feature_scaler.scale_nearest_station_dist(nearest_dists[j])
+            # 6: grid distance
+            grid_dist = node[1].get('grid_distance_km', -1.0)
+            if grid_dist == float('inf') or np.isinf(grid_dist) or grid_dist == -1.0:
+                node_features[j, 6] = -1.0
+            else:
+                node_features[j, 6] = self.feature_scaler.scale_grid_distance(grid_dist)
+            # 7: local bus capacity
+            bus_idx = self.node_to_bus_idx.get(node[0], -1)
+            bus_cap = bus_caps.get(bus_idx, 0.0) if bus_idx != -1 else 0.0
+            node_features[j, 7] = self.feature_scaler.scale_grid_mw(bus_cap)
+            # 8: distance to nearest station
+            nearest_dist = nearest_dists[j]
+            node_features[j, 8] = self.feature_scaler.scale_nearest_station_dist(nearest_dist) if nearest_dist != self.feature_scaler.dist_to_station_max else -1.0
 
-        global_st = np.array([self.feature_scaler.scale_budget(self.budget)], dtype=np.float32)
+        # Global state
+        budget_scaled = self.feature_scaler.scale_budget(self.budget)
+        progress_scaled = 2.0 * (self.schritt / max(1.0, self.max_steps)) - 1.0
+        score_delta = self.best_score - self.starting_score
+        global_st = np.array([budget_scaled, progress_scaled, score_delta], dtype=np.float32)
 
-        width = self.row_length * len(self.node_list) + 1
-        obs = np.zeros(width, dtype=np.float32)
-        obs[:-1] = node_features.flatten()
-        obs[-1] = global_st[0]
+        obs = np.concatenate([node_features.flatten(), global_st])
         return obs
 
     def budget_adjustment(self, my_station):
         inst_cost = my_station[2]["fee"]
-        if self.budget - inst_cost > 0:
-            # if we have enough money, we build the station
+        if self.budget - inst_cost >= 0:
             self.budget -= inst_cost
         else:
             self.game_over = True
 
     def budget_adjustment_small(self, chosen_node, config_index):
         single_charger_budget = H.evs_parking_area * chosen_node[1]['land_price'] + H.INSTALL_FEE[config_index]
-        if self.budget - single_charger_budget > 0:
-            # if we have enough money, we build the charger
+        if self.budget - single_charger_budget >= 0:
             self.budget -= single_charger_budget
         else:
             self.game_over = True
 
     def prepare_score(self):
         """
-        We have to make a loop to reorganise the station assignment
+        prepare the node and cost list for evaluation
         """
         for j in range(2):
             self.node_list, _, _ = H.station_seeking(self.plan_instance.plan, self.node_list,
-                                                      StationPlacement.node_dict,
-                                                      StationPlacement.cost_dict)
+                                                      self.node_dict,
+                                                      self.cost_dict,
+                                                      self.graph)
             for i in range(len(self.plan_instance.plan)):
                 self.plan_instance.plan[i] = H.total_number_EVs(self.plan_instance.plan[i], self.node_list)
                 self.plan_instance.plan[i] = H.W_s(self.plan_instance.plan[i])
-            j += 1
 
     def step(self, my_action):
         """
         Perform a step in the episode
         """
         for station in self.plan_instance.plan:
-            # if there is an empty station, delete it
             if np.sum(station[1]) <= 0:
                 self.plan_instance.remove_plan(station)
 
@@ -350,7 +437,7 @@ class StationPlacement(gym.Env):
             # Step: Control budget
             self.budget_adjustment(station_instance.station)
             if not self.game_over:
-                self.plan_instance.add_plan(station_instance.station) # this must be the reason why the budget exceed 100%
+                self.plan_instance.add_plan(station_instance.station)
         else:
             # add column to existing CS
             station_index = None
@@ -369,23 +456,21 @@ class StationPlacement(gym.Env):
 
         # Extend node features with grid data (if available)
         if self.grid_adapter:
-            station_nodes = [(s[0], s[2]["capability"] / 1000.0) for s in self.plan_instance.plan]
+            station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             self.node_list = self.grid_adapter.extend_node_features(self.node_list, station_nodes)
 
         # Step: calculate reward
         reward = self.evaluation()
         H.coverage(self.node_list, self.plan_instance.plan)
         obs = self.establish_observation()
+
         # episode end conditions
         if len(self.plan_instance.plan) == len(self.node_list):
             self.game_over = True
         self.schritt += 1
         if self.schritt >= len(self.node_list) / 2:
             self.game_over = True
-        # if self.game_over:
-        #     print("Best score {}.".format(self.best_score))
-        # Return gymnasium format: (obs, reward, terminated, truncated, info)
-        # best_node_list, best_plan = self.render()
+
         return obs, reward, self.game_over, False, {}
 
     def station_config_check(self, my_station):
@@ -399,8 +484,8 @@ class StationPlacement(gym.Env):
 
     def _control_action(self, chosen_action):
         """
-        we have three possibilities here: either build a new station, add a charger to an exisiting station or move a
-        charger from an exisiting station to a station in need
+        we have three possibilities here: either build a new station, add a charger to an existing station or move a
+        charger from an existing station to a station in need
         """
         my_action = chosen_action
         config_index = None
@@ -439,44 +524,72 @@ class StationPlacement(gym.Env):
                 chosen_node = H.support_stations(self.plan_instance.plan, free_list)
         return chosen_node, free_list, config_index, my_action
 
-    def evaluation(self):
+    def evaluation(self, bonus_w=3.0):
         """
-        Calculate the reward
+        Calculate the reward.
+        Reward is aligned with the score objective to prevent reward-score divergence.
         """
-        reward = 0
         self.prepare_score()
 
         if self.grid_adapter:
             station_nodes = [(s[0], s[2]["capability"]) for s in self.plan_instance.plan]
             dist_penalty, cap_penalty, grid_utilization, grid_distance = self.grid_adapter.calculate_grid_penalty(station_nodes)
+            total_grid_penalty = {'dist_penalty': dist_penalty, 'cap_penalty': cap_penalty}
             new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
-                                                             self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness, dist_penalty)
-            if cap_penalty < 0:
-                new_score -= 100
-                self.game_over = True
-                # print("VIOLATED!")
+                                                       self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
+                                                       self.plan_instance.norm_wait, self.plan_instance.norm_travel,
+                                                       total_grid_penalty)
         else:
             new_score, _, _, _, _, _, _ = H.norm_score(self.plan_instance.plan, self.node_list,
-                                                             self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
-                                                             self.plan_instance.norm_wait, self.plan_instance.norm_travel,
-                                                             self.plan_instance.norm_fairness)
+                                                       self.plan_instance.norm_benefit, self.plan_instance.norm_charg,
+                                                       self.plan_instance.norm_wait, self.plan_instance.norm_travel)
 
-        # Compare against the score from the PREVIOUS step, not the all-time best
-        step_improvement = new_score - self.previous_score
-        reward += step_improvement
-        # Update previous score for the next step
+        shaping = new_score - self.previous_score
         self.previous_score = new_score
-
-        new_score = max(new_score, -25)  # if negative score
-        if new_score - self.best_score > 0:
-            # reward += (new_score - self.best_score)
-            # avoid jojo learning
+        best_gain = max(0.0, new_score - self.best_score)
+        if best_gain > 0.0:
             self.best_score = new_score
             self.best_plan = copy.deepcopy(self.plan_instance.plan)
             self.best_node_list = copy.deepcopy(self.node_list)
+
+        reward = shaping + bonus_w * best_gain
         return reward
+
+    def _print_grid_violations(self, station_nodes):
+        """
+        Print detailed grid violation information for debugging.
+        """
+        if not self.grid_adapter:
+            return
+
+        bus_loads = {}
+        print("\n[GRID CONSTRAINT DETAILS]")
+        print("Bus-wise Load Analysis:")
+        print("-" * 80)
+        print(f"{'Bus ID':>8} {'Required (MW)':>15} {'Available (MW)':>15} {'Status':>15}")
+        print("-" * 80)
+
+        for item in station_nodes:
+            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], (int, float)):
+                node, capacity_mw = item
+                result = self.grid_adapter.check_feasibility(node, actual_power_mw=capacity_mw)
+            else:
+                node = item
+                result = self.grid_adapter.check_feasibility(node)
+
+            bus_idx = result.get('bus_idx', -1)
+            if bus_idx != -1:
+                if bus_idx not in bus_loads:
+                    bus_loads[bus_idx] = {'required': 0.0, 'available': result['available_mw']}
+                bus_loads[bus_idx]['required'] += result['required_mw']
+
+        for bus_idx, data in sorted(bus_loads.items()):
+            required = data['required']
+            available = data['available']
+            remaining = available - required
+            status = "✓ OK" if remaining >= 0 else "✗ VIOLATED"
+            print(f"{bus_idx:>8} {required:>15.3f} {available:>15.3f} {status:>15}")
+        print("-" * 80)
 
     def render(self, mode='human', close=False):
         """
@@ -493,5 +606,5 @@ if __name__ == '__main__':
     node_file = os.path.join(current_dir, "data", "Graph", location, "nodes_extended_" + location + ".txt")
     plan_file = os.path.join(current_dir, "data", "Graph", location, "existingplan_" + location + ".pkl")
     env = StationPlacement(graph_file, node_file, plan_file, location=location)
-    # It will check your custom environment and output additional warnings if needed
     check_env(env)
+    print("Environment check passed!")

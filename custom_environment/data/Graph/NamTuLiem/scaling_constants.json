@@ -1,0 +1,16 @@
+{
+  "location": "NamTuLiem",
+  "x_min": 105.7269853,
+  "x_max": 105.7986852,
+  "y_min": 20.9838375,
+  "y_max": 21.0564141,
+  "land_price_max": 75.989455,
+  "demand_max": 0.3681400082934368,
+  "grid_dist_max": 1.575,
+  "grid_mw_max": 12.80294418334961,
+  "street_count_max": 5.0,
+  "road_length_max": 332.1423371351924,
+  "dist_to_station_max": 2.0,
+  "capability_max": 1.5,
+  "benefit_max": 2.0
+}

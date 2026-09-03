@@ -1,0 +1,16 @@
+{
+  "location": "DongDa",
+  "x_min": 105.7982647,
+  "x_max": 105.8425802,
+  "y_min": 20.9973099,
+  "y_max": 21.0318687,
+  "land_price_max": 186.1624,
+  "demand_max": 0.9085063158482479,
+  "grid_dist_max": 1.0151000000000003,
+  "grid_mw_max": 12.80294418334961,
+  "street_count_max": 5.0,
+  "road_length_max": 362.9943999999997,
+  "dist_to_station_max": 2.0,
+  "capability_max": 1.5,
+  "benefit_max": 2.0
+}

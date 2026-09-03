@@ -1,0 +1,16 @@
+{
+  "location": "TayHo",
+  "x_min": 105.7926858,
+  "x_max": 105.8469281,
+  "y_min": 21.0405911,
+  "y_max": 21.092168,
+  "land_price_max": 106.7302,
+  "demand_max": 0.6290369616819261,
+  "grid_dist_max": 1.2383999999999997,
+  "grid_mw_max": 12.80294418334961,
+  "street_count_max": 5.0,
+  "road_length_max": 320.27695409911115,
+  "dist_to_station_max": 2.0,
+  "capability_max": 1.5,
+  "benefit_max": 2.0
+}
