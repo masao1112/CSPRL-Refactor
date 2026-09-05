@@ -94,7 +94,7 @@ def evaluate_single_model(model_path: str, env: StationPlacement, episodes: int 
 
     per_episode: Dict[str, List[float]] = {k: [] for k in (
         "score", "total_reward", "num_stations", "used_budget_ratio",
-        "benefit", "cost", "fairness", "charg_time", "wait_time", "cost_travel",
+        "benefit", "cost", "charg_time", "wait_time", "cost_travel",
         "travel_max", "wait_max", "dist_penalty", "cap_penalty", "overloaded_buses",
     )}
 
@@ -124,7 +124,7 @@ def evaluate_single_model(model_path: str, env: StationPlacement, episodes: int 
                 dist_penalty, cap_penalty, _, _ = env.grid_adapter.calculate_grid_penalty(station_nodes)
                 grid_penalty = {"dist_penalty": dist_penalty, "cap_penalty": cap_penalty}
                 n_overloaded = len(env.grid_adapter.get_grid_violations(station_nodes))
-            score, benefit, cost, charg_time, wait_time, cost_travel, fairness = H.norm_score(
+            score, benefit, cost, charg_time, wait_time, cost_travel = H.norm_score(
                 best_plan, best_node_list,
                 env.plan_instance.norm_benefit, env.plan_instance.norm_charg,
                 env.plan_instance.norm_wait, env.plan_instance.norm_travel,
@@ -138,7 +138,7 @@ def evaluate_single_model(model_path: str, env: StationPlacement, episodes: int 
             for key, value in (
                 ("score", score), ("total_reward", total_reward),
                 ("num_stations", len(best_plan)), ("used_budget_ratio", total_inst_cost),
-                ("benefit", benefit), ("cost", cost), ("fairness", fairness),
+                ("benefit", benefit), ("cost", cost),
                 ("charg_time", charg_time), ("wait_time", wait_time),
                 ("cost_travel", cost_travel),
                 ("travel_max", travel_metric(best_node_list)),
@@ -327,14 +327,13 @@ def main():
     print(f"  Budget Used: {best_model['used_budget_ratio']*100:.2f}%")
     print(f"  Benefit: {best_model['benefit']:.4f}")
     print(f"  Social Cost: {best_model['cost']:.4f}")
-    print(f"  Fairness: {best_model['fairness']:.4f}")
     print(f"  Grid Distance Penalty: {best_model['dist_penalty']:.4f}")
     print(f"  Grid Capacity Penalty: {best_model['cap_penalty']:.4f}")
     print(f"  Overloaded Buses: {int(best_model['overloaded_buses'])}")
 
     # Save CSV report
     csv_path = os.path.join(path_dir, "evaluation_results.csv")
-    metric_cols = ["score", "total_reward", "benefit", "cost", "fairness",
+    metric_cols = ["score", "total_reward", "benefit", "cost",
                    "charg_time", "wait_time", "cost_travel", "travel_max", "wait_max",
                    "dist_penalty", "cap_penalty", "overloaded_buses",
                    "num_stations", "used_budget_ratio"]

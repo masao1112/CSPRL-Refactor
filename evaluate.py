@@ -149,7 +149,7 @@ def main():
             station_nodes = [(s[0], s[2]["capability"]) for s in best_plan]
             dist_p, cap_p, grid_util, grid_dist = env.grid_adapter.calculate_grid_penalty(station_nodes)
             total_grid_penalty = {'dist_penalty': dist_p, 'cap_penalty': cap_p}
-            final_score, benefit, cost, charg_time, wait_time, travel_cost, fairness = H.norm_score(
+            final_score, benefit, cost, charg_time, wait_time, travel_cost = H.norm_score(
                 best_plan, best_node_list,
                 env.plan_instance.norm_benefit, env.plan_instance.norm_charg,
                 env.plan_instance.norm_wait, env.plan_instance.norm_travel,
@@ -157,7 +157,7 @@ def main():
             )
             violations = env.grid_adapter.get_grid_violations(station_nodes)
         else:
-            final_score, benefit, cost, charg_time, wait_time, travel_cost, fairness = H.norm_score(
+            final_score, benefit, cost, charg_time, wait_time, travel_cost = H.norm_score(
                 best_plan, best_node_list,
                 env.plan_instance.norm_benefit, env.plan_instance.norm_charg,
                 env.plan_instance.norm_wait, env.plan_instance.norm_travel
@@ -174,7 +174,6 @@ def main():
         print(f"Normalized Score:     {final_score:.4f}")
         print(f"Social Benefit:       {benefit:.4f}")
         print(f"Social Cost:          {cost:.4f}")
-        print(f"Social Fairness:      {fairness:.4f}")
         print(f"Travel Cost:          {travel_cost:.4f}")
         print(f"Charging Time:        {charg_time:.4f}")
         print(f"Waiting Time:         {wait_time:.4f}")

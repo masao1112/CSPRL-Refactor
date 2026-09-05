@@ -169,30 +169,6 @@ def node_coverage(my_plan, my_node):
     return single_benefit
 
 
-def station_coverage(my_station, my_node_list):
-    """
-    Yields the benefit of nodes within a station's influential radius.
-    More nodes covered = more benefit (no diminishing returns here).
-    This is different from node_coverage which has diminishing returns
-    due to redundancy (multiple stations covering one node).
-    For fair comparison with node_coverage, we normalize by total possible nodes.
-    """
-    s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-    radius_s = s_dict["radius"]
-
-    # Count nodes within radius
-    covered_nodes = 0
-    for node in my_node_list:
-        distance = haversine(s_pos, node)
-        if distance < radius_s:
-            covered_nodes += 1
-
-    # Normalize to 0-1 range based on total nodes, then scale to be comparable to node_coverage
-    normalized_coverage = (covered_nodes / len(my_node_list)) * 10  # scale factor to match node_coverage range
-
-    return normalized_coverage
-
-
 def total_number_EVs(my_station, my_node_list):
     """
     yields total number of EVs coming to S in a unit time interval for charging
@@ -245,30 +221,14 @@ def s_dictionnary(my_station, my_node_list):
 # SCORE over the plan #####################################################################
 def social_benefit(my_plan, my_node_list):
     """
-    Returns the social benefit of the charging plan.
-    Combines two balanced components with fair weighting:
-    1. Node coverage: how many stations cover each node (with diminishing returns)
-    2. Station coverage: how many nodes each station covers (with diminishing returns)
-    Both components use diminishing returns to encourage balanced, distributed placement.
+    Returns the social benefit of the charging plan based on node coverage (arXiv:2206.06011v1).
+    benefit(p) = (1 / |V|) * sum_{v in V} node_coverage(p, v)
     """
     if not my_plan:
         return 0
 
-    # Component 1: Node perspective - how well are nodes covered by stations
-    node_coverage_total = 0
-    for my_node in my_node_list:
-        node_coverage_total += node_coverage(my_plan, my_node)
-    node_coverage_avg = node_coverage_total / len(my_node_list)
-
-    # Component 2: Station perspective - how efficiently do stations cover nodes
-    station_coverage_total = 0
-    for station in my_plan:
-        station_coverage_total += station_coverage(station, my_node_list)
-    station_coverage_avg = station_coverage_total / len(my_plan)
-
-    # Balance both components equally
-    my_benefit = (node_coverage_avg + station_coverage_avg) / 2
-    return my_benefit
+    node_coverage_total = sum(node_coverage(my_plan, my_node) for my_node in my_node_list)
+    return node_coverage_total / len(my_node_list)
 
 
 def travel_cost(my_node_list):
@@ -307,20 +267,6 @@ def social_cost(my_plan, my_node_list):
     return my_social_cost
 
 
-def social_fairness(my_node_list):
-    """
-    Return a scalar fairness score for the node coverage distribution.
-    Higher values indicate more fair (more even) coverage across nodes.
-    We use the inverse of the standard deviation of station counts so that
-    perfectly even coverage -> higher fairness, and skewed coverage -> lower fairness.
-    """
-    counts = np.array([node[1].get('n_stations', 0) for node in my_node_list], dtype=float)
-    if counts.size == 0:
-        return 0.0
-    std = float(np.std(counts))
-    return 1.0 / (1.0 + std)
-
-
 def existing_score(my_existing_plan, my_node_list):
     """
     computes the score of the existing infrastructure
@@ -331,8 +277,7 @@ def existing_score(my_existing_plan, my_node_list):
     wait_time = waiting_time(my_existing_plan)
     cost_boring = charg_time + wait_time  # dimensionless
     my_cost = alpha * travel_time + (1 - alpha) * cost_boring
-    my_fairness = social_fairness(my_node_list)
-    return my_benefit, my_cost, my_fairness, charg_time, wait_time, travel_time
+    return my_benefit, my_cost, charg_time, wait_time, travel_time
 
 
 def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_travel, grid_penalty=None):
@@ -347,7 +292,6 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
     charg_time = charging_time(my_plan) / norm_charg  # dimensionless
     wait_time = waiting_time(my_plan) / norm_wait  # dimensionless
     cost = (alpha * cost_travel + (1 - alpha) * (charg_time + wait_time)) / 3
-    fairness = social_fairness(my_node_list)
     if grid_penalty is not None:
         if isinstance(grid_penalty, dict):
             dist_p = abs(grid_penalty.get('dist_penalty', 0.0))
@@ -362,10 +306,10 @@ def norm_score(my_plan, my_node_list, norm_benefit, norm_charg, norm_wait, norm_
         # cap_p arrives already normalized: calculate_grid_penalty divides the sum
         # of per-bus overload ratios by the district's bus count, a constant.
         avg_penalty = (dist_p / max(1, len(my_plan))) + cap_p
-        my_score = (benefit - cost + fairness) / 3 - GRID_PENALTY_WEIGHT * avg_penalty
+        my_score = (benefit - cost) / 2 - GRID_PENALTY_WEIGHT * avg_penalty
     else:
-        my_score = (benefit - cost + fairness) / 3
-    return my_score, benefit, cost, charg_time, wait_time, cost_travel, fairness
+        my_score = (benefit - cost) / 2
+    return my_score, benefit, cost, charg_time, wait_time, cost_travel
 
 
 def score(my_plan, my_node_list):
@@ -507,23 +451,6 @@ def choose_node_bydemand(free_list):
     demand_list = [my_node[1]["demand"] * (1 - 0.1 * my_node[1]["private_cs"]) for my_node in free_list]
     chosen_index = demand_list.index(max(demand_list))
     chosen_node = free_list[chosen_index]
-    return chosen_node
-
-
-def choose_node_by_fairness(free_list):
-    """
-    Pick the node with the least number of stations covering it.
-    Falls back to random choice if data is missing.
-    """
-    if not free_list:
-        return None
-    counts = [node[1].get('n_stations', 0) for node in free_list]
-    try:
-        chosen_idx = int(np.argmin(counts))
-    except Exception:
-        # fallback
-        chosen_idx = 0
-    chosen_node = free_list[chosen_idx]
     return chosen_node
 
 
