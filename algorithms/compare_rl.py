@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import osmnx as ox
-from stable_baselines3 import DQN
+from stable_baselines3 import DQN, PPO
 
 # Add project root to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -89,7 +89,7 @@ def run_episode(agent, env, agent_type="rl", max_steps=None, eval_grid_penalty_w
                   f"{len(env.plan_instance.plan)} stations; scores below are a probe, not a result.")
             break
         n_steps += 1
-        if agent_type == "rl":
+        if agent_type in ["rl", "dqn", "ppo"]:
             action, _ = agent.predict(obs, deterministic=True)
         elif agent_type == "ga":
             action = agent.select_action(obs)
@@ -144,7 +144,6 @@ def run_episode(agent, env, agent_type="rl", max_steps=None, eval_grid_penalty_w
     norm_charg = env.plan_instance.norm_charg
     norm_wait = env.plan_instance.norm_wait
     norm_travel = env.plan_instance.norm_travel
-
 
     grid_penalty = None
     dist_penalty = 0.0
@@ -282,26 +281,47 @@ def extractor_custom_objects(obs_type):
     return None
 
 
-def resolve_rl_model(rl_log_dir, location, obs_type, ns, step=None):
+def resolve_rl_model(rl_log_dir, location, obs_type, ns="", step=None, algo="dqn"):
     """Locate the checkpoint to compare against; returns (path_or_None, step).
 
-    train.py names every checkpoint best_model_{obs_type}_{location}_{ns}_{step}.zip,
-    so the prefix follows obs_type directly -- no per-obs_type special casing, which
-    is what silently made 'attention' look for 'best_model_mlp_*' files.
+    train.py names checkpoints:
+      DQN: best_model_{obs_type}_{location}_{ns}_{step}.zip (or without ns)
+      PPO: best_model_ppo_{obs_type}_{location}_{ns}_{step}.zip (or without ns)
 
     With no explicit step, prefer the ranking evaluate_all.py already wrote into
     evaluation_results.csv (it sorts best-first).
     """
-    run_dir = os.path.join(rl_log_dir, ns)
-    prefix = f"best_model_{obs_type}_{location}_{ns}_"
+    algo_dir = "" if algo == "dqn" else "ppo"
+    algo_prefix = "" if algo == "dqn" else "ppo_"
+
+    # Resolve base directory for the algorithm
+    if algo_dir and not rl_log_dir.rstrip("/\\").endswith(algo_dir):
+        base_dir = os.path.join(rl_log_dir, algo_dir)
+    else:
+        base_dir = rl_log_dir
+
+    # Check run directory with ns, falling back to base_dir if ns is empty or dir with ns doesn't exist
+    run_dir = os.path.join(base_dir, ns) if ns else base_dir
+    prefix = f"best_model_{algo_prefix}{obs_type}_{location}_{ns}_" if ns else f"best_model_{algo_prefix}{obs_type}_{location}_"
+
     if not os.path.isdir(run_dir):
-        print(f"Warning: run directory not found: {run_dir}")
-        return None, step
+        # If ns was provided but run_dir doesn't exist, check base_dir
+        if ns and os.path.isdir(base_dir):
+            run_dir = base_dir
+            prefix = f"best_model_{algo_prefix}{obs_type}_{location}_"
+        else:
+            print(f"Warning: run directory not found: {run_dir}")
+            return None, step
 
     if step is not None:
         path = os.path.join(run_dir, f"{prefix}{step}.zip")
         if os.path.exists(path):
             return path, step
+        # Also check without ns in prefix if not found
+        alt_prefix = f"best_model_{algo_prefix}{obs_type}_{location}_"
+        alt_path = os.path.join(run_dir, f"{alt_prefix}{step}.zip")
+        if os.path.exists(alt_path):
+            return alt_path, step
         print(f"Warning: requested checkpoint not found: {path}")
         return None, step
 
@@ -313,15 +333,18 @@ def resolve_rl_model(rl_log_dir, location, obs_type, ns, step=None):
             best = rows[0]
             path = os.path.join(run_dir, best["model_file"])
             if os.path.exists(path):
-                print(f"Selected best-scoring checkpoint from evaluation_results.csv "
+                print(f"Selected best-scoring [{algo.upper()}] checkpoint from evaluation_results.csv "
                       f"(step {best['step']}, score {float(best['score']):.4f})")
                 return path, int(best["step"])
 
     checkpoints = {}
     for fname in os.listdir(run_dir):
-        if fname.startswith(prefix) and fname.endswith(".zip"):
+        if fname.endswith(".zip") and (fname.startswith(prefix) or (algo == "ppo" and "ppo" in fname)):
             try:
-                checkpoints[int(fname[len(prefix):-len(".zip")])] = fname
+                # Extract trailing step number before .zip
+                base_name = fname[:-len(".zip")]
+                step_val = int(base_name.split("_")[-1])
+                checkpoints[step_val] = fname
             except ValueError:
                 continue
     if not checkpoints:
@@ -330,9 +353,28 @@ def resolve_rl_model(rl_log_dir, location, obs_type, ns, step=None):
 
     latest = max(checkpoints)
     print(f"Warning: no evaluation_results.csv in {run_dir}. Falling back to the LATEST "
-          f"checkpoint (step {latest}), which is not necessarily the best-scoring one. "
+          f"[{algo.upper()}] checkpoint (step {latest}), which is not necessarily the best-scoring one. "
           f"Run evaluate_all.py on this run first for a fair comparison.")
     return os.path.join(run_dir, checkpoints[latest]), latest
+
+
+def load_config_for_run(location, obs_type, ns="", algo="dqn"):
+    """Load config.json for a training run to replicate ablation parameters."""
+    algo_dir = "" if algo == "dqn" else "ppo"
+    paths_to_check = []
+    if ns:
+        if algo_dir:
+            paths_to_check.append(os.path.join("Results", "tmp", location, obs_type, algo_dir, ns, "config.json"))
+        paths_to_check.append(os.path.join("Results", "tmp", location, obs_type, ns, "config.json"))
+    if algo_dir:
+        paths_to_check.append(os.path.join("Results", "tmp", location, obs_type, algo_dir, "config.json"))
+    paths_to_check.append(os.path.join("Results", "tmp", location, obs_type, "config.json"))
+
+    for p in paths_to_check:
+        if os.path.exists(p):
+            with open(p, "r") as f:
+                return json.load(f), p
+    return {}, None
 
 
 # ── Main comparison ────────────────────────────────────────────────────
@@ -340,25 +382,29 @@ def resolve_rl_model(rl_log_dir, location, obs_type, ns, step=None):
 
 def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, max_steps=None,
             eval_grid_penalty_weight=None,
-            ga_ns=""):
+            ga_ns="",
+            algo="dqn",
+            ppo_ns="",
+            ppo_step=None,
+            device="cpu"):
     # Base directory and paths
     base_dir = os.path.join(project_root, "custom_environment", "data")
     graph_file = os.path.join(base_dir, "Graph", location, f"{location}.graphml")
     node_file = os.path.join(base_dir, "Graph", location, f"nodes_extended_{location}.txt")
     plan_file = os.path.join(base_dir, "Graph", location, f"new_existingplan_{location}.pkl")
+    if not os.path.exists(plan_file):
+        plan_file = os.path.join(base_dir, "Graph", location, f"existingplan_{location}.pkl")
 
     # Adopt the reward parameters the RL run was trained with, before the env is
     # built: reset() already scores the plan and builds the first observation.
-    # eta and beta reach the policy through node feature 3 and the demand-targeting
-    # heuristic, and grid_penalty_weight through global_state[2] -- evaluating an
-    # ablation under the defaults would feed the policy inputs it never saw.
-    run_cfg = {}
-    run_cfg_path = os.path.join("Results", "tmp", location, obs_type, ns, "config.json")
-    if os.path.exists(run_cfg_path):
-        with open(run_cfg_path, "r") as f:
-            run_cfg = json.load(f)
+    primary_algo = "ppo" if algo == "ppo" else "dqn"
+    primary_ns = ppo_ns if (algo == "ppo" and ppo_ns) else ns
+    run_cfg, cfg_path = load_config_for_run(location, obs_type, primary_ns, primary_algo)
+    if cfg_path:
+        print(f"Loaded config from {cfg_path}")
     else:
-        print(f"Warning: {run_cfg_path} not found; running with module defaults.")
+        print(f"Warning: config.json not found for {location}/{obs_type}; running with module defaults.")
+
     for key, attr in (("grid_penalty_weight", "GRID_PENALTY_WEIGHT"),
                       ("eta", "DEMAND_ETA"), ("beta", "DEMAND_BETA")):
         if run_cfg.get(key) is not None:
@@ -408,8 +454,6 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
         b_norm_travel,
         baseline_grid_penalty,
     )
-    # if env.grid_adapter and baseline_cap_penalty < 0:
-    #     norm_score_baseline -= 100
     print(f"Baseline (Existing Plan) Norm Score: {norm_score_baseline:.6f}")
     if env.grid_adapter:
         print(f"  Baseline Grid Penalties:")
@@ -428,25 +472,39 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
     # Load graph for visualization
     G = ox.load_graphml(graph_file)
 
-    # 1. Load RL (DQN) Model
+    # 1. Load RL Models (DQN and/or PPO)
     print()
     rl_log_dir = os.path.join("Results", "tmp", location, obs_type)
-    best_rl_model, step = resolve_rl_model(rl_log_dir, location, obs_type, ns, step)
-    if best_rl_model:
-        print(f"Loading RL model from {best_rl_model}")
-        # Pass env so SB3 checks the saved observation space against the current
-        # one -- a silent mismatch here would produce meaningless comparisons.
-        rl_agent = DQN.load(best_rl_model, env=env,
-                            custom_objects=extractor_custom_objects(obs_type))
-    else:
-        print("Warning: RL model not found.")
-        rl_agent = None
+    rl_agents = {}  # name -> (agent, step)
+
+    run_dqn = algo in ["dqn", "both", "all"]
+    run_ppo = algo in ["ppo", "both", "all"]
+
+    if run_dqn:
+        best_dqn_model, dqn_resolved_step = resolve_rl_model(rl_log_dir, location, obs_type, ns, step, algo="dqn")
+        if best_dqn_model:
+            label = "DQN" if (run_ppo or algo == "dqn") else "RL"
+            print(f"Loading DQN model from {best_dqn_model} on device {device}")
+            agent = DQN.load(best_dqn_model, env=env, device=device, custom_objects=extractor_custom_objects(obs_type))
+            rl_agents[label] = (agent, dqn_resolved_step)
+        else:
+            print("Warning: DQN model not found.")
+
+    if run_ppo:
+        resolved_ppo_ns = ppo_ns if ppo_ns else (ns if algo == "ppo" else "")
+        resolved_ppo_step = ppo_step if ppo_step is not None else (step if algo == "ppo" else None)
+        best_ppo_model, ppo_resolved_step = resolve_rl_model(rl_log_dir, location, obs_type, resolved_ppo_ns, resolved_ppo_step, algo="ppo")
+        if best_ppo_model:
+            label = "PPO"
+            print(f"Loading PPO model from {best_ppo_model} on device {device}")
+            agent = PPO.load(best_ppo_model, env=env, device=device, custom_objects=extractor_custom_objects(obs_type))
+            rl_agents[label] = (agent, ppo_resolved_step)
+        else:
+            print("Warning: PPO model not found.")
 
     # 2. Load GA Model (Only compatible with 'mlp')
     ga_agent = None
     if obs_type == "mlp":
-        # train_ga.py --ns puts results under Results/ga/<location>/<ns>/; with no
-        # --ga_ns fall back to the flat layout that runs before --ns existed used.
         ga_dir = os.path.join("Results", "ga", location)
         if ga_ns:
             ga_dir = os.path.join(ga_dir, ga_ns)
@@ -467,13 +525,15 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
     results = {}
     plans = {}
     node_lists = {}
+    step_map = {}
 
-    if rl_agent:
-        print("Running RL evaluation...")
-        metrics, plan, node_list = run_episode(rl_agent, env, "rl", max_steps=max_steps, eval_grid_penalty_weight=eval_grid_penalty_weight)
-        results["RL"] = metrics
-        plans["RL"] = plan
-        node_lists["RL"] = node_list
+    for label, (agent, agent_step) in rl_agents.items():
+        print(f"Running {label} evaluation...")
+        metrics, plan, node_list = run_episode(agent, env, "rl", max_steps=max_steps, eval_grid_penalty_weight=eval_grid_penalty_weight)
+        results[label] = metrics
+        plans[label] = plan
+        node_lists[label] = node_list
+        step_map[label] = agent_step
 
     if ga_agent:
         print("Running GA evaluation...")
@@ -497,9 +557,6 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
     # Display results
     print("\n--- Comparison Results ---")
     for alg, m in results.items():
-        # Relative score calculation (consistent with run_metrics.py)
-        # raw_score / norm_score * 100
-        # since m['score'] is already multiplied by 100 in run_episode, we just divide by norm_score_baseline
         rel_score = m["score"] / (norm_score_baseline + 1e-9)
 
         print(f"{alg}:")
@@ -553,7 +610,7 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
         )
         ax2.tick_params(axis="y", labelcolor=color)
 
-        plt.title(f"RL vs GA vs Greedy Performance comparison ({location})")
+        plt.title(f"Algorithm Performance Comparison ({location})")
         fig.tight_layout()
         chart_path = os.path.join("Results", f"comparison_{location}.png")
         plt.savefig(chart_path, dpi=150)
@@ -564,7 +621,7 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
     print("\n--- Generating Station Maps ---")
     map_dir = os.path.join("Results", "maps", location)
     for alg_name, plan in plans.items():
-        safe_name = alg_name.replace("-", "_")
+        safe_name = alg_name.replace("-", "_").replace(" ", "_").replace("(", "").replace(")", "")
         filepath = os.path.join(map_dir, f"map_{safe_name}_{location}.png")
         m = results[alg_name]
         title = f"{alg_name} — Score: {m['score']:.2f}% — Stations: {m['num_stations']}"
@@ -577,8 +634,9 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
     plan_dir = os.path.join("Results", "optimal_plan", location)
     os.makedirs(plan_dir, exist_ok=True)
     for alg_name, plan in plans.items():
-        safe_name = alg_name.replace("-", "_")
-        suffix = f"_{step}" if alg_name == "RL" else ""
+        safe_name = alg_name.replace("-", "_").replace(" ", "_").replace("(", "").replace(")", "")
+        cur_step = step_map.get(alg_name)
+        suffix = f"_{cur_step}" if cur_step is not None else ""
 
         plan_path = os.path.join(plan_dir, f"plan_{safe_name}{suffix}.pkl")
         with open(plan_path, "wb") as f:
@@ -595,8 +653,10 @@ def compare(location="DongDa", obs_type="mlp_graph", ns="config_2", step=None, m
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Compare an RL policy against GA and the greedy baselines on one district.")
+        description="Compare RL policies (DQN/PPO) against GA and greedy baselines on one district.")
     parser.add_argument("--location", type=str, default="DongDa")
+    parser.add_argument("--algo", type=str, choices=["dqn", "ppo", "both", "all"], default="dqn",
+                        help="RL algorithm to evaluate: 'dqn', 'ppo', or 'both'/'all' (default: dqn)")
     parser.add_argument("--obs_type", type=str, default="mlp",
                         choices=["mlp", "mlp_graph", "gnn", "attention"],
                         help="Observation type; must match the RL run being loaded")
@@ -604,6 +664,10 @@ if __name__ == "__main__":
                         help="Run namespace under Results/tmp/<location>/<obs_type>/")
     parser.add_argument("--step", type=int, default=None,
                         help="Checkpoint step; default picks the best-scoring one from evaluation_results.csv")
+    parser.add_argument("--ppo_ns", type=str, default="",
+                        help="Namespace for PPO run (if different from --ns or when --algo both)")
+    parser.add_argument("--ppo_step", type=int, default=None,
+                        help="Checkpoint step for PPO (if different from --step or when --algo both)")
     parser.add_argument("--max_steps", type=int, default=None,
                         help="Cap episode length for a quick behaviour probe on the large districts. "
                              "Scores from a capped run are NOT comparable to a full one")
@@ -615,8 +679,15 @@ if __name__ == "__main__":
                              "Pass 1.0 for an ablation trained with --grid_penalty_weight 0, "
                              "so it acts as trained but is reported on the full metric. "
                              "Omit to score with the weight the run was trained at")
+    parser.add_argument("--device", type=str, default="cpu", choices=["auto", "cpu", "cuda"],
+                         help="Device to load model on (default: cpu)")
+
     args = parser.parse_args()
     compare(location=args.location, obs_type=args.obs_type, ns=args.ns,
             step=args.step, max_steps=args.max_steps, ga_ns=args.ga_ns,
-            eval_grid_penalty_weight=args.eval_grid_penalty_weight)
+            eval_grid_penalty_weight=args.eval_grid_penalty_weight,
+            algo=args.algo, ppo_ns=args.ppo_ns, ppo_step=args.ppo_step,
+            device=args.device)
+
+
 

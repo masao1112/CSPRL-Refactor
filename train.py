@@ -214,6 +214,8 @@ if __name__ == '__main__':
                         help="[ablation] dynamic-demand scaling factor; 0 gives static demand")
     parser.add_argument("--beta", type=float, default=H.DEMAND_BETA,
                         help="[ablation] dynamic-demand distance decay; 0 removes distance decay")
+    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"],
+                        help="Device to train model on (default: auto)")
     args = parser.parse_args()
 
     if args.no_gnn:
@@ -314,7 +316,11 @@ if __name__ == '__main__':
     else:
         lr = args.learning_rate
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if args.device == "auto":
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    else:
+        device = args.device
+    print(f"[DEVICE] Training on device: {device}")
     if args.algo == "dqn":
         model = DQN(policy_type, env, verbose=1,
                     batch_size=args.batch_size,

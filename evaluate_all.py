@@ -118,7 +118,7 @@ def parse_step(filename: str) -> int:
         return int(match.group(1))
     return 0
 
-def evaluate_single_model(model_path: str, env: StationPlacement, obs_type: str, episodes: int = 1, seed: int = 1) -> Dict[str, float]:
+def evaluate_single_model(model_path: str, env: StationPlacement, obs_type: str, episodes: int = 1, seed: int = 1, device: str = "cpu") -> Dict[str, float]:
     """
     Load a model and evaluate it over the specified number of episodes.
     """
@@ -134,13 +134,13 @@ def evaluate_single_model(model_path: str, env: StationPlacement, obs_type: str,
     if obs_type == "gnn":
         from custom_environment.gnn_extractor import GNNFeaturesExtractor
         custom_objects = {"GNNFeaturesExtractor": GNNFeaturesExtractor}
-        model = algo_class.load(model_path, env=env, custom_objects=custom_objects)
+        model = algo_class.load(model_path, env=env, device=device, custom_objects=custom_objects)
     elif obs_type == "attention":
         from custom_environment.attention_extractor import AttentionFeaturesExtractor
         custom_objects = {"AttentionFeaturesExtractor": AttentionFeaturesExtractor}
-        model = algo_class.load(model_path, env=env, custom_objects=custom_objects)
+        model = algo_class.load(model_path, env=env, device=device, custom_objects=custom_objects)
     else:
-        model = algo_class.load(model_path, env=env)
+        model = algo_class.load(model_path, env=env, device=device)
         
     # Every metric reported in the paper's results table, so that picking a
     # checkpoint and filling the table read the same numbers from one run.
@@ -284,6 +284,8 @@ def main():
                          help="Override detected GNN settings (--use_gnn / --no-use_gnn)")
     parser.add_argument("--min_step", type=int, default=60000,
                          help="Skip model checkpoints saved before this training step (default: 60000)")
+    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"],
+                         help="Device to load model on (default: cpu)")
 
     args = parser.parse_args()
     
@@ -351,7 +353,7 @@ def main():
             print(f"[{idx+1}/{len(zip_files)}] Evaluating {filename} (Step: {step})...")
 
             try:
-                metrics = evaluate_single_model(z, env, obs_type, episodes=args.episodes, seed=args.seed)
+                metrics = evaluate_single_model(z, env, obs_type, episodes=args.episodes, seed=args.seed, device=args.device)
                 metrics["file"] = z
                 metrics["step"] = step
                 results.append(metrics)
