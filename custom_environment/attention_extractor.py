@@ -89,7 +89,8 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 class SelfAttentionBlock(nn.Module):
     """One pre-norm Transformer encoder block: multi-head self-attention
     sublayer + feed-forward sublayer, each wrapped in a residual connection
-    with LayerNorm. Unmasked -- every node attends to every other node."""
+    with LayerNorm. Uses GELU activation and orthogonal weight initialization
+    for smoother optimization. Unmasked -- every node attends to every other node."""
 
     def __init__(self, embed_dim, n_heads, ff_mult=4, dropout=0.0):
         super().__init__()
@@ -98,9 +99,25 @@ class SelfAttentionBlock(nn.Module):
         self.norm2 = nn.LayerNorm(embed_dim)
         self.ff = nn.Sequential(
             nn.Linear(embed_dim, embed_dim * ff_mult),
-            nn.ReLU(),
+            nn.GELU(approximate="tanh"),
             nn.Linear(embed_dim * ff_mult, embed_dim),
         )
+        self._init_weights()
+
+    def _init_weights(self):
+        if self.attn.in_proj_weight is not None:
+            nn.init.orthogonal_(self.attn.in_proj_weight, gain=1.0)
+        if self.attn.in_proj_bias is not None:
+            nn.init.zeros_(self.attn.in_proj_bias)
+        if self.attn.out_proj.weight is not None:
+            nn.init.orthogonal_(self.attn.out_proj.weight, gain=1.0)
+        if self.attn.out_proj.bias is not None:
+            nn.init.zeros_(self.attn.out_proj.bias)
+        for m in self.ff:
+            if isinstance(m, nn.Linear):
+                nn.init.orthogonal_(m.weight, gain=1.0)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     def forward(self, h):
         # h: (B, N, D)
@@ -114,36 +131,55 @@ class SelfAttentionBlock(nn.Module):
 class PMAPooling(nn.Module):
     """Pooling by Multi-head Attention (Lee et al., ICML 2019). `n_seeds`
     learned query vectors attend over the (variable-length) node set,
-    producing `n_seeds` fixed-size summary vectors -- output size never
-    depends on the number of nodes."""
+    producing `n_seeds` fixed-size summary vectors with Pre-LayerNorm architecture."""
 
     def __init__(self, embed_dim, n_heads, n_seeds=1, dropout=0.0):
         super().__init__()
         self.n_seeds = n_seeds
         self.seeds = nn.Parameter(torch.empty(1, n_seeds, embed_dim))
-        nn.init.xavier_uniform_(self.seeds)
+        nn.init.orthogonal_(self.seeds)
+        self.norm_seeds = nn.LayerNorm(embed_dim)
+        self.norm_h = nn.LayerNorm(embed_dim)
         self.attn = nn.MultiheadAttention(embed_dim, n_heads, dropout=dropout, batch_first=True)
-        self.norm1 = nn.LayerNorm(embed_dim)
+        self.norm_ff = nn.LayerNorm(embed_dim)
         self.ff = nn.Sequential(
             nn.Linear(embed_dim, embed_dim * 4),
-            nn.ReLU(),
+            nn.GELU(approximate="tanh"),
             nn.Linear(embed_dim * 4, embed_dim),
         )
-        self.norm2 = nn.LayerNorm(embed_dim)
+        self._init_weights()
+
+    def _init_weights(self):
+        if self.attn.in_proj_weight is not None:
+            nn.init.orthogonal_(self.attn.in_proj_weight, gain=1.0)
+        if self.attn.in_proj_bias is not None:
+            nn.init.zeros_(self.attn.in_proj_bias)
+        if self.attn.out_proj.weight is not None:
+            nn.init.orthogonal_(self.attn.out_proj.weight, gain=1.0)
+        if self.attn.out_proj.bias is not None:
+            nn.init.zeros_(self.attn.out_proj.bias)
+        for m in self.ff:
+            if isinstance(m, nn.Linear):
+                nn.init.orthogonal_(m.weight, gain=1.0)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     def forward(self, h):
         # h: (B, N, D) -> (B, n_seeds * D)
         B = h.shape[0]
         seeds = self.seeds.expand(B, -1, -1)  # (B, n_seeds, D)
-        attn_out, _ = self.attn(seeds, h, h, need_weights=False)
-        pooled = self.norm1(seeds + attn_out)
-        pooled = self.norm2(pooled + self.ff(pooled))
+        # Pre-LN on both queries (seeds) and keys/values (node representations)
+        q = self.norm_seeds(seeds)
+        kv = self.norm_h(h)
+        attn_out, _ = self.attn(q, kv, kv, need_weights=False)
+        seeds = seeds + attn_out
+        pooled = seeds + self.ff(self.norm_ff(seeds))
         return pooled.reshape(B, -1)
 
 
 class AttentionFeaturesExtractor(BaseFeaturesExtractor):
     """
-    Encoder-only, permutation-invariant feature extractor for SB3.
+    Encoder-only, permutation-invariant feature extractor for SB3 with enhanced stability.
     Expects the same Dict observation space `GNNFeaturesExtractor` uses
     (node_features, edge_index, edge_attr, global_state) -- edge_index/
     edge_attr are accepted for interface compatibility but never read.
@@ -170,8 +206,7 @@ class AttentionFeaturesExtractor(BaseFeaturesExtractor):
         n_global_features = observation_space.spaces["global_state"].shape[0]
         global_mlp_dim = 32
         pooled_dim = (pma_seeds * embed_dim) if use_pma else embed_dim
-        # Unlike GNNFeaturesExtractor's actual_features_dim (n_nodes * k_features + 32),
-        # this is independent of n_nodes -- the whole point of pooling.
+        # Independent of n_nodes -- fixed-size representation
         actual_features_dim = pooled_dim + global_mlp_dim
         super().__init__(observation_space, actual_features_dim)
 
@@ -189,12 +224,25 @@ class AttentionFeaturesExtractor(BaseFeaturesExtractor):
         if use_pma:
             self.pool = PMAPooling(embed_dim, n_heads, n_seeds=pma_seeds, dropout=dropout)
         else:
-            self.pool = None  # mean-pool has no learnable parameters
+            self.pool = None
 
+        self.pooled_norm = nn.LayerNorm(pooled_dim)
         self.global_mlp = nn.Sequential(
             nn.Linear(n_global_features, global_mlp_dim),
-            nn.ReLU(),
+            nn.GELU(approximate="tanh"),
         )
+        self.global_norm = nn.LayerNorm(global_mlp_dim)
+        self._init_weights()
+
+    def _init_weights(self):
+        nn.init.orthogonal_(self.embed.weight, gain=1.0)
+        if self.embed.bias is not None:
+            nn.init.zeros_(self.embed.bias)
+        for m in self.global_mlp:
+            if isinstance(m, nn.Linear):
+                nn.init.orthogonal_(m.weight, gain=1.0)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     def forward(self, observations):
         x = observations["node_features"]              # (B, N, F)
@@ -207,7 +255,8 @@ class AttentionFeaturesExtractor(BaseFeaturesExtractor):
         if self.use_pma:
             pooled = self.pool(h)                        # (B, pma_seeds * D)
         else:
-            pooled = h.mean(dim=1)                        # (B, D)  -- ablation baseline
+            pooled = h.mean(dim=1)                       # (B, D)
 
-        global_embed = self.global_mlp(global_state)      # (B, 32)
-        return torch.cat([pooled, global_embed], dim=1)
+        pooled_normed = self.pooled_norm(pooled)
+        global_normed = self.global_norm(self.global_mlp(global_state))
+        return torch.cat([pooled_normed, global_normed], dim=1)
