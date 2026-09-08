@@ -77,7 +77,7 @@ def main():
             node_file = alt_node_file
 
     # Check plan file
-    plan_file = os.path.join(base_dir, "Graph", location, f"existingplan_{location}.pkl")
+    plan_file = os.path.join(base_dir, "Graph", location, f"new_existingplan_{location}.pkl")
     if not os.path.exists(plan_file):
         alt_plan_file = os.path.join(base_dir, "Graph", location, f"new_existingplan_{location}.pkl")
         if os.path.exists(alt_plan_file):

@@ -132,7 +132,7 @@ def evaluate_single_model(model_path: str, env: StationPlacement, episodes: int 
             )
 
             # Budget calculation
-            basic_cost = env.plan_instance.basic_cost
+            basic_cost = getattr(env.plan_instance, "basic_cost", sum(station[2]["fee"] for station in best_plan))
             total_inst_cost = (sum(station[2]["fee"] for station in best_plan) - basic_cost) / H.BUDGET
 
             for key, value in (

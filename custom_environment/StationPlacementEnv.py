@@ -139,6 +139,7 @@ class Plan:
             H.existing_score(self.plan, my_node_list)
         self.existing_plan = self.plan.copy()
         self.existing_plan = [s[0] for s in self.existing_plan]
+        self.basic_cost = sum(my_station[2]["fee"] for my_station in self.plan)
 
     def __repr__(self):
         return "The charging plan is {}".format(self.plan)
