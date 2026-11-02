@@ -7,7 +7,7 @@ và thực hiện các phân tích lưới điện.
 
 import pandas as pd
 import os
-from typing import Optional, Dict, List, Tuple, Any
+from typing import Dict, List, Any
 
 try:
     import pandapower as pp
@@ -460,4 +460,3 @@ class GridLoader:
             "voltage_kv": voltage_kv,
             **capacity_info,
         }
-

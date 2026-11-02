@@ -275,7 +275,7 @@ def plot_results(results: List[Dict[str, Any]], save_path: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate all models in a directory to find the best performing model.")
-    parser.add_argument("--path_dir", type=str, help="Directory containing the saved .zip models")
+    parser.add_argument("--path_dir", type=str, required=True, help="Directory containing the saved .zip models")
     parser.add_argument("--metric", type=str, choices=["score", "reward"], default="score", help="Metric to rank models (default: score)")
     parser.add_argument("--episodes", type=int, default=1, help="Number of episodes per model evaluation (default: 1)")
     parser.add_argument("--seed", type=int, default=1, help="Random seed for environment reset (default: 1)")
@@ -285,7 +285,7 @@ def main():
     parser.add_argument("--min_step", type=int, default=60000,
                          help="Skip model checkpoints saved before this training step (default: 60000)")
     parser.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"],
-                         help="Device to load model on (default: cpu)")
+                         help="Device to load model on (default: auto)")
 
     args = parser.parse_args()
     

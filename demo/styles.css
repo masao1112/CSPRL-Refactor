@@ -1,0 +1,137 @@
+:root {
+  color-scheme: light;
+  --ink: #282b30;
+  --text: #40444b;
+  --muted: #747981;
+  --blue: #356b9b;
+  --line: #e3e5e8;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 25px; }
+body { margin: 0; background: #fff; color: var(--text); font: 16px/1.85 Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
+main { padding: 0 28px; }
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--blue); outline-offset: 5px; }
+p, h1, h2, h3, figure { margin: 0; }
+strong { color: var(--ink); font-weight: 600; }
+.wide { max-width: 1060px; margin-inline: auto; }
+.reading { max-width: 790px; margin-inline: auto; }
+.paper-header { max-width: 1050px; margin: 0 auto; padding: 62px 12px 36px; text-align: center; }
+.venue { color: var(--muted); font-size: 12px; letter-spacing: 1.1px; margin-bottom: 20px; }
+h1 { color: var(--ink); font-size: clamp(29px, 3.2vw, 42px); font-weight: 500; letter-spacing: -1.1px; line-height: 1.33; text-wrap: balance; }
+.english-title { font: italic 17px/1.65 Georgia, 'Times New Roman', serif; color: #7b8087; margin-top: 17px; }
+.authors { font-size: 16px; line-height: 1.9; color: var(--blue); margin-top: 25px; }
+.affiliation { font-size: 14px; margin-top: 5px; }
+.publication { font-size: 12px; color: var(--muted); line-height: 1.8; margin-top: 12px; }
+.resource-links { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 21px; font-size: 15px; }
+.resource-links a { border-bottom: 1px solid #a8c0d7; }
+.resource-links a:hover { text-decoration: none; border-color: var(--blue); }
+.resource-links span { color: #c6c9ce; font-size: 12px; }
+.teaser { margin-top: 10px; }
+.teaser-pair { display: grid; grid-template-columns: 1fr 32px 1fr; align-items: center; gap: 16px; }
+.teaser-pair img { display: block; width: 100%; height: auto; }
+.comparison-arrow { text-align: center; color: #a1a6ad; font-size: 26px; padding-bottom: 30px; }
+.panel-label { font: 16px/1.5 Georgia, 'Times New Roman', serif; color: #3f444a; text-align: center; margin-top: 8px; }
+figcaption { color: #696f76; font-size: 13px; line-height: 1.8; margin-top: 17px; }
+.teaser figcaption { max-width: 880px; margin: 23px auto 0; }
+code { font: .9em/1.5 monospace; color: #626b76; }
+.contents { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 28px; max-width: 790px; margin: 33px auto 0; padding: 17px 0; border-block: 1px solid var(--line); font-size: 13px; }
+section.reading { padding-top: 43px; }
+h2 { color: var(--ink); font-size: 26px; font-weight: 500; letter-spacing: -.4px; line-height: 1.45; margin-bottom: 18px; }
+h3 { color: var(--ink); font-size: 19px; font-weight: 500; line-height: 1.5; margin: 29px 0 12px; }
+.reading p + p { margin-top: 16px; }
+.reading h2:not(:first-child) { margin-top: 43px; }
+.motion-figure { margin-top: 23px; }
+.motion-figure > img { display: block; width: 100%; height: auto; border: 1px solid #eceef1; }
+.motion-caption { display: flex; align-items: start; gap: 25px; }
+.motion-caption figcaption { flex: 1; }
+#motion-toggle { flex-shrink: 0; margin-top: 19px; background: none; border: 0; border-bottom: 1px solid #afc4d7; color: var(--blue); font: 12px/1.8 Arial, sans-serif; cursor: pointer; padding: 0; }
+#motion-toggle[hidden] { display: none; }
+.animation-description { margin-top: 18px; font-size: 14px; }
+.architecture-figure { margin: 30px auto; max-width: 560px; }
+.architecture-figure img { display: block; width: 100%; height: auto; }
+.equation { font: italic 19px/1.6 Georgia, 'Times New Roman', serif; text-align: center; color: #34383e; margin: 27px -15px; }
+.equation sub { font-size: .65em; }
+.fraction { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: .93em; margin: 0 5px; }
+.fraction span:first-child { border-bottom: 1px solid #737981; padding: 0 7px 3px; }
+.fraction span:last-child { padding-top: 1px; line-height: 1.25; }
+.table-container { overflow-x: auto; margin-top: 25px; }
+table { border-collapse: collapse; width: 100%; white-space: nowrap; font-size: 12px; line-height: 1.6; }
+caption { caption-side: top; text-align: left; font-size: 13px; color: #5e6670; padding-bottom: 12px; }
+thead { border-top: 1.5px solid #636970; border-bottom: 1px solid #adb2b9; }
+th, td { padding: 12px 13px; text-align: right; }
+th { font-weight: 500; }
+thead th { color: #555b64; font-size: 11px; }
+th:first-child, td:first-child { text-align: left; }
+tbody tr { border-bottom: 1px solid #eceef0; }
+tbody tr:last-child { border-bottom: 1.5px solid #636970; }
+.proposed { background: #f1f5f9; }
+.proposed th { color: #305a7e; font-weight: 600; }
+.table-note { color: var(--muted); font-size: 12px; line-height: 1.8; margin-top: 12px; }
+.result-maps { margin-top: 39px; }
+.map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px 38px; }
+.map-grid img { display: block; width: 100%; height: auto; }
+.result-maps figcaption { max-width: 880px; margin-inline: auto; margin-top: 26px; }
+.source-note { border-left: 2px solid #d8e1eb; padding-left: 17px; color: #6a7179; font-size: 13px; }
+footer.reading { border-top: 1px solid var(--line); padding: 25px 0 40px; margin-top: 48px; color: var(--muted); font-size: 11px; line-height: 1.85; }
+footer p + p { margin-top: 10px; }
+footer .design-references { font-size: 10px; }
+.skip-link { position: fixed; top: -90px; left: 20px; background: #fff; padding: 8px 15px; z-index: 5; }
+.skip-link:focus { top: 15px; }
+@media(min-width:1500px) { .paper-header { padding-top: 76px; } }
+@media(max-width:800px) {
+  main { padding-inline: 23px; }
+  .paper-header { padding: 45px 0 26px; }
+  h1 { font-size: 34px; }
+  .english-title { font-size: 15px; }
+  .authors { font-size: 14px; }
+  .teaser-pair { gap: 10px; grid-template-columns: 1fr 20px 1fr; }
+  .panel-label { font-size: 13px; }
+  .reading { font-size: 15px; }
+  .motion-caption { gap: 15px; }
+  .map-grid { gap: 24px; }
+  .equation { font-size: 17px; margin-inline: 0; }
+  th,td { padding: 11px; }
+}
+@media(max-width:520px) {
+  body { font-size: 15px; }
+  main { padding-inline: 19px; }
+  .paper-header { padding-top: 33px; }
+  .venue { font-size: 10px; letter-spacing: .6px; margin-bottom: 17px; }
+  h1 { font-size: 29px; letter-spacing: -.65px; line-height: 1.4; }
+  .english-title { font-size: 14px; line-height: 1.6; margin-top: 15px; }
+  .authors { font-size: 13px; margin-top: 18px; }
+  .desktop-break { display: none; }
+  .affiliation { font-size: 12px; }
+  .publication { font-size: 10px; }
+  .publication br { display: none; }
+  .resource-links { font-size: 14px; gap: 17px; margin-top: 18px; }
+  .teaser-pair { grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  .comparison-arrow { display: none; }
+  .panel-label { font-size: 11px; line-height: 1.5; margin-top: 7px; }
+  figcaption { font-size: 11px; }
+  .teaser figcaption { margin-top: 17px; }
+  .contents { gap: 21px; font-size: 11px; margin-top: 24px; padding-block: 13px; }
+  section.reading { padding-top: 30px; }
+  h2 { font-size: 24px; margin-bottom: 14px; }
+  h3 { font-size: 18px; }
+  .reading { font-size: 14px; line-height: 1.9; }
+  .motion-figure { margin-top: 19px; }
+  .motion-caption { display: block; }
+  #motion-toggle { margin-top: 8px; font-size: 11px; }
+  .animation-description { font-size: 12px; }
+  .architecture-figure { margin-block: 23px; }
+  .equation { font-size: 12px; margin-block: 23px; white-space: nowrap; }
+  .fraction { margin-inline: 1px; }
+  .fraction span:first-child { padding-inline: 3px; }
+  .table-note { font-size: 11px; }
+  table { font-size: 11px; }
+  thead th { font-size: 10px; }
+  .map-grid { grid-template-columns: 1fr; gap: 25px; }
+  .map-grid .panel-label { font-size: 15px; }
+  .result-maps { margin-top: 28px; }
+  .source-note { font-size: 12px; padding-left: 13px; }
+  footer.reading { font-size: 10px; padding-bottom: 28px; margin-top: 35px; }
+}
+@media(prefers-reduced-motion:reduce) { html { scroll-behavior: auto; } }

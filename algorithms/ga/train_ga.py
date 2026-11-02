@@ -7,7 +7,6 @@ import argparse
 import time
 import csv
 import json
-import copy
 
 # Add project root to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))

@@ -4,7 +4,6 @@ import csv
 import json
 import pickle
 import argparse
-from math import ceil
 
 import torch
 import numpy as np
@@ -688,6 +687,3 @@ if __name__ == "__main__":
             eval_grid_penalty_weight=args.eval_grid_penalty_weight,
             algo=args.algo, ppo_ns=args.ppo_ns, ppo_step=args.ppo_step,
             device=args.device)
-
-
-

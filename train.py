@@ -1,6 +1,5 @@
 from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.utils import LinearSchedule
 import os
@@ -17,7 +16,7 @@ from custom_environment.StationPlacementEnv import StationPlacement
 import custom_environment.helpers as H
 
 """
-Trai the model by reinforcement learning.
+Train the model by reinforcement learning.
 """
 
 class SaveOnBestTrainingRewardCallback(BaseCallback):
@@ -179,7 +178,7 @@ if __name__ == '__main__':
     parser.add_argument("--no_gnn", action="store_true", help="Disable GNN, use MLP policy")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate (default: 1e-4)")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size (default: 128)")
-    parser.add_argument("--buffer_size", type=int, default=20000, help="Replay buffer size (default: 50000)")
+    parser.add_argument("--buffer_size", type=int, default=20000, help="Replay buffer size (default: 20000)")
     parser.add_argument("--features_dim", type=int, default=256, help="GNN features dimension (default: 256)")
     parser.add_argument("--net_arch", type=int, nargs="+", default=[256, 256], help="Network architecture layers (default: 256 256)")
     parser.add_argument("--exploration_initial_eps", type=float, default=1.0, help="Initial exploration epsilon (default: 1.0)")

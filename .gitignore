@@ -1,5 +1,7 @@
-Results
-Images
+# Experiment outputs
+/Results/
+/Images/
+*.log
 
 # Python
 __pycache__/
@@ -7,19 +9,20 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.env
+.env.*
 env/
 venv/
 .venv/
+*.egg-info/
+/build/
+/dist/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# Project Results & Data
-Results/*.csv
-Results/*.pkl
-Results/*.png
-.ipynb_checkpoints
-*.log

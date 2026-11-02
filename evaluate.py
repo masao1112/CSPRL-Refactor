@@ -3,7 +3,6 @@ from stable_baselines3.common.monitor import Monitor
 import pickle
 import osmnx as ox
 from custom_environment.StationPlacementEnv import StationPlacement
-from visualise import visualise_stations
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os

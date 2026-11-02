@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DQN với self-attention, Set Transformer và thông tin lưới điện cho quy hoạch trạm sạc xe điện. Công trình nghiên cứu của nhóm tác giả Trường Đại học Hà Nội.">
+  <meta name="theme-color" content="#ffffff">
+  <title>CSPRL — Học tăng cường sâu cho quy hoạch trạm sạc xe điện</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#abstract">Đến nội dung</a>
+<main>
+<header class="paper-header">
+  <p class="venue">VNICT 2026 · Trường Đại học Hà Nội</p>
+  <h1>Học tăng cường sâu tích hợp cơ chế tự chú ý và thông tin lưới điện cho bài toán quy hoạch trạm sạc xe điện</h1>
+  <p class="english-title" lang="en">Grid-aware EV charging station planning with deep reinforcement learning</p>
+  <p class="authors">Vương Quang Huy, Đào Quang Thái Anh, Nguyễn Gia Bảo,<br class="desktop-break"> Trần Nam Sơn, Nguyễn Văn Hiếu, Nguyễn Đình Chiến</p>
+  <p class="affiliation">Trường Đại học Hà Nội</p>
+  <p class="publication">Hội thảo quốc gia lần thứ XXIX: Một số vấn đề chọn lọc của Công nghệ thông tin và truyền thông<br> Hà Nội, 7–8 tháng 11 năm 2026</p>
+  <div class="resource-links"><a href="assets/paper.pdf" target="_blank" rel="noopener">Bài báo (PDF)</a><span aria-hidden="true">/</span><a href="https://github.com/masao1112/CSPRL-Refactor" target="_blank" rel="noopener">Mã nguồn</a></div>
+</header>
+
+<figure class="teaser wide">
+  <div class="teaser-pair">
+    <div><a href="assets/figures/map_DongDa_existingplan_DongDa.png" target="_blank" rel="noopener"><img src="assets/figures/map_DongDa_existingplan_DongDa.png" width="1866" height="1543" alt="Hạ tầng hiện hữu trên mạng đường bộ Đống Đa: trạm sạc màu đỏ, nút giao màu xám"></a><p class="panel-label">(a) Hạ tầng hiện hữu</p></div>
+    <span class="comparison-arrow" aria-hidden="true">→</span>
+    <div><a href="assets/figures/map_DongDa_RL_102353.png" target="_blank" rel="noopener"><img src="assets/figures/map_DongDa_RL_102353.png" width="1866" height="1543" alt="Phương án RL_102353 trên Đống Đa với các trạm sạc phân bố trên nhiều khu vực"></a><p class="panel-label">(b) Học tăng cường · RL_102353</p></div>
+  </div>
+  <figcaption><strong>Quy hoạch là một chuỗi quyết định.</strong> Bổ sung hạ tầng sạc làm thay đổi nhu cầu chưa được phục vụ và dư địa lưới điện cho các bước tiếp theo. Hai bản đồ sử dụng ảnh mới từ <code>res/</code>; điểm đỏ biểu thị trạm sạc, kích thước điểm phản ánh công suất lắp đặt.</figcaption>
+</figure>
+
+<nav class="contents" aria-label="Mục lục"><a href="#abstract">Tóm tắt</a><a href="#illustration">Minh họa</a><a href="#method">Phương pháp</a><a href="#results">Kết quả</a></nav>
+
+<section class="reading" id="abstract">
+  <h2>Tóm tắt</h2>
+  <p>Quy hoạch trạm sạc xe điện cần đồng thời đáp ứng nhu cầu sử dụng, giảm chi phí bất tiện và phù hợp với khả năng cung cấp của lưới điện đô thị. Một trạm mới không chỉ bổ sung công suất: nó còn thay đổi nhu cầu ở các vị trí lân cận và dung lượng còn lại của lưới.</p>
+  <p>Nghiên cứu mô hình hóa quá trình mở rộng hạ tầng thành bài toán quyết định Markov. Chính sách DQN sử dụng bộ mã hóa <strong>self-attention và Pooling by Multi-head Attention (PMA)</strong> để tổng hợp thông tin toàn mạng thành biểu diễn có kích thước cố định. Tác tử chọn một trong năm chiến lược mức cao, sau đó heuristic xác định vị trí cụ thể.</p>
+  <p>Trên thí nghiệm Đống Đa được báo cáo trong bài báo, phương pháp đề xuất đạt hàm mục tiêu <strong>224,7 ± 0,3</strong> so với mốc hạ tầng hiện hữu bằng 100, sử dụng <strong>90,1% ngân sách</strong> và không gây quá tải thanh cái trong mô hình lưới điện mô phỏng.</p>
+</section>
+
+<section id="illustration" class="reading">
+  <h2>Một quá trình ra quyết định tuần tự</h2>
+  <p>Quan sát trạng thái toàn mạng, chọn chiến lược, triển khai một thay đổi và cập nhật trạng thái. Chu trình này được lặp lại trong giới hạn ngân sách.</p>
+</section>
+<figure class="motion-figure wide">
+  <img id="process-animation" src="assets/planning-poster.png" data-animation="assets/planning-process.gif" width="1200" height="660" alt="Minh họa giả lập 48 bước: năm trạm mẫu ban đầu màu xám, trạm bổ sung màu đỏ; mỗi bước chọn macro-action rồi heuristic chọn nút và cập nhật kế hoạch. Không chạy DQN.">
+  <div class="motion-caption"><figcaption><strong>Minh họa luồng chạy (giả lập).</strong> GIF được dựng sẵn bằng quy tắc trên nền đường bộ của repo; trạm và thứ tự hành động là mẫu, không phải trajectory thực nghiệm. Không nạp mô hình. Với chế độ giảm chuyển động, trang hiển thị hình tĩnh.</figcaption><button id="motion-toggle" type="button" aria-controls="process-animation" aria-pressed="false" hidden>Phát ảnh động</button></div>
+</figure>
+<div class="reading animation-description"><p><strong>Đọc hình:</strong> điểm xám là trạm mẫu ban đầu; điểm đỏ là trạm bổ sung; vòng xanh đánh dấu vị trí đang được cập nhật. Năm macro-action bao gồm tạo mới theo lợi ích hoặc nhu cầu, bổ sung bộ sạc theo lợi ích hoặc nhu cầu, và di dời bộ sạc giữa các trạm.</p></div>
+
+<section id="method" class="reading">
+  <h2>Nhìn toàn mạng, quyết định từng bước</h2>
+  <p>Trạng thái gồm ma trận <i>X</i><sub>t</sub> với 10 đặc trưng cho mỗi nút và vector <i>g</i><sub>t</sub> với ba đặc trưng toàn cục: ngân sách còn lại, tiến độ episode và mức cải thiện điểm. Self-attention trao đổi thông tin giữa mọi cặp nút; PMA tổng hợp các embedding về kích thước không phụ thuộc số nút.</p>
+  <figure class="architecture-figure"><a href="assets/architecture.png" target="_blank" rel="noopener"><img src="assets/architecture.png" width="663" height="373" loading="lazy" alt="Bộ mã hóa: đặc trưng nút qua embedding, LayerNorm, self-attention và PMA; ghép nhánh MLP toàn cục trước đầu Q"></a><figcaption><strong>Kiến trúc đề xuất.</strong> D = 128, hai khối tự chú ý với bốn đầu; PMA dùng năm vector truy vấn. Hình 1, trang 4 của bài báo.</figcaption></figure>
+  <h3>Policy chọn chiến lược, heuristic chọn vị trí</h3>
+  <p>Đầu Q của DQN chọn một macro-action thay vì chọn trực tiếp tọa độ. Heuristic tương ứng xác định nút để tạo mới, bổ sung hoặc di dời bộ sạc. Sau mỗi hành động, môi trường cập nhật nhu cầu động, công suất trạm và dư địa lưới điện.</p>
+  <h3>Cân bằng chất lượng phục vụ và tác động lưới</h3>
+  <div class="equation" role="math" aria-label="R của p bằng một phần ba tổng lợi ích trừ chi phí cộng công bằng, trừ trọng số lưới nhân hàm phạt lưới">R(p) = <span class="fraction"><span>benefit(p) − cost(p) + fairness(p)</span><span>3</span></span> − w<sub>g</sub> Φ<sub>grid</sub>(p)</div>
+  <p>Hàm mục tiêu kết hợp lợi ích phục vụ, chi phí di chuyển/chờ/sạc và công bằng không gian, rồi trừ phạt khoảng cách đấu nối và quá tải. Phần thưởng mỗi bước phản ánh thay đổi hàm mục tiêu, cộng thưởng khi đạt điểm tốt nhất mới trong episode; reward và R(p) là hai đại lượng khác nhau.</p>
+</section>
+
+<section id="results" class="reading">
+  <h2>Kết quả trên quận Đống Đa</h2>
+  <p>Bài báo sử dụng mạng đường bộ OpenStreetMap với <strong>639 nút</strong> và mô hình lưới điện gồm <strong>18 thanh cái</strong>. Các phương pháp dùng cùng hạ tầng ban đầu, ngân sách và đồ thị. DQN và giải thuật di truyền được đánh giá qua năm lần chạy độc lập, báo cáo mean ± std.</p>
+</section>
+<div class="wide table-container" tabindex="0" role="region" aria-label="Bảng so sánh hiệu năng; có thể cuộn ngang">
+<table><caption>Bảng III. So sánh hiệu năng trên Đống Đa</caption><thead><tr><th scope="col">Phương pháp</th><th scope="col">R(p) ↑</th><th scope="col">Lợi ích ↑</th><th scope="col">Chi phí ↓</th><th scope="col">Công bằng ↑</th><th scope="col">Quá tải ↓</th><th scope="col">Số trạm</th><th scope="col">Ngân sách (%)</th></tr></thead><tbody>
+<tr><th scope="row">Hạ tầng hiện hữu</th><td>100,0</td><td>100,0</td><td>100,0</td><td>100,0</td><td>0</td><td>5</td><td>0,0</td></tr>
+<tr><th scope="row">Greedy-Benefit</th><td>150,3</td><td>191,9</td><td>56,8</td><td>15,1</td><td>1</td><td>47</td><td>56,6</td></tr>
+<tr><th scope="row">Greedy-Demand</th><td>210,8</td><td>215,6</td><td>66,1</td><td>41,2</td><td>1</td><td>67</td><td>98,4</td></tr>
+<tr><th scope="row">Giải thuật di truyền</th><td>217,1 ± 3,8</td><td>212,0 ± 3,9</td><td>45,2 ± 1,3</td><td>40,9 ± 0,4</td><td>0</td><td>65</td><td>98,0</td></tr>
+<tr class="proposed"><th scope="row">DQN (đề xuất)</th><td>224,7 ± 0,3</td><td>232,9 ± 1,9</td><td>48,3 ± 0,4</td><td>47,8 ± 1,4</td><td>0</td><td>46</td><td>90,1</td></tr>
+</tbody></table></div>
+<p class="table-note wide">Số liệu gốc: Bảng III, trang 5. R(p), lợi ích, chi phí và công bằng quy về phần trăm so với hạ tầng hiện hữu (= 100). Quá tải là số thanh cái; ↑ cao hơn tốt hơn, ↓ thấp hơn tốt hơn. ± biểu thị độ lệch chuẩn.</p>
+
+<figure class="result-maps wide">
+<div class="map-grid">
+  <div><a href="assets/figures/map_DongDa_G_Benefit.png" target="_blank" rel="noopener"><img src="assets/figures/map_DongDa_G_Benefit.png" width="1866" height="1543" loading="lazy" alt="Bản đồ phương án Greedy-Benefit từ res"></a><p class="panel-label">(a) Greedy-Benefit</p></div>
+  <div><a href="assets/figures/map_DongDa_G_Demand.png" target="_blank" rel="noopener"><img src="assets/figures/map_DongDa_G_Demand.png" width="1866" height="1543" loading="lazy" alt="Bản đồ phương án Greedy-Demand từ res"></a><p class="panel-label">(b) Greedy-Demand</p></div>
+  <div><a href="assets/figures/map_DongDa_GA.png" target="_blank" rel="noopener"><img src="assets/figures/map_DongDa_GA.png" width="1866" height="1543" loading="lazy" alt="Bản đồ phương án giải thuật di truyền từ res"></a><p class="panel-label">(c) Giải thuật di truyền</p></div>
+  <div><a href="assets/figures/map_DongDa_RL_102353.png" target="_blank" rel="noopener"><img src="assets/figures/map_DongDa_RL_102353.png" width="1866" height="1543" loading="lazy" alt="Bản đồ phương án học tăng cường RL_102353 từ res"></a><p class="panel-label">(d) Học tăng cường · RL_102353</p></div>
+</div>
+<figcaption><strong>Phân bố không gian của các phương án.</strong> Bốn ảnh xuất được cung cấp trong <code>res/</code>, giữ nguyên màu và độ phân giải gốc. Bấm vào hình để xem chi tiết. Các ảnh này không được dùng để suy ngược số liệu mean ± std trong Bảng III; chưa có metadata để đối chiếu từng ảnh với năm lần chạy của bài báo.</figcaption>
+</figure>
+
+<section class="reading">
+  <h3>Vai trò của thông tin lưới điện và PMA</h3>
+  <p>Trong các đối sánh chính, DQN đạt hàm mục tiêu tổng hợp cao nhất, với ít trạm hơn và ngân sách thấp hơn GA. Phân tích loại bỏ thành phần cho thấy bỏ thông tin lưới dẫn tới hai thanh cái quá tải và giảm công bằng.</p>
+  <div class="table-container" tabindex="0" role="region" aria-label="Bảng phân tích loại bỏ thành phần; có thể cuộn ngang"><table><caption>Bảng IV. Phân tích loại bỏ thành phần</caption><thead><tr><th scope="col">Mô hình</th><th scope="col">R(p) ↑</th><th scope="col">Lợi ích ↑</th><th scope="col">Công bằng ↑</th><th scope="col">Quá tải ↓</th></tr></thead><tbody>
+  <tr class="proposed"><th scope="row">DQN đầy đủ</th><td>224,7 ± 0,3</td><td>232,9 ± 1,9</td><td>47,8 ± 1,4</td><td>0</td></tr>
+  <tr><th scope="row">Không xét lưới</th><td>220,7 ± 0,6</td><td>237,4 ± 1,7</td><td>30,7 ± 1,8</td><td>2</td></tr>
+  <tr><th scope="row">Mean Pooling</th><td>225,4 ± 1,7</td><td>235,6 ± 3,3</td><td>46,3 ± 3,5</td><td>0</td></tr>
+  <tr><th scope="row">Không chú ý (MLP)</th><td>222,5 ± 2,6</td><td>220,8 ± 4,9</td><td>43,7 ± 5,2</td><td>0</td></tr>
+  </tbody></table></div>
+  <p class="table-note">Nguồn: Bảng IV, trang 5. Mean Pooling có điểm trung bình nhỉnh hơn mô hình đầy đủ (225,4 so với 224,7), nhưng độ lệch chuẩn cao hơn (1,7 so với 0,3). Kết quả hỗ trợ nhận xét về tính ổn định của PMA, không phải điểm trung bình cao nhất trong ablation.</p>
+  <h2>Giới hạn và hướng phát triển</h2>
+  <p>Lưới phân phối và phụ tải nền được xây dựng từ dữ liệu mô phỏng, chưa phải dữ liệu vận hành thực tế. Thực nghiệm hiện giới hạn ở một quận; cần đánh giá trên nhiều mạng đường bộ, tích hợp dữ liệu lưới thực và kiểm tra khả năng chuyển giao chính sách.</p>
+</section>
+<footer class="reading">
+  <p>Học tăng cường sâu tích hợp cơ chế tự chú ý và thông tin lưới điện<br>cho bài toán quy hoạch trạm sạc xe điện · VNICT 2026</p>
+  <p>Nền đường bộ: © OpenStreetMap contributors. Hình và số liệu thuộc công trình nguồn.</p>
+  <p class="design-references">Tham khảo cách trình bày: <a href="https://yosinski.com/deepvis">DeepVis</a> · <a href="https://yanlitao.github.io/web/e.html">ExampleNet</a> · <a href="https://nehsgnail.github.io/awesome-scientific-figure/">Awesome Scientific Figure</a></p>
+</footer>
+</main>
+</body>
+</html>

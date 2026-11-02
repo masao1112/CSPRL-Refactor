@@ -2,7 +2,6 @@ import pickle
 import pandas as pd
 import os
 import custom_environment.helpers as H
-import numpy as np
 
 # Configuration
 LOCATION = "DongDa"

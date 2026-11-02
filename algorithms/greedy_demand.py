@@ -1,6 +1,5 @@
 import os
 import sys
-import numpy as np
 
 # Add project root to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -9,7 +8,6 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from custom_environment.StationPlacementEnv import StationPlacement
-import custom_environment.helpers as H
 
 
 def run_greedy_demand(location="DongDa"):

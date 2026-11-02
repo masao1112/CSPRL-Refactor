@@ -40,7 +40,7 @@ FEEDER_CONFIG = {
     "std_type": "NAYY 4x240 SE",
 }
 
-POPULATION_FILE_REL_PATH = "population\hanoi_pop_density_100m.gpkg"
+POPULATION_FILE_REL_PATH = os.path.join("population", "hanoi_pop_density_100m.gpkg")
 
 
 def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

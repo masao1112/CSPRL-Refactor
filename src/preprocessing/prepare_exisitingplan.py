@@ -2,7 +2,6 @@ import os
 import ast
 import pickle
 import pandas as pd
-import numpy as np
 
 
 # Path to file
@@ -49,6 +48,7 @@ for row in detail_stations_df.iterrows():
         print(f"Warning: no matching node found for station at ({s_lat}, {s_lon}); row dropped.")
 
 # save to file
-truncated_plan = existing_plan[:10]
-pickle.dump(existing_plan, open(f"custom_environment/data/Graph/{location}/existingplan_" + location + ".pkl", "wb"))
-print(f"Successfully saved {len(existing_plan)} existing plans (truncated from {len(existing_plan)} matched stations).")
+output_file = os.path.join(base_dir, "Graph", location, f"existingplan_{location}.pkl")
+with open(output_file, "wb") as file:
+    pickle.dump(existing_plan, file)
+print(f"Successfully saved {len(existing_plan)} existing stations to {output_file}.")

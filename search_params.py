@@ -111,7 +111,6 @@ if __name__ == "__main__":
             results.append((sf, df, benefit, cost))
             
     # Calculate min and max for normalization
-    # Calculate min and max for normalization
     b_vals = [r[2] for r in results]
     c_vals = [r[3] for r in results]
     
