@@ -1,6 +1,10 @@
 # CSPRL — Research project page
 
-Trang giới thiệu công trình theo cấu trúc học thuật: tên bài và tác giả → hình đối chiếu → tóm tắt → GIF minh họa → phương pháp → kết quả → giới hạn. Nền trắng, chữ xám, link xanh lam; không có dashboard, bộ lọc, timeline hoặc số liệu giả lập dạng KPI.
+Trang giới thiệu công trình theo cấu trúc học thuật, ưu tiên đầu ra: tên bài và tác giả → kế hoạch và kết quả chính → hình đối chiếu thu gọn → tóm tắt → bảng kết quả và cách đọc chỉ số → GIF/luồng chạy → phương pháp và thông số → giới hạn. Nền trắng, chữ xám, link xanh lam; không có dashboard, bộ lọc, timeline hoặc số liệu giả lập dạng KPI.
+
+Phần diễn giải gồm 7 chỉ số kết quả (định nghĩa, chiều tốt/xấu, đơn vị và đánh đổi), đầu ra của 5 macro-action, 10 đặc trưng nút theo nhóm và 13 mục cấu hình mã hóa/huấn luyện. Các số liệu tổng hợp được giữ nguyên từ bài báo; các chênh lệch như 7,6 điểm R và 7,9 điểm phần trăm ngân sách được tính từ các trung bình báo cáo.
+
+Ảnh kết quả có chiều rộng tối đa 210 px mỗi hình trên desktop; teaser tối đa 720 px. Người đọc có thể mở ảnh gốc qua link của hình. Bảng III/IV được hiển thị trước phần phương pháp để dễ đối chiếu kết quả mà không cần đọc hết cấu hình.
 
 ## Xem trang
 
