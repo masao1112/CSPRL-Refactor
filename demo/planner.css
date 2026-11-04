@@ -1,0 +1,241 @@
+.interactive-demo {--ink:#26333f;--text:#4b5967;--muted:#7a8692;--line:#e0e6ec;--blue:#376d95;--pale:#f2f6fa;--red:#ce4746;--green:#4d8a7d;color-scheme:light}
+.interactive-demo * {box-sizing:border-box}
+.interactive-demo a {color:var(--blue);text-decoration:none}
+.interactive-demo a:hover {text-decoration:underline}
+.interactive-demo h1, .interactive-demo h2, .interactive-demo h3, .interactive-demo p {margin:0}
+.interactive-demo button, .interactive-demo select, .interactive-demo input {font:inherit}
+.interactive-demo button, .interactive-demo select {border:1px solid #ced8e1;background:white;color:var(--ink);border-radius:4px}
+.interactive-demo button {cursor:pointer;padding:9px 13px;font-size:12px;white-space:nowrap}
+.interactive-demo button:hover {background:#eef3f8}
+.interactive-demo button:disabled, .interactive-demo select:disabled, .interactive-demo input:disabled {opacity:.45;cursor:wait}
+.interactive-demo button:focus-visible, .interactive-demo a:focus-visible, .interactive-demo select:focus-visible, .interactive-demo input:focus-visible, .interactive-demo [tabindex]:focus-visible {outline:3px solid #6492b6;outline-offset:3px}
+.interactive-demo select {padding:8px 30px 8px 10px;font-size:12px;max-width:100%}
+.interactive-demo input[type=range] {accent-color:var(--blue);width:100%;cursor:pointer}
+.interactive-demo input[type=checkbox] {accent-color:var(--blue);margin:0;width:13px;height:13px}
+.interactive-demo button.primary {background:var(--blue);border-color:var(--blue);color:white}
+.interactive-demo button.primary:hover {background:#2e5d80}
+.interactive-demo button.quiet {border-color:transparent;background:transparent;color:var(--muted)}
+.interactive-demo .sr-only {position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.interactive-demo .eyebrow {color:var(--blue);font-size:9px;letter-spacing:1.5px;font-weight:600}
+.interactive-demo .section-heading {display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:16px}
+.interactive-demo h2 {font-size:23px;font-weight:500;line-height:1.4;color:var(--ink);margin-top:6px}
+.interactive-demo .dataset-status {font-size:10px;color:var(--muted)}
+.interactive-demo .toolbar {background:white;border:1px solid var(--line);border-radius:5px;padding:13px 16px;display:flex;align-items:end;gap:20px}
+.interactive-demo .method-field {display:flex;flex-direction:column;gap:4px;min-width:225px}
+.interactive-demo .method-field label, .interactive-demo .speed-field {font-size:10px;color:var(--muted)}
+.interactive-demo .run-controls, .interactive-demo .result-controls {display:flex;gap:6px;align-items:center}
+.interactive-demo .speed-field select {display:block;margin-top:4px;padding:8px}
+.interactive-demo .result-controls {margin-left:auto}
+.interactive-demo .load-status {margin-top:12px;padding:12px 16px;background:#edf3f8;border:1px solid #d7e4ef;border-radius:4px;font-size:12px}
+.interactive-demo .load-status[hidden] {display:none}
+.interactive-demo .load-status button {margin-left:12px}
+.interactive-demo .metrics {margin-top:15px;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));background:white;border:1px solid var(--line);border-radius:5px}
+.interactive-demo .metrics>div {padding:15px 13px;border-right:1px solid var(--line)}
+.interactive-demo .metrics>div:last-child {border-right:0}
+.interactive-demo .metrics span {font-size:10px;color:#647689;display:block;min-height:19px}
+.interactive-demo .metrics strong {display:block;font-size:23px;line-height:1.8;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.interactive-demo .metrics small {display:block;font-size:8px;line-height:1.7;color:var(--muted)}
+.interactive-demo .metric-note {font-size:10px;margin:9px 0 15px;color:var(--muted)}
+.interactive-demo .workspace {display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;align-items:start}
+.interactive-demo .map-column {min-width:0}
+.interactive-demo .map-card, .interactive-demo .inspector, .interactive-demo .timeline-panel, .interactive-demo .event-panel {background:white;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.interactive-demo .map-controls {display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--line)}
+.interactive-demo .map-caption {font-size:9px;color:#778695;letter-spacing:.8px}
+.interactive-demo .map-controls fieldset {display:flex;gap:13px;border:0;margin:0;padding:0}
+.interactive-demo .map-controls label {display:flex;align-items:center;gap:5px;font-size:10px;white-space:nowrap}
+.interactive-demo .planning-map {width:100%;height:auto;display:block;background:#f6f8fa;touch-action:manipulation}
+.interactive-demo .road-base {fill:none;stroke:white;stroke-width:5;stroke-linejoin:round;stroke-linecap:round}
+.interactive-demo .road-line {fill:none;stroke:#b9c5d0;stroke-width:1;stroke-linejoin:round;stroke-linecap:round}
+.interactive-demo .service-circle {fill:#6f9fbd;fill-opacity:.026;stroke:#7399b7;stroke-width:.7;stroke-opacity:.45}
+.interactive-demo .connection-line {stroke:#376d95;stroke-width:1.4;stroke-dasharray:4 4;opacity:.8}
+.interactive-demo .station-marker, .interactive-demo .bus-marker {cursor:pointer}
+.interactive-demo .station-dot {fill:var(--red);stroke:white;stroke-width:1.8}
+.interactive-demo .station-marker.existing .station-dot {fill:#7a828a}
+.interactive-demo .selection-ring {fill:none;stroke:#2d668f;stroke-width:1.8}
+.interactive-demo .station-marker:focus, .interactive-demo .bus-marker:focus {outline:0}
+.interactive-demo .station-marker:focus .station-dot, .interactive-demo .bus-marker:focus path {stroke:#152c43;stroke-width:3}
+.interactive-demo .map-station-label {font-size:12px;fill:#264c6a;font-weight:600;paint-order:stroke;stroke:white;stroke-width:4;stroke-linejoin:round}
+.interactive-demo .map-location {font-size:9px;fill:#7c8f9e;letter-spacing:1.2px}
+.interactive-demo .map-legend {display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:11px 14px 0;font-size:9px;color:var(--muted)}
+.interactive-demo .map-legend>span {display:inline-flex;align-items:center;gap:5px}
+.interactive-demo .dot {width:7px;height:7px;display:inline-block;border-radius:50%}
+.interactive-demo .existing-dot {background:#7a828a}
+.interactive-demo .new-dot {background:var(--red)}
+.interactive-demo .ring {width:12px;height:12px;border-radius:50%;border:1px solid #7399b7;background:#7399b712}
+.interactive-demo .bus-key {width:8px;height:8px;display:inline-block;transform:rotate(45deg);background:var(--green)}
+.interactive-demo .heat-key i {display:inline-block;width:38px;height:5px;background:linear-gradient(to right,#fff1c8,#df8429);border-radius:4px}
+.interactive-demo .map-credit {font-size:8px;color:#93a0aa;margin:8px 14px 12px}
+.interactive-demo .timeline-panel {margin-top:12px;padding:15px 18px}
+.interactive-demo .timeline-head {display:flex;justify-content:space-between;align-items:start;gap:15px}
+.interactive-demo .timeline-head p {font-size:11px;min-height:34px;margin-top:5px;line-height:1.8}
+.interactive-demo .timeline-head output {font-size:18px;color:var(--blue);white-space:nowrap;font-variant-numeric:tabular-nums}
+.interactive-demo .timeline-panel input {margin:12px 0 9px}
+.interactive-demo .progress-caption {display:flex;justify-content:space-between;gap:12px;font-size:9px;color:var(--muted)}
+.interactive-demo progress {display:block;width:100%;height:4px;accent-color:var(--blue);border:0;border-radius:4px;overflow:hidden;margin-top:9px}
+.interactive-demo progress::-webkit-progress-bar {background:#e6ecf1}
+.interactive-demo progress::-webkit-progress-value {background:#5686a9}
+.interactive-demo .event-panel {margin-top:12px;padding:16px 18px}
+.interactive-demo .panel-heading {display:flex;justify-content:space-between;align-items:center;gap:12px}
+.interactive-demo .panel-heading h3 {font-size:14px;font-weight:500;color:var(--ink)}
+.interactive-demo .panel-heading>span {font-size:9px;color:var(--muted)}
+.interactive-demo #planner-event-log {list-style:none;margin:10px 0 0;padding:0}
+.interactive-demo #planner-event-log li {font-size:10px;line-height:1.8;padding:8px 0;border-top:1px solid #edf0f3;display:flex;gap:12px}
+.interactive-demo #planner-event-log time {font-size:9px;white-space:nowrap;color:var(--blue);min-width:40px}
+.interactive-demo .inspector {padding:18px;position:sticky;top:14px}
+.interactive-demo .field-label {display:block;font-size:10px;color:var(--muted);margin:16px 0 6px}
+.interactive-demo #planner-station-select {width:100%}
+.interactive-demo .empty-state {font-size:11px;color:var(--muted);padding-top:20px}
+.interactive-demo .station-heading {margin:20px 0 13px;display:flex;justify-content:space-between;align-items:baseline}
+.interactive-demo .station-heading h4 {font-size:21px;color:var(--ink);font-weight:500;margin:0}
+.interactive-demo .station-heading>span {font-size:9px;color:var(--muted)}
+.interactive-demo .detail-list {margin:0}
+.interactive-demo .detail-list>div {display:flex;justify-content:space-between;gap:12px;font-size:11px;padding:8px 0;border-bottom:1px solid #edf0f3}
+.interactive-demo .detail-list dt {color:var(--muted)}
+.interactive-demo .detail-list dd {margin:0;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.interactive-demo .charger-title {font-size:11px;font-weight:500;color:var(--ink);margin:17px 0 9px}
+.interactive-demo .charger-grid {display:grid;grid-template-columns:1fr 1fr;gap:5px 14px}
+.interactive-demo .charger-grid>div {display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eef1f4;font-size:10px;color:var(--muted)}
+.interactive-demo .charger-grid strong {font-weight:500;color:var(--ink)}
+.interactive-demo .detail-footnote {font-size:9px;color:var(--muted);margin-top:13px;line-height:1.8}
+.interactive-demo .status-alert {color:var(--red)!important}
+.interactive-demo .comparison-section {padding-top:48px}
+.interactive-demo .section-copy {font-size:12px;line-height:1.9;color:var(--muted);max-width:900px;margin-bottom:20px}
+.interactive-demo .compare-grid {display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.interactive-demo .compare-card {min-width:0;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:white}
+.interactive-demo .compare-toolbar {display:flex;align-items:end;justify-content:space-between;gap:14px;padding:14px 16px}
+.interactive-demo .compare-toolbar label {font-size:10px;color:var(--muted);flex:1}
+.interactive-demo .compare-toolbar select {display:block;margin-top:4px;max-width:100%;width:100%}
+.interactive-demo .compare-toolbar button {font-size:10px}
+.interactive-demo .compare-caption {font-size:10px;color:var(--muted);padding:0 16px 12px}
+.interactive-demo .compare-inspector {margin-top:12px;border-left:2px solid #a7c0d2;background:#f0f5f9;padding:12px 15px;font-size:11px;line-height:1.9;min-height:44px}
+.interactive-demo .table-scroll {overflow:auto;margin-top:22px}
+.interactive-demo table {border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap;background:white}
+.interactive-demo caption {text-align:left;font-size:11px;color:var(--muted);padding:0 0 10px}
+.interactive-demo th, .interactive-demo td {padding:12px 15px;text-align:right;border-bottom:1px solid var(--line);font-weight:400}
+.interactive-demo th:first-child, .interactive-demo td:first-child {text-align:left}
+.interactive-demo thead th {font-size:11px;background:#edf3f8;color:#587086}
+.interactive-demo tbody th {color:var(--ink)}
+.interactive-demo .reading-guide {padding:42px 0 12px}
+.interactive-demo .guide-columns {display:grid;grid-template-columns:1fr 1fr;gap:45px;margin-top:23px}
+.interactive-demo .guide-columns h3 {font-size:15px;font-weight:500;color:var(--ink);margin-bottom:13px}
+.interactive-demo .guide-columns p {font-size:12px;line-height:1.9;color:var(--muted);margin-top:10px}
+.interactive-demo footer {margin-top:35px;border-top:1px solid var(--line);padding:22px 0 30px;display:flex;gap:25px;align-items:center;font-size:10px;color:var(--muted)}
+.interactive-demo #planner-export-status {margin-left:auto;color:var(--blue)}
+@media (max-width:1200px) {
+.interactive-demo .metrics {grid-template-columns:repeat(4,minmax(0,1fr))}
+.interactive-demo .metrics>div:nth-child(4) {border-right:0}
+.interactive-demo .metrics>div:nth-child(-n/**/+4) {border-bottom:1px solid var(--line)}
+.interactive-demo .toolbar {gap:10px;flex-wrap:wrap}
+.interactive-demo .method-field {min-width:200px}
+.interactive-demo .workspace {grid-template-columns:minmax(0,1fr) 285px}
+.interactive-demo .map-caption {display:none}
+.interactive-demo .map-controls {justify-content:end}
+.interactive-demo .metrics strong {font-size:22px}
+}
+@media (max-width:850px) {
+.interactive-demo .workspace {grid-template-columns:1fr}
+.interactive-demo .inspector {position:static}
+.interactive-demo .charger-grid {grid-template-columns:repeat(4,1fr);gap:8px 20px}
+.interactive-demo .detail-list {display:grid;grid-template-columns:1fr 1fr;gap:0 25px}
+.interactive-demo .result-controls {margin-left:0}
+.interactive-demo .toolbar {align-items:end;gap:12px}
+.interactive-demo .map-caption {display:block}
+.interactive-demo .map-controls {justify-content:space-between}
+.interactive-demo .guide-columns {gap:28px}
+.interactive-demo .comparison-section {padding-top:36px}
+}
+@media (max-width:560px) {
+.interactive-demo .section-heading {align-items:start;flex-direction:column;gap:9px}
+.interactive-demo h2 {font-size:22px}
+.interactive-demo .toolbar {padding:13px;gap:13px 9px}
+.interactive-demo .method-field {width:100%;min-width:0}
+.interactive-demo .method-field select {width:100%;font-size:13px}
+.interactive-demo .run-controls {flex:1}
+.interactive-demo .run-controls button {padding-inline:11px}
+.interactive-demo .speed-field select {padding:7px 3px}
+.interactive-demo .result-controls {width:100%;display:grid;grid-template-columns:1fr 1fr}
+.interactive-demo .metrics {grid-template-columns:repeat(2,minmax(0,1fr))}
+.interactive-demo .metrics>div {padding:11px 13px;border-bottom:1px solid var(--line)}
+.interactive-demo .metrics>div:nth-child(2n) {border-right:0}
+.interactive-demo .metrics>div:nth-last-child(-n/**/+2) {border-bottom:0}
+.interactive-demo .metrics strong {font-size:24px}
+.interactive-demo .metrics span {font-size:10px}
+.interactive-demo .metrics small {font-size:9px}
+.interactive-demo .metric-note {font-size:9px}
+.interactive-demo .map-controls {justify-content:center;padding:12px 7px}
+.interactive-demo .map-caption {display:none}
+.interactive-demo .map-controls fieldset {gap:12px}
+.interactive-demo .map-controls label {font-size:10px}
+.interactive-demo .planning-map {min-height:235px}
+.interactive-demo .map-legend {gap:7px 10px;font-size:8px;padding-inline:10px}
+.interactive-demo .map-credit {font-size:7px;margin-inline:10px}
+.interactive-demo .timeline-panel {padding:13px}
+.interactive-demo .timeline-head output {font-size:15px}
+.interactive-demo .timeline-head p {font-size:10px}
+.interactive-demo .timeline-head .eyebrow {font-size:8px}
+.interactive-demo .event-panel {padding:13px}
+.interactive-demo .panel-heading h3 {font-size:13px}
+.interactive-demo .panel-heading>span {font-size:8px}
+.interactive-demo .inspector {padding:16px}
+.interactive-demo .detail-list {grid-template-columns:1fr}
+.interactive-demo .charger-grid {grid-template-columns:repeat(3,1fr);gap:7px 15px}
+.interactive-demo .compare-grid {grid-template-columns:1fr;gap:17px}
+.interactive-demo .compare-card .planning-map {min-height:220px}
+.interactive-demo .compare-toolbar {padding:13px}
+.interactive-demo .compare-inspector {font-size:10px}
+.interactive-demo .guide-columns {grid-template-columns:1fr;gap:23px}
+.interactive-demo .guide-columns p {font-size:11px}
+.interactive-demo .reading-guide {padding-top:30px}
+.interactive-demo .reading-guide h2 {font-size:21px}
+.interactive-demo footer {flex-wrap:wrap;gap:12px 20px}
+.interactive-demo #planner-export-status {margin-left:0;flex-basis:100%}
+}
+.interactive-demo .mobile-metric-hint {display:none}
+@media (max-width:560px) {
+.interactive-demo .metrics {grid-template-columns:repeat(8,minmax(132px,1fr));max-width:100%;overflow-x:auto}
+.interactive-demo .metrics>div {border-bottom:0!important;border-right:1px solid var(--line)!important}
+.interactive-demo .metrics>div:last-child {border-right:0!important}
+.interactive-demo .mobile-metric-hint {display:inline;color:var(--blue)}
+}
+@media (prefers-reduced-motion:reduce) {
+
+}
+
+.interactive-demo { margin-top:28px; margin-bottom:30px; border-block:1px solid var(--line); color:var(--text); background:#fff; }
+.interactive-demo > summary { display:list-item; cursor:pointer; padding:17px 0; color:var(--blue); font-size:16px; }
+.interactive-demo > summary::marker { font-size:12px; }
+.interactive-demo > summary small { display:block; color:var(--muted); font-size:11px; margin-left:0; margin-top:3px; }
+.interactive-demo > summary:focus-visible { outline:2px solid var(--blue); outline-offset:5px; }
+.interactive-demo .demo-content { padding:7px 0 25px; }
+.interactive-demo .feature-intro { max-width:790px; margin:0 0 24px; font-size:13px; line-height:1.9; color:var(--muted); }
+.interactive-demo .section-heading { margin-bottom:13px; }
+.interactive-demo h2 { font-size:22px; margin:5px 0 0; font-weight:500; letter-spacing:0; }
+.interactive-demo h3 { margin:0; font-weight:500; }
+.interactive-demo .toolbar { border-inline:0; border-radius:0; padding-inline:0; gap:12px; }
+.interactive-demo .method-field { min-width:200px; }
+.interactive-demo .workspace { grid-template-columns:minmax(0,1fr) 270px; gap:18px; }
+.interactive-demo .map-card, .interactive-demo .timeline-panel, .interactive-demo .event-panel, .interactive-demo .inspector, .interactive-demo .compare-card { border-radius:0; box-shadow:none; }
+.interactive-demo .metrics { background:white; border-inline:0; border-radius:0; }
+.interactive-demo .metrics strong { font-size:21px; font-weight:400; }
+.interactive-demo .metrics small { font-size:8px; }
+.interactive-demo .inspector { position:static; padding:15px; border:0; border-left:1px solid var(--line); }
+.interactive-demo .comparison-section { padding-top:30px; }
+.interactive-demo .reading-guide { padding-top:30px; }
+.interactive-demo .reading-guide h2 { font-size:21px; margin:0; }
+.interactive-demo .reading-guide h3 { font-size:15px; margin-bottom:10px; }
+.interactive-demo .export-status { font-size:11px; color:var(--blue); margin-top:16px; }
+@media(max-width:1000px) { .interactive-demo .result-controls { margin-left:0; } }
+@media(max-width:800px) {
+ .interactive-demo .workspace { grid-template-columns:1fr; }
+ .interactive-demo .inspector { border-left:0; border-top:1px solid var(--line); padding:18px 0 0; }
+ .interactive-demo .detail-list { grid-template-columns:1fr 1fr; }
+}
+@media(max-width:560px) {
+ .interactive-demo > summary { font-size:15px; }
+ .interactive-demo .demo-content { padding-bottom:18px; }
+ .interactive-demo .feature-intro { font-size:12px; }
+ .interactive-demo .toolbar { gap:12px 8px; }
+ .interactive-demo .method-field { min-width:0; }
+ .interactive-demo .workspace { gap:13px; }
+ .interactive-demo .detail-list { grid-template-columns:1fr; }
+}

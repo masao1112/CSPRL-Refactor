@@ -8,7 +8,9 @@
   <title>CSPRL — Học tăng cường sâu cho quy hoạch trạm sạc xe điện</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="planner.css">
   <script src="app.js" defer></script>
+  <script type="module" src="planner.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#abstract">Đến nội dung</a>
@@ -131,6 +133,68 @@
   <div class="motion-caption"><figcaption><strong>Minh họa luồng chạy (giả lập).</strong> GIF được dựng sẵn bằng quy tắc trên nền đường bộ của repo; trạm và thứ tự hành động là mẫu, không phải trajectory thực nghiệm. Không nạp mô hình. Với chế độ giảm chuyển động, trang hiển thị hình tĩnh.</figcaption><button id="motion-toggle" type="button" aria-controls="process-animation" aria-pressed="false" hidden>Phát ảnh động</button></div>
 </figure>
 <div class="reading animation-description"><p><strong>Đọc hình:</strong> điểm xám là trạm mẫu ban đầu; điểm đỏ là trạm bổ sung; vòng xanh đánh dấu vị trí đang được cập nhật. Năm macro-action bao gồm tạo mới theo lợi ích hoặc nhu cầu, bổ sung bộ sạc theo lợi ích hoặc nhu cầu, và di dời bộ sạc giữa các trạm.</p></div>
+
+<details id="planning-demo" class="interactive-demo wide">
+  <summary><span>Khám phá kế hoạch trên bản đồ Đống Đa</span><small>Chạy từng bước · Chi tiết trạm · So sánh · CSV</small></summary>
+  <div class="demo-content">
+    <p class="feature-intro">Phần demo bổ sung dùng 5 trạm hiện hữu và dữ liệu cục bộ của repo. Chọn phương pháp để xem kế hoạch hình thành, tua timeline và xuất danh sách trạm. Chuỗi hành động là giả lập, không nạp mô hình.</p>
+<section id="planner-planner" aria-labelledby="planner-planner-title">
+<div class="section-heading"><div><p class="eyebrow">BẢN ĐỒ MINH HỌA</p><h2 id="planner-planner-title">Đống Đa, Hà Nội</h2></div><span id="planner-dataset-status" class="dataset-status">Đang chuẩn bị dữ liệu…</span></div>
+<div class="toolbar">
+<div class="method-field"><label for="planner-method">Phương pháp</label><select id="planner-method" disabled><option value="dqn">DQN đề xuất</option><option value="ga">Giải thuật di truyền (GA)</option><option value="benefit">Greedy-Benefit</option><option value="demand">Greedy-Demand</option></select></div>
+<div class="run-controls"><button id="planner-play" class="primary" disabled>▶ Chạy</button><button id="planner-step" disabled>Tiến 1 bước</button><button id="planner-reset" class="quiet" disabled>Đặt lại</button></div>
+<label class="speed-field">Tốc độ<select id="planner-speed"><option value="1000">1×</option><option value="500">2×</option><option value="200">5×</option></select></label>
+<div class="result-controls"><button id="planner-best" disabled>Kế hoạch tốt nhất</button><button id="planner-export" disabled>Xuất CSV ↓</button></div>
+</div>
+<div id="planner-load-status" class="load-status" role="status">Đang tải bản đồ và 5 trạm hiện hữu…</div>
+<p id="planner-budget-summary" class="metric-note">Chi phí và ngân sách dùng đơn vị triệu đồng.</p>
+<noscript><p class="load-status">Ứng dụng cần JavaScript để hiển thị bản đồ và timeline. Nội dung nghiên cứu vẫn có thể đọc bình thường bên ngoài phần demo.</p></noscript>
+<div class="metrics" id="planner-metrics" role="region" tabindex="0" aria-label="Các chỉ số của kế hoạch hiện tại; cuộn ngang trên màn hình nhỏ">
+<div><span>R(p) ↑</span><strong id="planner-metric-score">—</strong><small>Chỉ số so với ban đầu</small></div>
+<div><span>Lợi ích ↑</span><strong id="planner-metric-benefit">—</strong><small>Độ phủ phục vụ</small></div>
+<div><span>Chi phí bất tiện ↓</span><strong id="planner-metric-cost">—</strong><small>Di chuyển · chờ · sạc</small></div>
+<div><span>Công bằng ↑</span><strong id="planner-metric-fairness">—</strong><small>Đồng đều độ phủ</small></div>
+<div><span>Số trạm</span><strong id="planner-metric-stations">—</strong><small id="planner-station-count-note">5 trạm đầu vào</small></div>
+<div><span>Số bộ sạc</span><strong id="planner-metric-chargers">—</strong><small id="planner-total-power">12 mức công suất</small></div>
+<div><span>Ngân sách sử dụng</span><strong id="planner-metric-budget">—</strong><small id="planner-budget-amount">Đơn vị: triệu đồng</small></div>
+<div><span>Thanh cái quá tải ↓</span><strong id="planner-metric-overloaded">—</strong><small id="planner-bus-count-note">Lưới điện trong repo</small></div>
+</div>
+<p class="metric-note"><span class="mobile-metric-hint">Vuốt ngang để xem đủ 8 chỉ số. </span>Chỉ số của kịch bản giả lập, tính từ kế hoạch ở bước đang xem; R(p), lợi ích, chi phí và công bằng lấy trạng thái ban đầu = 100. Không phải số liệu thực nghiệm của bài báo.</p>
+<div class="workspace">
+<div class="map-column">
+<div class="map-card">
+<div class="map-controls"><span class="map-caption">MẠNG ĐƯỜNG BỘ · OPENSTREETMAP</span><fieldset><legend class="sr-only">Lớp hiển thị, áp dụng cho cả ba bản đồ</legend><label><input id="planner-layer-demand" type="checkbox" checked> Nhu cầu</label><label><input id="planner-layer-service" type="checkbox"> Vùng phục vụ</label><label><input id="planner-layer-grid" type="checkbox" checked> Lưới điện</label></fieldset></div>
+<svg id="planner-main-map" class="planning-map" data-map-key="main" viewBox="0 0 900 560" role="group" aria-label="Bản đồ kế hoạch hiện tại trên Đống Đa"></svg>
+<div class="map-legend"><span><i class="dot existing-dot"></i> Hiện hữu</span><span><i class="dot new-dot"></i> Trạm mới · kích thước theo kW</span><span><i class="ring"></i> Vùng phục vụ</span><span><i class="bus-key"></i> Thanh cái</span><span class="heat-key">Nhu cầu <i></i> thấp → cao</span></div>
+<p class="map-credit">© OpenStreetMap contributors · hình học từ GraphML trong repo · không dùng bản đồ nền trực tuyến</p>
+</div>
+<div class="timeline-panel">
+<div class="timeline-head"><div><span class="eyebrow">TIẾN TRÌNH QUYẾT ĐỊNH</span><p id="planner-current-action" aria-live="polite">Khởi tạo 5 trạm hiện hữu.</p></div><output id="planner-step-label" for="planner-timeline">00 / 00</output></div>
+<label class="sr-only" for="planner-timeline">Tua đến bước quyết định</label><input id="planner-timeline" type="range" min="0" max="0" value="0" disabled>
+<div class="progress-caption"><span id="planner-timeline-state">Chưa chạy</span><span id="planner-spent-label">Ngân sách: —</span></div><progress id="planner-budget-progress" max="100" value="0" aria-label="Ngân sách đã dùng"></progress>
+</div>
+<div class="event-panel"><div class="panel-heading"><h3>Nhật ký hành động</h3><span id="planner-best-step-note">Kế hoạch tốt nhất: —</span></div><ol id="planner-event-log" aria-label="Năm bước gần nhất"><li>Chọn phương pháp rồi bấm Chạy.</li></ol></div>
+</div>
+<aside class="inspector" aria-labelledby="planner-inspector-title"><div class="panel-heading"><h3 id="planner-inspector-title">Chi tiết trạm</h3><span id="planner-inspector-source">Bản đồ chính</span></div><label for="planner-station-select" class="field-label">Chọn trạm hoặc bấm điểm trên bản đồ</label><select id="planner-station-select" disabled><option>Đang tải…</option></select><div id="planner-inspector-content" aria-live="polite"><p class="empty-state">Chọn một trạm để xem cấu hình 12 mức sạc và thanh cái đấu nối.</p></div></aside>
+</div>
+</section>
+
+<section id="planner-comparison" class="comparison-section" aria-labelledby="planner-comparison-title">
+<div class="section-heading"><div><p class="eyebrow">SO SÁNH KẾ HOẠCH</p><h2 id="planner-comparison-title">So sánh hai phương án</h2></div><span class="dataset-status">Hai bản đồ dùng cùng tỉ lệ và thang màu</span></div>
+<p class="section-copy">So sánh kế hoạch có R(p) cao nhất trong từng chuỗi giả lập. Chọn trạm trên bất kỳ bản đồ nào để xem chi tiết tại bảng phía trên; CSV lấy đúng phương án đang hiển thị.</p>
+<div class="compare-grid">
+<article class="compare-card"><div class="compare-toolbar"><label for="planner-compare-a">Phương án A<select id="planner-compare-a" disabled><option value="dqn">DQN đề xuất</option><option value="ga">GA</option><option value="benefit">Greedy-Benefit</option><option value="demand">Greedy-Demand</option></select></label><button id="planner-export-a" disabled>CSV ↓</button></div><p id="planner-compare-a-caption" class="compare-caption">Đang chuẩn bị…</p><svg id="planner-compare-map-a" class="planning-map" data-map-key="a" viewBox="0 0 900 560" role="group" aria-label="Bản đồ phương án A"></svg></article>
+<article class="compare-card"><div class="compare-toolbar"><label for="planner-compare-b">Phương án B<select id="planner-compare-b" disabled><option value="ga">GA</option><option value="dqn">DQN đề xuất</option><option value="benefit">Greedy-Benefit</option><option value="demand">Greedy-Demand</option></select></label><button id="planner-export-b" disabled>CSV ↓</button></div><p id="planner-compare-b-caption" class="compare-caption">Đang chuẩn bị…</p><svg id="planner-compare-map-b" class="planning-map" data-map-key="b" viewBox="0 0 900 560" role="group" aria-label="Bản đồ phương án B"></svg></article>
+</div>
+<div class="compare-inspector" id="planner-compare-detail" aria-live="polite">Bấm một trạm hoặc thanh cái trên hai bản đồ để đọc chi tiết.</div>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Bảng so sánh hai kế hoạch, có thể cuộn ngang"><table id="planner-comparison-table"><caption>Chỉ số từ hai kế hoạch đang hiển thị</caption><thead><tr><th scope="col">Chỉ số</th><th scope="col">Phương án A</th><th scope="col">Phương án B</th><th scope="col">B − A</th></tr></thead><tbody id="planner-comparison-body"></tbody></table></div>
+</section>
+
+<section class="reading-guide"><h2>Đọc kết quả đúng ngữ cảnh</h2><div class="guide-columns"><div><h3>Kế hoạch, ngân sách và thời gian chờ</h3><p>Trạm xám thuộc kế hoạch đầu vào; trạm đỏ được bổ sung. Mỗi trạm có thể chứa nhiều bộ sạc thuộc 12 mức công suất. Bán kính được tính lại theo tổng kW ở từng bước bằng r = Rmax / [1 + exp(−C/C₀)], với Rmax = 1 km và C₀ = 1.000 kW.</p><p>Chi phí mặt bằng = diện tích mỗi bộ sạc × số bộ sạc × giá đất, sau đó cộng chi phí thiết bị. Tất cả dùng triệu đồng: ngân sách 900.000 triệu đồng bằng 900 tỷ đồng. Ngân sách đã dùng là chi phí mở rộng ròng cộng phí di dời, không bao gồm chi phí hạ tầng ban đầu.</p><p>Thời gian chờ được ước tính bằng hàng đợi hữu hạn M/M/1/N. Nhu cầu chuẩn hóa được đổi sang cường độ đến bằng quy tắc của demo, nên đây không phải số phút chờ được đo thực tế.</p></div><div><h3>Lớp lưới và phương pháp</h3><p>Thanh cái đổi từ xanh sang cam khi tiến gần dư địa, đỏ khi tải sạc vượt dư địa (100%). Dư địa lấy từ công suất thiết bị và phụ tải CSV, không chạy tính toán dòng công suất. Chọn một thanh cái để xem tải sạc MW và dư địa MW.</p><p>DQN, GA và hai Greedy có chuỗi hành động giả lập riêng để trình diễn thao tác. So sánh ở đây minh họa các kế hoạch sinh bằng quy tắc; không dùng để xếp hạng chất lượng thuật toán đã huấn luyện. <a href="#results">Xem kết quả được báo cáo trong bài báo ↗</a></p></div></div></section>
+<p id="planner-export-status" class="export-status" role="status"></p>
+
+  </div>
+</details>
 
 <section class="reading execution-guide" aria-labelledby="execution-title">
   <h3 id="execution-title">Theo dõi đầu ra của từng bước</h3>

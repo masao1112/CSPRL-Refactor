@@ -1,14 +1,14 @@
 # CSPRL-Refactor
 
-### Trang giới thiệu công trình nghiên cứu
+### Trang nghiên cứu và demo quy hoạch trạm sạc
 
-Trang nghiên cứu với ảnh động minh họa quy trình, các bản đồ mới trong `res/`, kiến trúc và số liệu từ bài báo camera-ready. Không nạp mô hình; luồng giả lập được dựng sẵn thành GIF.
+Trang nghiên cứu giữ bố cục bài báo, phần diễn giải và bảng số liệu. Trong phần Luồng chạy, mở “Khám phá kế hoạch trên bản đồ Đống Đa” để chọn DQN/GA/Greedy, tua kế hoạch giả lập, xem chi tiết 12 mức sạc và tải lưới, so sánh hai phương án và xuất CSV. Đầu vào dùng 5 trạm hiện hữu và nhu cầu trong repo; không nạp mô hình.
 
 ```bash
 python -m http.server 8765 --bind 127.0.0.1 --directory demo
 ```
 
-Mở <http://localhost:8765>. Xem [hướng dẫn trang nghiên cứu](demo/README.md) để biết nguồn ảnh, số liệu bài báo và cách dựng GIF minh họa.
+Mở <http://localhost:8765>. Xem [hướng dẫn demo](demo/README.md) để biết luồng sử dụng, dữ liệu đầu vào, cách tính chỉ số và giới hạn giả lập.
 
 Tối ưu vị trí và cấu hình trạm sạc xe điện trên mạng đường bộ Hà Nội bằng học tăng cường. Môi trường Gymnasium kết hợp nhu cầu sạc, chi phí di chuyển/chờ/sạc, độ công bằng và khả năng đáp ứng của lưới điện. Agent lựa chọn các chiến lược xây mới, mở rộng hoặc di chuyển bộ sạc; các heuristic trong môi trường quyết định vị trí cụ thể.
 

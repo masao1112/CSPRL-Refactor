@@ -113,7 +113,7 @@ def installment_fee(my_station):
     n_chargers = np.sum(s_x)
     charger_cost = np.sum(INSTALL_FEE * s_x)
     fee = evs_parking_area * n_chargers * s_pos[1]['land_price'] + charger_cost
-    s_dict["fee"] = fee  # [fee] = €t
+    s_dict["fee"] = fee  # [fee] = million VND; land_price is million VND/m²
     return my_station
 
 
@@ -155,11 +155,14 @@ def dynamic_demand(my_node, my_plan, scaling_factor=None, distance_decay_factor=
 
 def influence_radius(my_station):
     """
-    gives the radius of the nodes whose charging demand the CS could satisfy
+    Service radius in km, with station capability stored in MW.
+
+    The sigmoid scale is 1000 * capacity_unit kW. Convert capability to kW
+    before applying that scale; otherwise MW values keep r near RADIUS_MAX/2.
     """
     s_pos, s_x, s_dict = my_station[0], my_station[1], my_station[2]
-    total_capacity = s_dict["capability"]
-    radius_s = RADIUS_MAX * 1 / (1 + np.exp(-total_capacity / (1000 * capacity_unit))) # prev 100
+    total_capacity_kw = s_dict["capability"] * 1000.0
+    radius_s = RADIUS_MAX / (1 + np.exp(-total_capacity_kw / (1000 * capacity_unit)))
     s_dict["radius"] = radius_s  # [radius] = km
     return my_station
 
@@ -718,11 +721,12 @@ evs_parking_area = 15  # meter square
 K = 100  # maximal number of chargers at a station
 RADIUS_MAX = 1  # [radius_max] = km
 CHARGING_POWER = np.array([3, 7, 11, 20, 22, 30, 60, 80, 120, 150, 180, 250])
-INSTALL_FEE = np.array([5, 11, 12, 100, 12, 143, 278, 397, 416, 676, 956, 3272])
+INSTALL_FEE = np.array([5, 11, 12, 100, 12, 143, 278, 397, 416, 676, 956, 3272])  # million VND / charger
 BATTERY = 85  # battery capacity, [BATTERY] = kWh
 RELOCATION_FACTOR = 0.2  # Assumption: Moving costs 20% of a new one
 
-BUDGET = 900000
+BUDGET = 900000  # million VND = 900 billion VND
+COST_UNIT = "million_vnd"
 
 time_unit = 1  # [time_unit] = h, introduced for getting the units correctly
 capacity_unit = 1  # [cap_unit] = kW, introduced for getting the units correctly
